@@ -5,7 +5,6 @@ import random
 import json
 from datetime import datetime, timedelta
 
-# Broadcast settings
 BROADCAST_IP = '0.0.0.0'
 PORT = 4225
 
@@ -13,7 +12,9 @@ class DroneMessageGenerator:
     def __init__(self):
         self.lat_range = (25.0, 49.0)
         self.lon_range = (-125.0, -67.0)
-    
+        self.msg_index = 0
+        self.start_time = time.time()
+
     def get_timestamps(self):
         now = datetime.utcnow()
         time_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -52,42 +53,43 @@ class DroneMessageGenerator:
 </event>"""
 
     def generate_esp32_format(self):
-        time_str, start_str, stale_str = self.get_timestamps()
-        lat = round(random.uniform(*self.lat_range), 4)
-        lon = round(random.uniform(*self.lon_range), 4)
-        esp_id = f"ESP32-{random.randint(100,999)}"
+        runtime = int(time.time() - self.start_time)
+        drone_id = f"DRONE{random.randint(100,999)}"
         
-        json_data = {
+        if random.random() < 0.1:  # 10% chance of zero coordinates
+            lat, lon = 0.000000, 0.000000
+        else:
+            lat = round(random.uniform(*self.lat_range), 6)
+            lon = round(random.uniform(*self.lon_range), 6)
+            
+        message = {
+            "index": self.msg_index,
+            "runtime": runtime,
             "Basic ID": {
-                "id_type": "Serial Number (ANSI/CTA-2063-A)",
-                "id": esp_id
+                "id": drone_id,
+                "id_type": "Serial Number (ANSI/CTA-2063-A)"
             },
             "Location/Vector Message": {
                 "latitude": lat,
                 "longitude": lon,
-                "speed": round(random.uniform(0, 30), 1),
-                "vert_speed": round(random.uniform(-5, 5), 1),
-                "geodetic_altitude": round(random.uniform(50, 400), 1),
-                "height_agl": round(random.uniform(20, 200), 1)
+                "speed": 0 if lat == 0 else round(random.uniform(0, 30), 1),
+                "vert_speed": 0 if lat == 0 else round(random.uniform(-5, 5), 1),
+                "geodetic_altitude": 0 if lat == 0 else round(random.uniform(50, 400), 1),
+                "height_agl": 0 if lat == 0 else round(random.uniform(20, 200), 1)
             },
             "Self-ID Message": {
-                "text": f"ESP32 Drone {esp_id}"
+                "text": f"Test Drone {drone_id}"
             },
             "System Message": {
-                "latitude": lat + random.uniform(-0.001, 0.001),
-                "longitude": lon + random.uniform(-0.001, 0.001)
+                "latitude": 0.000000 if lat == 0 else round(lat + random.uniform(-0.001, 0.001), 6),
+                "longitude": 0.000000 if lon == 0 else round(lon + random.uniform(-0.001, 0.001), 6)
             }
         }
-        
-        return f"""<event version="2.0" uid="drone-{esp_id}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
-    <point lat="{lat}" lon="{lon}" hae="100" ce="9999999" le="9999999"/>
-    <detail>
-        <message>{json.dumps(json_data, indent=2)}</message>
-    </detail>
-</event>"""
+        self.msg_index += 1
+        return json.dumps(message)
 
 def clear_screen():
-    os.system('clear')  # Mac specific
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 def get_valid_number(prompt, min_val, max_val):
     while True:
@@ -134,6 +136,8 @@ def main_menu():
                              else generator.generate_esp32_format())
                     sock.sendto(message.encode(), server_address)
                     print(f"📡 Sent {format_name} message at {time.strftime('%H:%M:%S')}")
+                    if choice == '2':  # Show ESP32 messages
+                        print(message + "\n")
                     time.sleep(interval)
             except KeyboardInterrupt:
                 print("\n\n🛑 Broadcast stopped")
