@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "dragonLogo2.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -12,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "dragonLogo2 1.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -33,46 +35,55 @@
       "size" : "16x16"
     },
     {
+      "filename" : "FFEF0CF7-F032-4CDD-B4F6-E7FDABE91C45 7.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "16x16"
     },
     {
+      "filename" : "FFEF0CF7-F032-4CDD-B4F6-E7FDABE91C45 6.png",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "32x32"
     },
     {
+      "filename" : "FFEF0CF7-F032-4CDD-B4F6-E7FDABE91C45 5.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "32x32"
     },
     {
+      "filename" : "FFEF0CF7-F032-4CDD-B4F6-E7FDABE91C45 4.png",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "128x128"
     },
     {
+      "filename" : "FFEF0CF7-F032-4CDD-B4F6-E7FDABE91C45 3.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "128x128"
     },
     {
+      "filename" : "FFEF0CF7-F032-4CDD-B4F6-E7FDABE91C45 2.png",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "256x256"
     },
     {
+      "filename" : "FFEF0CF7-F032-4CDD-B4F6-E7FDABE91C45 1.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "256x256"
     },
     {
+      "filename" : "FFEF0CF7-F032-4CDD-B4F6-E7FDABE91C45.png",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "512x512"
     },
     {
+      "filename" : "IMG_2697 1.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "512x512"
