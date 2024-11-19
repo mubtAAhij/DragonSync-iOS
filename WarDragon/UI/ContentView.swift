@@ -16,14 +16,19 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             VStack {
-                List(cotViewModel.parsedMessages) { item in
-                    MessageRow(message: item, cotViewModel: cotViewModel)
-                }
-                .listStyle(.inset)
-                .onChange(of: cotViewModel.parsedMessages) { _, messages in
-                    if let latest = messages.last {
-                        latestMessage = latest
-                        showAlert = false // show an alert inside the app
+                ScrollViewReader { proxy in
+                    List(cotViewModel.parsedMessages) { item in
+                        MessageRow(message: item, cotViewModel: cotViewModel)
+                    }
+                    .listStyle(.inset)
+                    .onChange(of: cotViewModel.parsedMessages) { _, messages in
+                        if let latest = messages.last {
+                            latestMessage = latest
+                            showAlert = false
+                            withAnimation {
+                                proxy.scrollTo(latest.id, anchor: .bottom)
+                            }
+                        }
                     }
                 }
                 
