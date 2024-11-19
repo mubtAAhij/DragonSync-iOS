@@ -2,13 +2,17 @@
 
 <img src="https://github.com/user-attachments/assets/e8a6a8ba-2fb1-4a65-b78b-c440a13fed48" alt="Dragon Logo" width="320">
 
+## Inspiration & Overview
 
+![image](https://github.com/user-attachments/assets/63f082e5-64b6-469c-9bc8-b98bc1ebc71a)
 
-DragonLink is an iOS utility app designed to enhance the functionality of the WarDragon system by integrating with DragonSync. 
+DragonLink is an iOS utility app designed to enhance the functionality of the WarDragon system by integrating with [DragonSync](https://github.com/alphafox02/DragonSync) and [DroneID](https://github.com/bkerler/DroneID). 
 
-This application facilitates seamless communication between your iOS device and the WarDragon platform, enabling real-time monitoring and control of Remote ID-compliant drones.
+None of this would be possible without them, and especially the devs of [Sniffle](https://github.com/nccgroup/Sniffle). 
 
 ## Features
+
+This application facilitates seamless communication between your iOS device and the WarDragon platform, enabling real-time monitoring and control of Remote ID-compliant drones.
 
 - **Real-Time Drone Monitoring**: Receive live updates on drone status and location directly on your iOS device.
 - **System Status Alerts**: Stay informed about the health and performance of your WarDragon system.
@@ -30,11 +34,11 @@ Once installed, launch DragonLink on your iOS device. Ensure that your device is
 
 ## Credits
 
-DragonLink is built upon the foundational work of DragonSync by [cemaxecuter](cemaxecuter.com).
+DragonLink is built upon the foundational work of DragonSync by [cemaxecuter](cemaxecuter.com). Check out his work here on GitHub: [@alphafox02](https://github.com/alphafox02)
 
 We extend our gratitude for their contributions to the open-source community, which have been instrumental in the development of this application.
 
-Disclaimer
+## Disclaimer
 
 > [!WARNING]
 > This software is provided as-is, without warranty of any kind. Use at your own risk.
