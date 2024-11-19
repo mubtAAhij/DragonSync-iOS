@@ -32,7 +32,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         // Process Basic ID and set type
         if let basicID = jsonData["Basic ID"] as? [String: Any],
            let id = basicID["id"] as? String {
-            let droneId = "drone-\(id)"
+            let droneId = "ESP32-\(id)" // TODO change back from ESP32 after tests
             
             // Set type based on ID type
             if let idType = basicID["id_type"] as? String {

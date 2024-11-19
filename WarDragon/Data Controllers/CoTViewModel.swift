@@ -118,73 +118,73 @@ class CoTViewModel: ObservableObject {
     }
 
     private func receiveMessages(from connection: NWConnection) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, isComplete, error in
-            if let error = error {
-                print("Error receiving data: \(error.localizedDescription)")
-                return
-            }
+       connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+           guard let self = self else { return }
+           
+           if let error = error {
+               print("Error receiving data: \(error.localizedDescription)")
+               self.receiveMessages(from: connection)
+               return
+           }
 
-            if let data = data, !data.isEmpty {
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("Received data: \(jsonString)")
-                    
-                    do {
-                        // Try to parse as JSON array first
-                        if let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-                            print("Successfully parsed JSON array")
-                            
-                            // Process each message in the array
-                            for jsonData in jsonArray {
-                                if jsonData["Basic ID"] != nil {
-                                    print("Processing ESP32 message from array")
-                                    let parser = CoTMessageParser()
-                                    if let parsedMessage = parser.parseESP32Message(jsonData) {
-                                        DispatchQueue.main.async {
-                                            print("Adding ESP32 message to parsed messages")
-                                            self.parsedMessages.append(parsedMessage)
-                                            self.sendNotification(for: parsedMessage)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // If not an array, try as single object
-                        else if let jsonData = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                            print("Successfully parsed JSON object")
-                            
-                            if jsonData["Basic ID"] != nil {
-                                print("Processing ESP32 message from object")
-                                let parser = CoTMessageParser()
-                                if let parsedMessage = parser.parseESP32Message(jsonData) {
-                                    DispatchQueue.main.async {
-                                        print("Adding ESP32 message to parsed messages")
-                                        self.parsedMessages.append(parsedMessage)
-                                        self.sendNotification(for: parsedMessage)
-                                    }
-                                }
-                            }
-                        }
-                    } catch {
-                        print("JSON parsing failed, trying XML: \(error)")
-                        // Try XML parsing if JSON fails
-                        let parser = XMLParser(data: data)
-                        let cotParserDelegate = CoTMessageParser()
-                        parser.delegate = cotParserDelegate
-                        
-                        if parser.parse(), let parsedMessage = cotParserDelegate.cotMessage {
-                            DispatchQueue.main.async {
-                                self.parsedMessages.append(parsedMessage)
-                                self.sendNotification(for: parsedMessage)
-                            }
-                        }
-                    }
-                }
-            }
-
-            if !isComplete {
-                self.receiveMessages(from: connection)
-            }
-        }
+           if let data = data, !data.isEmpty {
+               if let jsonString = String(data: data, encoding: .utf8) {
+                   print("Received data: \(jsonString)")
+                   
+                   do {
+                       if let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                           print("Successfully parsed JSON array")
+                           
+                           for jsonData in jsonArray {
+                               if jsonData["Basic ID"] != nil {
+                                   print("Processing ESP32 message from array")
+                                   let parser = CoTMessageParser()
+                                   if let parsedMessage = parser.parseESP32Message(jsonData) {
+                                       DispatchQueue.main.async {
+                                           print("Adding ESP32 message to parsed messages")
+                                           self.parsedMessages.append(parsedMessage)
+                                           self.sendNotification(for: parsedMessage)
+                                       }
+                                   }
+                               }
+                           }
+                       } else if let jsonData = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                           print("Successfully parsed JSON object")
+                           
+                           if jsonData["Basic ID"] != nil {
+                               print("Processing ESP32 message from object")
+                               let parser = CoTMessageParser()
+                               if let parsedMessage = parser.parseESP32Message(jsonData) {
+                                   DispatchQueue.main.async {
+                                       print("Adding ESP32 message to parsed messages")
+                                       self.parsedMessages.append(parsedMessage)
+                                       self.sendNotification(for: parsedMessage)
+                                   }
+                               }
+                           }
+                       }
+                   } catch {
+                       print("JSON parsing failed, trying XML: \(error)")
+                       let parser = XMLParser(data: data)
+                       let cotParserDelegate = CoTMessageParser()
+                       parser.delegate = cotParserDelegate
+                       
+                       if parser.parse(), let parsedMessage = cotParserDelegate.cotMessage {
+                           DispatchQueue.main.async {
+                               self.parsedMessages.append(parsedMessage)
+                               self.sendNotification(for: parsedMessage)
+                           }
+                       }
+                   }
+               }
+           }
+           
+           if !isComplete {
+               self.receiveMessages(from: connection)
+           } else {
+               self.receiveMessages(from: connection)
+           }
+       }
     }
     
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
