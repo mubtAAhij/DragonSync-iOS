@@ -180,9 +180,9 @@ class CoTViewModel: ObservableObject {
            }
            
            if !isComplete {
-               self.receiveMessages(from: connection)
+               self.receiveMessages(from: connection) // Continue receiving messages for incomplete state
            } else {
-               self.receiveMessages(from: connection)
+               connection.cancel() // Properly close the connection for complete state
            }
        }
     }
