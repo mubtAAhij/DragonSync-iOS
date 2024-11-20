@@ -22,17 +22,17 @@ class CoTViewModel: ObservableObject {
     }
     
     private func checkPermissions() {
-        // Check network permission
-        let listener = try? NWListener(using: .udp)
-        if listener == nil {
-            requestLocalNetworkPermission()
-        }
-        
         // Check notification permission
         UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
             if settings.authorizationStatus != .authorized {
                 self?.requestNotificationPermission()
             }
+        }
+        
+        // Check network permission
+        let listener = try? NWListener(using: .udp)
+        if listener == nil {
+            requestLocalNetworkPermission()
         }
     }
     
@@ -82,7 +82,7 @@ class CoTViewModel: ObservableObject {
         let parameters = NWParameters.udp
         parameters.allowLocalEndpointReuse = true
         parameters.prohibitedInterfaceTypes = [.cellular]
-        parameters.requiredInterfaceType = .wifi  // Set to the appropriate interface type
+        parameters.requiredInterfaceType = .wifi
 
         guard let port = NWEndpoint.Port(rawValue: self.port) else { return }
 
@@ -111,7 +111,7 @@ class CoTViewModel: ObservableObject {
         // Handle new connections
         self.listener?.newConnectionHandler = { connection in
             connection.start(queue: self.listenerQueue)
-            self.receiveMessages(from: connection)  // Start receiving messages
+            self.receiveMessages(from: connection)
         }
 
         self.listener?.start(queue: self.listenerQueue)
