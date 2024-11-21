@@ -8,58 +8,87 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var cotViewModel = CoTViewModel()
+    @StateObject private var statusViewModel = StatusViewModel()
+    @StateObject private var cotViewModel: CoTViewModel
     @State private var isListening = false
     @State private var showAlert = false
     @State private var latestMessage: CoTViewModel.CoTMessage?
+    @State private var selectedTab = 0
+    
+    init() {
+        let statusVM = StatusViewModel()
+        _statusViewModel = StateObject(wrappedValue: statusVM)
+        _cotViewModel = StateObject(wrappedValue: CoTViewModel(statusViewModel: statusVM))
+    }
     
     var body: some View {
-        NavigationStack {
-            VStack {
-                ScrollViewReader { proxy in
-                    List(cotViewModel.parsedMessages) { item in
-                        MessageRow(message: item, cotViewModel: cotViewModel)
-                    }
-                    .listStyle(.inset)
-                    .onChange(of: cotViewModel.parsedMessages) { _, messages in
-                        if let latest = messages.last {
-                            latestMessage = latest
-                            showAlert = false
-                            withAnimation {
-                                proxy.scrollTo(latest.id, anchor: .bottom)
+        TabView(selection: $selectedTab) {
+            NavigationStack {
+                VStack {
+                    ScrollViewReader { proxy in
+                        List(cotViewModel.parsedMessages) { item in
+                            MessageRow(message: item, cotViewModel: cotViewModel)
+                        }
+                        .listStyle(.inset)
+                        .onChange(of: cotViewModel.parsedMessages) { _, messages in
+                            if let latest = messages.last {
+                                latestMessage = latest
+                                showAlert = false
+                                withAnimation {
+                                    proxy.scrollTo(latest.id, anchor: .bottom)
+                                }
                             }
                         }
                     }
+                    
+                    Button(isListening ? "Stop Listening" : "Start Listening") {
+                        isListening.toggle()
+                        if isListening {
+                            cotViewModel.startListening()
+                        } else {
+                            cotViewModel.stopListening()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding()
                 }
-                
-                Button(isListening ? "Stop Listening" : "Start Listening") {
-                    isListening.toggle()
-                    if isListening {
-                        cotViewModel.startListening()
-                    } else {
-                        cotViewModel.stopListening()
+                .navigationTitle("DragonLink")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbarColorScheme(.dark, for: .navigationBar)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: { cotViewModel.parsedMessages.removeAll() }) {
+                            Image(systemName: "trash")
+                        }
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .padding()
-            }
-            .navigationTitle("DragonLink")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { cotViewModel.parsedMessages.removeAll() }) {
-                        Image(systemName: "trash")
+                .alert("New Message", isPresented: $showAlert) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    if let message = latestMessage {
+                        Text("From: \(message.uid)\nType: \(message.type)\nLocation: \(message.lat), \(message.lon)")
                     }
                 }
             }
-            .alert("New Message", isPresented: $showAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                if let message = latestMessage {
-                    Text("From: \(message.uid)\nType: \(message.type)\nLocation: \(message.lat), \(message.lon)")
-                }
+            .tabItem {
+                Label("Drones", systemImage: "airplane")
             }
+            .tag(0)
+            
+            NavigationStack {
+                StatusListView(statusViewModel: statusViewModel)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button(action: { statusViewModel.statusMessages.removeAll() }) {
+                                Image(systemName: "trash")
+                            }
+                        }
+                    }
+            }
+            .tabItem {
+                Label("Status", systemImage: "server.rack")
+            }
+            .tag(1)
         }
     }
 }
