@@ -111,7 +111,7 @@ class DroneMessageGenerator:
       lon = round(random.uniform(*self.lon_range), 6)
       
       message = {
-         "serial_number": f"DRAGON{random.randint(100,999)}",
+         "serial_number": f"DRAGON{random.randint(100,101)}",
          "runtime": runtime,
          "gps_data": {
             "latitude": lat,
