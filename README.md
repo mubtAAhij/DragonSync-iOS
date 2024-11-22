@@ -1,14 +1,12 @@
-# DragonLink
+# DragonSync iOS
 
 <img src="https://github.com/user-attachments/assets/e8a6a8ba-2fb1-4a65-b78b-c440a13fed48" alt="Dragon Logo" width="320">
 
-## Inspiration & Overview
-
-![image](https://github.com/user-attachments/assets/63f082e5-64b6-469c-9bc8-b98bc1ebc71a)
-
-DragonLink is an iOS utility app designed to enhance the functionality of the WarDragon system by integrating with [DragonSync](https://github.com/alphafox02/DragonSync) and [DroneID](https://github.com/bkerler/DroneID). 
+DragonSync is an iOS app designed to enhance the functionality of the WarDragon system by integrating with [DragonSync](https://github.com/alphafox02/DragonSync) and [DroneID](https://github.com/bkerler/DroneID). 
 
 None of this would be possible without them, and especially the devs of [Sniffle](https://github.com/nccgroup/Sniffle). 
+
+---
 
 ## Features
 
@@ -17,6 +15,20 @@ This application facilitates seamless communication between your iOS device and 
 - **Real-Time Drone Monitoring**: Receive live updates on drone status and location directly on your iOS device.
 - **System Status Alerts**: Stay informed about the health and performance of your WarDragon system.
 - **Seamless Integration**: Built to work effortlessly with DragonSync and the WarDragon platform.
+
+## Current Functionality
+
+- Display decoded DroneIDs from ESP32 & other hardware without TAK servers or intricate setup
+![image](https://github.com/user-attachments/assets/63f082e5-64b6-469c-9bc8-b98bc1ebc71a)
+
+![image](https://github.com/user-attachments/assets/1e4ebd30-01a2-4158-9422-4c65b21fa18b)
+
+
+- Monitor system status using the [DragonSync](https://github.com/alphafox02/DragonSync) `wardragon_monitor.py`
+   
+- The dedicated service port offers automatic UI updates and supports multiple systems:
+![image](https://github.com/user-attachments/assets/197d5703-90e2-4485-8af7-8bd6c46f44fb)
+
 
 ## Installation
 
@@ -30,7 +42,11 @@ git clone https://github.com/Root-Down-Digital/DragonLink.git
 
 ## Usage
 
-Once installed, launch DragonLink on your iOS device. Ensure that your device is connected to the same network as your WarDragon system. The app will automatically detect and connect to the system, providing you with real-time data and control options.
+- Once installed, launch DragonSync on your iOS device. Ensure that your device is connected to the same network as your WarDragon system.
+
+- Launch the scripts from DragonSync to start the monitor and broadcast. (Specific commands to follow after testing is complete). 
+
+- The app will automatically detect and connect to the system when you select Start Listening, providing you with real-time CoT data and status updates.
 
 ## Credits
 
