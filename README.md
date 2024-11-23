@@ -1,6 +1,10 @@
 # DragonSync iOS
 
-<img src="https://github.com/user-attachments/assets/e8a6a8ba-2fb1-4a65-b78b-c440a13fed48" alt="Dragon Logo" width="320">
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/35f7de98-7256-467d-a983-6eed49e90796" alt="Dragon Logo" width="220">
+</p>
+
+
 
 DragonSync is an iOS app designed to enhance the functionality of the WarDragon system by integrating with [DragonSync](https://github.com/alphafox02/DragonSync) and [DroneID](https://github.com/bkerler/DroneID). 
 
