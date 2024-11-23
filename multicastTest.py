@@ -22,11 +22,12 @@ class DroneMessageGenerator:
       time_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
       stale = (now + timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
       return time_str, time_str, stale
+
    def generate_original_format(self):
       time_str, start_str, stale_str = self.get_timestamps()
       lat = round(random.uniform(*self.lat_range), 4)
       lon = round(random.uniform(*self.lon_range), 4)
-      drone_id = f"DRONE{random.randint(100,999)}"
+      drone_id = f"DRONE{random.randint(100,103)}"  # Only use 4 possible drones
       
       # Random drone type generation
       base_type = "a-f-G"
@@ -65,13 +66,16 @@ class DroneMessageGenerator:
    def generate_esp32_format(self):
       runtime = int(time.time() - self.start_time)
       
-      # Random ID type
+      # Fixed set of ID types for consistency
       id_types = [
          "Serial Number (ANSI/CTA-2063-A)",
          "CAA Registration ID", 
          "UTM (USS) Assigned ID",
          "Operator ID"
       ]
+      
+      # Use consistent drone IDs
+      drone_id = f"DRONE{random.randint(100,103)}"  # Only use 4 possible drones
       
       if random.random() < 0.1:
          lat, lon = 0.000000, 0.000000
@@ -83,7 +87,7 @@ class DroneMessageGenerator:
          "index": self.msg_index,
          "runtime": runtime,
          "Basic ID": {
-            "id": "NONE",
+            "id": drone_id,  # Use the consistent drone ID instead of "NONE"
             "id_type": random.choice(id_types)
          },
          "Location/Vector Message": {
@@ -95,7 +99,7 @@ class DroneMessageGenerator:
             "height_agl": 0 if lat == 0 else round(random.uniform(20, 200), 1)
          },
          "Self-ID Message": {
-            "text": "UAV NONE operational"
+            "text": f"UAV {drone_id} operational"  # Include drone ID in description
          },
          "System Message": {
             "latitude": 0.000000 if lat == 0 else round(lat + random.uniform(-0.001, 0.001), 6),
@@ -110,30 +114,55 @@ class DroneMessageGenerator:
       lat = round(random.uniform(*self.lat_range), 6)
       lon = round(random.uniform(*self.lon_range), 6)
       
+      # Calculate disk usage first
+      total_disk = 68719476736  # 64GB
+      used_disk = round(random.uniform(0, total_disk))
+      free_disk = total_disk - used_disk
+      disk_percent = (used_disk / total_disk) * 100
+      
+      # Calculate memory usage
+      total_memory = 8589934592  # 8GB in bytes
+      available_memory = round(random.uniform(2147483648, total_memory))
+      used_memory = total_memory - available_memory
+      memory_percent = (used_memory / total_memory) * 100  # Fixed from used_disk/total_disk
+      
       message = {
          "serial_number": f"DRAGON{random.randint(100,101)}",
-         "runtime": runtime,
+         "timestamp": runtime,
          "gps_data": {
             "latitude": lat,
             "longitude": lon,
-            "altitude": round(random.uniform(0, 100), 1)
+            "altitude": round(random.uniform(0, 100), 1),
+            "speed": round(random.uniform(0, 30), 1)
          },
          "system_stats": {
             "cpu_usage": round(random.uniform(0, 100), 1),
             "memory": {
-               "total": 8589934592,  # 8GB in bytes
-               "available": round(random.uniform(2147483648, 8589934592))  # 2-8GB
+               "total": total_memory,
+               "available": available_memory,
+               "percent": round(memory_percent, 1),
+               "used": used_memory,
+               "free": available_memory,
+               "active": round(used_memory * 0.6),
+               "inactive": round(used_memory * 0.4),
+               "buffers": round(available_memory * 0.1),
+               "cached": round(available_memory * 0.3),
+               "shared": round(used_memory * 0.2),
+               "slab": round(used_memory * 0.1)
             },
             "disk": {
-               "total": 68719476736,  # 64GB
-               "used": round(random.uniform(0, 68719476736))
+               "total": total_disk,
+               "used": used_disk,
+               "free": free_disk,
+               "percent": round(disk_percent, 1)
             },
-            "temperature": round(random.uniform(30, 70), 1),
+            "temperature": str(round(random.uniform(30, 70), 1)),
             "uptime": runtime
          }
       }
       return json.dumps(message)
-   
+
+
 def clear_screen():
    os.system('cls' if os.name == 'nt' else 'clear')
    

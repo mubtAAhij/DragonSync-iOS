@@ -91,25 +91,49 @@ class DroneMessageGenerator:
         lat = round(random.uniform(*self.lat_range), 6)
         lon = round(random.uniform(*self.lon_range), 6)
         
+        # Calculate disk usage first
+        total_disk = 68719476736  # 64GB
+        used_disk = round(random.uniform(0, total_disk))
+        free_disk = total_disk - used_disk
+        disk_percent = (used_disk / total_disk) * 100
+        
+        # Calculate memory usage
+        total_memory = 8589934592  # 8GB in bytes
+        available_memory = round(random.uniform(2147483648, total_memory))
+        used_memory = total_memory - available_memory
+        memory_percent = (used_memory / total_memory) * 100  # Fixed from used_disk/total_disk
+        
         message = {
             "serial_number": f"DRAGON{random.randint(100,101)}",
-            "runtime": runtime,
+            "timestamp": runtime,
             "gps_data": {
                 "latitude": lat,
                 "longitude": lon,
-                "altitude": round(random.uniform(0, 100), 1)
+                "altitude": round(random.uniform(0, 100), 1),
+                "speed": round(random.uniform(0, 30), 1)
             },
             "system_stats": {
                 "cpu_usage": round(random.uniform(0, 100), 1),
                 "memory": {
-                    "total": 8589934592,
-                    "available": round(random.uniform(2147483648, 8589934592))
+                    "total": total_memory,
+                    "available": available_memory,
+                    "percent": round(memory_percent, 1),
+                    "used": used_memory,
+                    "free": available_memory,
+                    "active": round(used_memory * 0.6),
+                    "inactive": round(used_memory * 0.4),
+                    "buffers": round(available_memory * 0.1),
+                    "cached": round(available_memory * 0.3),
+                    "shared": round(used_memory * 0.2),
+                    "slab": round(used_memory * 0.1)
                 },
                 "disk": {
-                    "total": 68719476736,
-                    "used": round(random.uniform(0, 68719476736))
+                    "total": total_disk,
+                    "used": used_disk,
+                    "free": free_disk,
+                    "percent": round(disk_percent, 1)
                 },
-                "temperature": round(random.uniform(30, 70), 1),
+                "temperature": str(round(random.uniform(30, 70), 1)),
                 "uptime": runtime
             }
         }
@@ -198,3 +222,4 @@ if __name__ == "__main__":
         print("\n\n👋 Program terminated by user")
     except Exception as e:
         print(f"\n❌ An error occurred: {e}")
+        

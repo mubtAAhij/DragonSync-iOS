@@ -20,7 +20,7 @@ class CoTViewModel: ObservableObject {
     private var statusViewModel = StatusViewModel()
 
     struct CoTMessage: Identifiable, Equatable {
-        let id = UUID()
+        var id: String { uid }
         var uid: String
         var type: String
         var lat: String
@@ -188,7 +188,7 @@ class CoTViewModel: ObservableObject {
                                 } catch {
                                     print("JSON Parsing error: \(error)")
                                 }
-                            }
+                              }
                         }
                     }
                 }
