@@ -56,10 +56,6 @@ class CoTViewModel: ObservableObject {
             }
         }
         
-        let listener = try? NWListener(using: .udp)
-        if listener == nil {
-            requestLocalNetworkPermission()
-        }
     }
     
     private func requestNotificationPermission() {
@@ -69,12 +65,6 @@ class CoTViewModel: ObservableObject {
                 print("Notification permission error: \(error.localizedDescription)")
             }
         }
-    }
-    
-    private func requestLocalNetworkPermission() {
-        let listener = try? NWListener(using: .udp)
-        listener?.start(queue: .main)
-        listener?.cancel()
     }
 
     func startListening() {
