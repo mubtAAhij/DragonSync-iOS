@@ -14,10 +14,11 @@ class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
     private var cotListener: NWListener?
     private var statusListener: NWListener?
-    private let cotPort: UInt16 = 4224
+    private let cotPort: UInt16 = 6969
     private let statusPort: UInt16 = 4225
     private let listenerQueue = DispatchQueue(label: "CoTListenerQueue")
     private var statusViewModel = StatusViewModel()
+    public var isListeningCot = false
 
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
@@ -78,6 +79,7 @@ class CoTViewModel: ObservableObject {
 
     func startListening() {
         stopListening()
+        isListeningCot = true
 
         let parameters = NWParameters.udp
         parameters.allowLocalEndpointReuse = true
@@ -210,6 +212,7 @@ class CoTViewModel: ObservableObject {
     }
 
     func stopListening() {
+        isListeningCot = false
         cotListener?.cancel()
         statusListener?.cancel()
         cotListener = nil

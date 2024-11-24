@@ -7,7 +7,7 @@ import struct
 from datetime import datetime, timezone, timedelta
 
 MULTICAST_GROUP = '224.0.0.1'
-COT_PORT = 4224
+COT_PORT = 6969
 STATUS_PORT = 4225
 
 class DroneMessageGenerator:
