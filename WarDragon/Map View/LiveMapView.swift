@@ -26,13 +26,23 @@ struct LiveMapView: View {
         ))
     }
     
+    // Add computed property for unique drones
+    private var uniqueDrones: [CoTViewModel.CoTMessage] {
+        var latestDronePositions: [String: CoTViewModel.CoTMessage] = [:]
+        for message in cotViewModel.parsedMessages {
+            latestDronePositions[message.uid] = message
+        }
+        return Array(latestDronePositions.values)
+    }
+    
     var body: some View {
         ZStack {
             Map {
-                ForEach(cotViewModel.parsedMessages) { message in
+                // Use uniqueDrones instead of parsedMessages
+                ForEach(uniqueDrones) { message in
                     if let coordinate = message.coordinate {
                         Marker(message.uid, coordinate: coordinate)
-                            .tint(message.uid == cotViewModel.parsedMessages.last?.uid ? .red : .blue)
+                            .tint(message.uid == uniqueDrones.last?.uid ? .red : .blue)
                     }
                 }
             }
@@ -40,9 +50,9 @@ struct LiveMapView: View {
             VStack {
                 Spacer()
                 
-                // Drone count button
+                // Update count to use uniqueDrones
                 Button(action: { showDroneList.toggle() }) {
-                    Text("\(cotViewModel.parsedMessages.count) Drones")
+                    Text("\(uniqueDrones.count) Drones")
                         .padding()
                         .background(.ultraThinMaterial)
                         .cornerRadius(20)
@@ -52,7 +62,8 @@ struct LiveMapView: View {
         }
         .sheet(isPresented: $showDroneList) {
             NavigationView {
-                List(cotViewModel.parsedMessages) { message in
+                // Update list to use uniqueDrones
+                List(uniqueDrones) { message in
                     VStack(alignment: .leading) {
                         Text(message.uid)
                             .font(.headline)
@@ -73,7 +84,8 @@ struct LiveMapView: View {
             .presentationDetents([.medium])
         }
         .onReceive(timer) { _ in
-            if let latestMessage = cotViewModel.parsedMessages.last,
+            // Update to use uniqueDrones for latest position
+            if let latestMessage = uniqueDrones.last,
                let lat = Double(latestMessage.lat),
                let lon = Double(latestMessage.lon) {
                 withAnimation {
