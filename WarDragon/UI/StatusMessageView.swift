@@ -204,16 +204,15 @@ struct SystemStatsView: View {
                     color: gaugeColor(for: stats.cpuUsage)
                 )
                 
-                if stats.temperature != "N/A" {
-                    if let temp = Double(stats.temperature) {
-                        CircularGauge(
-                            value: temp,
-                            maxValue: 100,
-                            title: "TEMP",
-                            unit: "°C",
-                            color: temperatureColor(temp)
-                        )
-                    }
+                // Just show temperature if it's above zero
+                if stats.temperature > 0 {
+                    CircularGauge(
+                        value: stats.temperature,
+                        maxValue: 100,
+                        title: "TEMP",
+                        unit: "°C",
+                        color: temperatureColor(stats.temperature)
+                    )
                 }
             }
             

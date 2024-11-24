@@ -43,7 +43,7 @@ struct ContentView: View {
                         }
                     }
                 }
-                .navigationTitle("DragonLink")
+                .navigationTitle("DragonSync")
                 .navigationBarTitleDisplayMode(.large)
                 .toolbarColorScheme(.dark, for: .navigationBar)
                 .toolbar {

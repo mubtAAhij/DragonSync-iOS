@@ -14,12 +14,12 @@ class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
     private var cotListener: NWListener?
     private var statusListener: NWListener?
-    private let cotPort: UInt16 = 6969
-    private let statusPort: UInt16 = 4225
+    private let cotPortMC: UInt16 = 6969
+    private let statusPortZMQ: UInt16 = 4225
     private let listenerQueue = DispatchQueue(label: "CoTListenerQueue")
     private var statusViewModel = StatusViewModel()
     public var isListeningCot = false
-
+    
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
         var uid: String
@@ -43,7 +43,7 @@ class CoTViewModel: ObservableObject {
             return CLLocationCoordinate2D(latitude: latDouble, longitude: lonDouble)
         }
     }
-
+    
     init(statusViewModel: StatusViewModel) {
         self.statusViewModel = statusViewModel
         self.checkPermissions()
@@ -66,34 +66,27 @@ class CoTViewModel: ObservableObject {
             }
         }
     }
-
+    
     func startListening() {
         stopListening()
         isListeningCot = true
-
+        
         let parameters = NWParameters.udp
         parameters.allowLocalEndpointReuse = true
         parameters.prohibitedInterfaceTypes = [.cellular]
         parameters.requiredInterfaceType = .wifi
-
-        // Start both listeners
-        [cotPort, statusPort].forEach { port in
-            if let nwPort = NWEndpoint.Port(rawValue: port) {
-                do {
-                    let listener = try NWListener(using: parameters, on: nwPort)
-                    if port == cotPort {
-                        self.cotListener = listener
-                    } else {
-                        self.statusListener = listener
-                    }
-                    setupListener(listener, port: port)
-                } catch let error {
-                    print("Failed to create listener on port \(port): \(error.localizedDescription)")
-                }
+        
+        // Start CoT multicast listener
+        if let nwPort = NWEndpoint.Port(rawValue: cotPortMC) {
+            do {
+                let listener = try NWListener(using: parameters, on: nwPort)
+                setupListener(listener, port: cotPortMC)
+            } catch let error {
+                print("Failed to create listener on port \(cotPortMC): \(error.localizedDescription)")
             }
         }
     }
-
+    
     private func setupListener(_ listener: NWListener?, port: UInt16) {
         listener?.stateUpdateHandler = { state in
             DispatchQueue.main.async {
@@ -109,90 +102,113 @@ class CoTViewModel: ObservableObject {
                 }
             }
         }
-
+        
         listener?.newConnectionHandler = { [weak self] connection in
             connection.start(queue: self?.listenerQueue ?? .main)
-            
-            // Determine the type based on the port
-            let type = (port == self?.cotPort) ? "CoT" : "Status"
-            self?.receiveMessages(from: connection, type: type)
+            self?.receiveMessages(from: connection)  // Removed type parameter
         }
-
+        
         listener?.start(queue: self.listenerQueue)
     }
+    
+    private func receiveMessages(from connection: NWConnection) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+            guard let self = self else { return }
 
-
-    private func receiveMessages(from connection: NWConnection, type: String) {
-            connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("Error receiving data: \(error.localizedDescription)")
-                    self.receiveMessages(from: connection, type: type)
-                    return
-                }
-
-                if let data = data, !data.isEmpty {
-                    if let message = String(data: data, encoding: .utf8) {
-                        print("Received data: \(message)")
-                        
-                        if type == "Status" {
-                            self.statusViewModel.handleStatusMessage(message)
-                        } else {
-                            // Check if it's XML first
-                            if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
-                                let parser = XMLParser(data: data)
-                                let cotParserDelegate = CoTMessageParser()
-                                parser.delegate = cotParserDelegate
-                                
-                                if parser.parse(), let parsedMessage = cotParserDelegate.cotMessage {
-                                    DispatchQueue.main.async {
-                                        self.parsedMessages.append(parsedMessage)
-                                        self.sendNotification(for: parsedMessage)
-                                    }
-                                }
-                            } else {
-                                // Try JSON parsing if it's not XML
-                                do {
-                                    if let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-                                        for jsonData in jsonArray {
-                                            if jsonData["Basic ID"] != nil {
-                                                let parser = CoTMessageParser()
-                                                if let parsedMessage = parser.parseESP32Message(jsonData) {
-                                                    DispatchQueue.main.async {
-                                                        self.parsedMessages.append(parsedMessage)
-                                                        self.sendNotification(for: parsedMessage)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } else if let jsonData = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                                        if jsonData["Basic ID"] != nil {
-                                            let parser = CoTMessageParser()
-                                            if let parsedMessage = parser.parseESP32Message(jsonData) {
-                                                DispatchQueue.main.async {
-                                                    self.parsedMessages.append(parsedMessage)
-                                                    self.sendNotification(for: parsedMessage)
-                                                }
-                                            }
-                                        }
-                                    }
-                                } catch {
-                                    print("JSON Parsing error: \(error)")
-                                }
-                              }
-                        }
-                    }
-                }
-                
-                if !isComplete {
-                    self.receiveMessages(from: connection, type: type)
+            defer {
+                if !isComplete && self.isListeningCot {
+                    self.receiveMessages(from: connection)
                 } else {
                     connection.cancel()
                 }
             }
-        }
 
+            if let error = error {
+                print("Error receiving data: \(error.localizedDescription)")
+                return
+            }
+
+            guard let data = data, !data.isEmpty else {
+                print("No data received.")
+                return
+            }
+
+            if let message = String(data: data, encoding: .utf8) {
+                print("Received data: \(message)")
+
+                // Check if it's a Status message
+                if let jsonData = message.data(using: .utf8),
+                   let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+                   parsedJson["serial_number"] != nil,
+                   parsedJson["gps_data"] != nil,
+                   parsedJson["system_stats"] != nil {
+                    print("Processing as Status message")
+                    DispatchQueue.main.async {
+                        self.statusViewModel.handleStatusMessage(message) // Directly use `handleStatusMessage`
+                    }
+                    return
+                }
+
+                // Check if it's a Drone message
+                if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{"),
+                   let jsonData = message.data(using: .utf8),
+                   let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+                   parsedJson["Basic ID"] != nil {
+                    print("Processing as ESP32 Drone message")
+                    let parser = CoTMessageParser()
+                    if let parsedMessage = parser.parseESP32Message(parsedJson) {
+                        DispatchQueue.main.async {
+                            self.updateMessage(parsedMessage)
+                        }
+                    }
+                    return
+                }
+
+                // Attempt XML parsing if JSON doesn't match any known structures
+                if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
+                    print("Processing as XML Drone message")
+                    let parser = XMLParser(data: data)
+                    let cotParserDelegate = CoTMessageParser()
+                    parser.delegate = cotParserDelegate
+
+                    if parser.parse(), let parsedMessage = cotParserDelegate.cotMessage {
+                        DispatchQueue.main.async {
+                            self.updateMessage(parsedMessage)
+                        }
+                    } else {
+                        print("Failed to parse XML.")
+                    }
+                    return
+                }
+
+                print("Unrecognized message format.")
+            }
+        
+        
+            if !isComplete {
+                self.receiveMessages(from: connection)
+            } else {
+                connection.cancel()
+            }
+        }
+    }
+
+    
+    private func updateMessage(_ message: CoTMessage) {
+        DispatchQueue.main.async {
+            if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
+                // Update existing message
+                self.parsedMessages[index] = message
+                print("Updated existing drone: \(message.uid)")
+            } else {
+                // Add new message
+                self.parsedMessages.append(message)
+                print("Added new drone: \(message.uid)")
+                self.sendNotification(for: message)
+            }
+        }
+    }
+    
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
         let content = UNMutableNotificationContent()
         content.title = "New CoT Message"
@@ -200,15 +216,16 @@ class CoTViewModel: ObservableObject {
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
-
+    
     func stopListening() {
         isListeningCot = false
         cotListener?.cancel()
         statusListener?.cancel()
         cotListener = nil
         statusListener = nil
+        print("Listeners stopped and ports released.")
     }
-
+    
     func resetListener() {
         stopListening()
         parsedMessages.removeAll()

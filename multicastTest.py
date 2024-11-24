@@ -110,58 +110,46 @@ class DroneMessageGenerator:
       return json.dumps(message)
    
    def generate_status_message(self):
-      runtime = int(time.time() - self.start_time)
-      lat = round(random.uniform(*self.lat_range), 6)
-      lon = round(random.uniform(*self.lon_range), 6)
+      runtime = time.time() - self.start_time  # Use actual timestamp not runtime
       
-      # Calculate disk usage first
-      total_disk = 68719476736  # 64GB
-      used_disk = round(random.uniform(0, total_disk))
-      free_disk = total_disk - used_disk
-      disk_percent = (used_disk / total_disk) * 100
-      
-      # Calculate memory usage
-      total_memory = 8589934592  # 8GB in bytes
-      available_memory = round(random.uniform(2147483648, total_memory))
-      used_memory = total_memory - available_memory
-      memory_percent = (used_memory / total_memory) * 100  # Fixed from used_disk/total_disk
+      # MAC-style serial number to match DragonSync
+      mac_serial = ''.join([random.choice('0123456789abcdef') for _ in range(12)])
       
       message = {
-         "serial_number": f"DRAGON{random.randint(100,101)}",
-         "timestamp": runtime,
+         "timestamp": runtime,  # Direct timestamp
          "gps_data": {
-            "latitude": lat,
-            "longitude": lon,
+            "latitude": round(random.uniform(*self.lat_range), 6),
+            "longitude": round(random.uniform(*self.lon_range), 6),
             "altitude": round(random.uniform(0, 100), 1),
             "speed": round(random.uniform(0, 30), 1)
          },
+         "serial_number": mac_serial,  # MAC format like "8447091c1561"
          "system_stats": {
-            "cpu_usage": round(random.uniform(0, 100), 1),
+            "cpu_usage": round(random.uniform(0, 5), 1),  # Lower CPU values like shown
             "memory": {
-               "total": total_memory,
-               "available": available_memory,
-               "percent": round(memory_percent, 1),
-               "used": used_memory,
-               "free": available_memory,
-               "active": round(used_memory * 0.6),
-               "inactive": round(used_memory * 0.4),
-               "buffers": round(available_memory * 0.1),
-               "cached": round(available_memory * 0.3),
-               "shared": round(used_memory * 0.2),
-               "slab": round(used_memory * 0.1)
+               "total": 8054636544,  # Exact values from image
+               "available": 3868450816,
+               "percent": 52.0,
+               "used": 3007385600,
+               "free": 1158946816,
+               "active": 3558670336,
+               "inactive": 2120343552,
+               "buffers": 406798336,
+               "cached": 3481505792,
+               "shared": 698163200,
+               "slab": 483831808
             },
             "disk": {
-               "total": total_disk,
-               "used": used_disk,
-               "free": free_disk,
-               "percent": round(disk_percent, 1)
+               "total": 250375438336,  # Match exact disk values
+               "used": 87526760448,
+               "free": 150055772160,
+               "percent": 36.8
             },
-            "temperature": str(round(random.uniform(30, 70), 1)),
+            "temperature": 34.0,  # Number not string
             "uptime": runtime
          }
       }
       return json.dumps(message)
-
 
 def clear_screen():
    os.system('cls' if os.name == 'nt' else 'clear')
@@ -231,7 +219,8 @@ def main_menu():
                   
                if choice in ['3', '4']:
                   message = generator.generate_status_message()
-                  status_sock.sendto(message.encode(), (MULTICAST_GROUP, STATUS_PORT))
+                  # Change this line - it should go to COT_PORT now that everything is multicast
+                  cot_sock.sendto(message.encode(), (MULTICAST_GROUP, COT_PORT))  # Changed from STATUS_PORT
                   print(f"📡 Sent Status message at {time.strftime('%H:%M:%S')}")
                   print(message + "\n")
                   
@@ -252,3 +241,4 @@ if __name__ == "__main__":
       print("\n\n👋 Program terminated by user")
    except Exception as e:
       print(f"\n❌ An error occurred: {e}")
+      

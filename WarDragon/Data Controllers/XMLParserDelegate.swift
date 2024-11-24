@@ -115,7 +115,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
 
     func parser(_ parser: XMLParser, foundCharacters string: String) {
         if currentElement == "message" {
-            messageContent += string  // Preserve formatting for JSON
+            messageContent += string
         } else {
             currentValue += string.trimmingCharacters(in: .whitespacesAndNewlines)
         }

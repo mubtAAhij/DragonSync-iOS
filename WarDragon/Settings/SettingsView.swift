@@ -66,14 +66,14 @@ struct SettingsView: View {
             
             Section("Ports") {
                 HStack {
-                    Text("Messages")
+                    Text("CoT Messages")
                     Spacer()
                     Text(verbatim: String(settings.telemetryPort))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
                 HStack {
-                    Text("Status")
+                    Text("ZMQ Status")
                     Spacer()
                     Text(verbatim: String(settings.statusPort))
                         .foregroundStyle(.secondary)
@@ -129,7 +129,7 @@ struct SettingsView: View {
             if cotHandler.isListeningCot {
                 return "Connected"
             } else {
-                return "Listening..."  // Changed from "Waiting for data..."
+                return "Listening..."
             }
         } else {
             return "Disconnected"

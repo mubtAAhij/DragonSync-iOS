@@ -34,7 +34,7 @@ class StatusViewModel: ObservableObject {
             var cpuUsage: Double
             var memory: MemoryStats
             var disk: DiskStats
-            var temperature: String  // Changed to String for "N/A" support
+            var temperature: Double
             var uptime: Double
             
             struct MemoryStats {
@@ -64,6 +64,7 @@ class StatusViewModel: ObservableObject {
         if let data = message.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             
+            // Match the dragonsync.py output here for tests
             guard let serialNumber = json["serial_number"] as? String,
                   let timestamp = json["timestamp"] as? Double,
                   let gpsData = json["gps_data"] as? [String: Any],
@@ -75,13 +76,13 @@ class StatusViewModel: ObservableObject {
                   let cpuUsage = systemStats["cpu_usage"] as? Double,
                   let memory = systemStats["memory"] as? [String: Any],
                   let disk = systemStats["disk"] as? [String: Any],
-                  let temperature = systemStats["temperature"] as? String,  // Handle "N/A"
+                  let temperature = systemStats["temperature"] as? Double,
                   let uptime = systemStats["uptime"] as? Double else {
                 print("Failed to parse status message fields")
                 return
             }
             
-            // Parse detailed memory stats
+            // Parse memory details
             guard let memTotal = memory["total"] as? Int64,
                   let memAvailable = memory["available"] as? Int64,
                   let memPercent = memory["percent"] as? Double,
@@ -97,7 +98,7 @@ class StatusViewModel: ObservableObject {
                 return
             }
             
-            // Parse disk stats
+            // Parse disk details
             guard let diskTotal = disk["total"] as? Int64,
                   let diskUsed = disk["used"] as? Int64,
                   let diskFree = disk["free"] as? Int64,
