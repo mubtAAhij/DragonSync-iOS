@@ -90,22 +90,22 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 if parts.count == 2 {
                     let value = String(parts[1])
                     switch parts[0] {
-                        case "CPU Usage":
-                            cpuUsage = Double(value.replacingOccurrences(of: "%", with: "")) ?? 0.0
-                        case "Memory Total":
-                            memTotal = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
-                        case "Memory Available":
-                            memAvailable = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
-                        case "Disk Total":
-                            diskTotal = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
-                        case "Disk Used":
-                            diskUsed = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
-                        case "Temperature":
-                            temperature = Double(value.replacingOccurrences(of: "°C", with: "")) ?? 0.0
-                        case "Uptime":
-                            uptime = Double(value.replacingOccurrences(of: " seconds", with: "")) ?? 0.0
-                        default:
-                            break
+                    case "CPU Usage":
+                        cpuUsage = Double(value.replacingOccurrences(of: "%", with: "")) ?? 0.0
+                    case "Memory Total":
+                        memTotal = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
+                    case "Memory Available":
+                        memAvailable = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
+                    case "Disk Total":
+                        diskTotal = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
+                    case "Disk Used":
+                        diskUsed = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
+                    case "Temperature":
+                        temperature = Double(value.replacingOccurrences(of: "°C", with: "")) ?? 0.0
+                    case "Uptime":
+                        uptime = Double(value.replacingOccurrences(of: " seconds", with: "")) ?? 0.0
+                    default:
+                        break
                     }
                 }
             }
@@ -182,6 +182,12 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 let lat = pointAttributes["lat"] ?? "0.0"
                 let lon = pointAttributes["lon"] ?? "0.0"
                 
+                // Validate location before alerting
+                if lat == "0.0" || lon == "0.0" {
+                    print("Discarding XML drone message with zero coordinates")
+                    return
+                }
+
                 cotMessage = CoTViewModel.CoTMessage(
                     uid: eventAttributes["uid"] ?? "",
                     type: eventAttributes["type"] ?? "",
@@ -226,6 +232,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             if let location = jsonData["Location/Vector Message"] as? [String: Any] {
                 lat = String(describing: location["latitude"] ?? "0.0")
                 lon = String(describing: location["longitude"] ?? "0.0")
+                
+                // Ditch messages with zero location
+                if lat == "0.0" || lon == "0.0" {
+                    print("Discarding XML drone message with zero coordinates")
+                    return nil
+                }
+                
                 speed = String(describing: location["speed"] ?? "0.0")
                 vspeed = String(describing: location["vert_speed"] ?? "0.0")
                 alt = String(describing: location["geodetic_altitude"] ?? "0.0")
