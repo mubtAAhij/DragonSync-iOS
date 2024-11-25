@@ -32,7 +32,7 @@ class Settings: ObservableObject {
     @AppStorage("zmqHost") private(set) var zmqHost: String = "0.0.0.0"
     @AppStorage("multicastHost") private(set) var multicastHost: String = "239.3.2.1"
     @AppStorage("notificationsEnabled") private(set) var notificationsEnabled = true
-    @AppStorage("keepScreenOn") private(set) var keepScreenOn = true
+    @AppStorage("keepScreenOn") private(set) var keepScreenOn = false
     @AppStorage("telemetryPort") private(set) var telemetryPort: Int = 6969
     @AppStorage("statusPort") private(set) var statusPort: Int = 4225
     @AppStorage("isListening") private(set) var isListening = false
