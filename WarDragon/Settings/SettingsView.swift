@@ -44,11 +44,15 @@ struct SettingsView: View {
                     ))
                     .textContentType(.URL)
                     .autocapitalization(.none)
+                    .disabled(settings.isListening)
                 } else {
                     TextField("Multicast Host", text: .init(
                         get: { settings.multicastHost },
                         set: { settings.updateConnection(mode: settings.connectionMode, host: $0) }
                     ))
+                    .textContentType(.URL)
+                    .autocapitalization(.none)
+                    .disabled(settings.isListening)
                 }
                 
                 Toggle("Active", isOn: .init(
