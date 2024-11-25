@@ -24,6 +24,16 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private var currentValue = ""
     private var messageContent = ""
     private var remarks = ""
+    private var cpuUsage: Double = 0.0
+    private var memoryTotal: Double = 0.0
+    private var memoryAvailable: Double = 0.0
+    private var memoryUsed: Double = 0.0
+    private var memoryPercent: Double = 0.0
+    private var diskTotal: Double = 0.0
+    private var diskUsed: Double = 0.0
+    private var diskPercent: Double = 0.0
+    private var temperature: Double = 0.0
+    private var uptime: Double = 0.0
     
     var cotMessage: CoTViewModel.CoTMessage?
     var statusMessage: StatusViewModel.StatusMessage?
@@ -69,51 +79,15 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     
     // MARK: - Message Handlers
     private func handleStatusMessage(_ elementName: String) {
-        if elementName == "event" {
+        switch elementName {
+        case "remarks":
+            parseRemarks(remarks)
+        case "event":
             let serialNumber = eventAttributes["uid"] ?? "unknown"
             let lat = Double(pointAttributes["lat"] ?? "0.0") ?? 0.0
             let lon = Double(pointAttributes["lon"] ?? "0.0") ?? 0.0
             let altitude = Double(pointAttributes["hae"] ?? "0.0") ?? 0.0
-            
-            // Parse remarks for system stats
-            let components = remarks.components(separatedBy: ", ")
-            var cpuUsage = 0.0
-            var memTotal: Int64 = 0
-            var memAvailable: Int64 = 0
-            var diskTotal: Int64 = 0
-            var diskUsed: Int64 = 0
-            var temperature = 0.0
-            var uptime = 0.0
-            
-            for component in components {
-                let parts = component.split(separator: ": ")
-                if parts.count == 2 {
-                    let value = String(parts[1])
-                    switch parts[0] {
-                    case "CPU Usage":
-                        cpuUsage = Double(value.replacingOccurrences(of: "%", with: "")) ?? 0.0
-                    case "Memory Total":
-                        memTotal = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
-                    case "Memory Available":
-                        memAvailable = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
-                    case "Disk Total":
-                        diskTotal = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
-                    case "Disk Used":
-                        diskUsed = Int64(Double(value.replacingOccurrences(of: " MB", with: "")) ?? 0.0 * 1024 * 1024)
-                    case "Temperature":
-                        temperature = Double(value.replacingOccurrences(of: "°C", with: "")) ?? 0.0
-                    case "Uptime":
-                        uptime = Double(value.replacingOccurrences(of: " seconds", with: "")) ?? 0.0
-                    default:
-                        break
-                    }
-                }
-            }
-            
-            let memUsed = memTotal - memAvailable
-            let memPercent = (Double(memUsed) / Double(memTotal)) * 100.0
-            let diskPercent = (Double(diskUsed) / Double(diskTotal)) * 100.0
-            
+
             statusMessage = StatusViewModel.StatusMessage(
                 serialNumber: serialNumber,
                 timestamp: uptime,
@@ -126,31 +100,58 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 systemStats: .init(
                     cpuUsage: cpuUsage,
                     memory: .init(
-                        total: memTotal,
-                        available: memAvailable,
-                        percent: memPercent,
-                        used: memUsed,
-                        free: memAvailable,
-                        active: memUsed * 6 / 10,
-                        inactive: memUsed * 4 / 10,
-                        buffers: memAvailable / 10,
-                        cached: memAvailable * 3 / 10,
-                        shared: memUsed * 2 / 10,
-                        slab: memUsed / 10
+                        total: Int64(memoryTotal * 1024 * 1024),
+                        available: Int64(memoryAvailable * 1024 * 1024),
+                        percent: memoryPercent,
+                        used: Int64(memoryUsed * 1024 * 1024),
+                        free: Int64(memoryAvailable * 1024 * 1024),
+                        active: Int64(memoryUsed * 0.6 * 1024 * 1024),
+                        inactive: Int64(memoryUsed * 0.4 * 1024 * 1024),
+                        buffers: Int64(memoryAvailable * 0.1 * 1024 * 1024),
+                        cached: Int64(memoryAvailable * 0.3 * 1024 * 1024),
+                        shared: Int64(memoryUsed * 0.2 * 1024 * 1024),
+                        slab: Int64(memoryUsed * 0.1 * 1024 * 1024)
                     ),
                     disk: .init(
-                        total: diskTotal,
-                        used: diskUsed,
-                        free: diskTotal - diskUsed,
+                        total: Int64(diskTotal * 1024 * 1024),
+                        used: Int64(diskUsed * 1024 * 1024),
+                        free: Int64((diskTotal - diskUsed) * 1024 * 1024),
                         percent: diskPercent
                     ),
                     temperature: temperature,
                     uptime: uptime
                 )
             )
+        default:
+            break
         }
     }
-    
+
+    private func parseRemarks(_ remarks: String) {
+        print("Parsing remarks: \(remarks)")
+        let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        
+        for component in components {
+            print("Processing component: \(component)")
+            if component.hasPrefix("CPU Usage:") {
+                cpuUsage = Double(component.replacingOccurrences(of: "CPU Usage: ", with: "").replacingOccurrences(of: "%", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Total:") {
+                memoryTotal = Double(component.replacingOccurrences(of: "Memory Total: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Available:") {
+                memoryAvailable = Double(component.replacingOccurrences(of: "Memory Available: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Disk Total:") {
+                diskTotal = Double(component.replacingOccurrences(of: "Disk Total: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Disk Used:") {
+                diskUsed = Double(component.replacingOccurrences(of: "Disk Used: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Temperature:") {
+                temperature = Double(component.replacingOccurrences(of: "Temperature: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
+            } else if component.hasPrefix("Uptime:") {
+                uptime = Double(component.replacingOccurrences(of: "Uptime: ", with: "").replacingOccurrences(of: " seconds", with: "")) ?? 0.0
+            }
+        }
+        print("Parsed CPU Usage: \(cpuUsage), Memory Total: \(memoryTotal), Memory Available: \(memoryAvailable), Disk Total: \(diskTotal), Disk Used: \(diskUsed), Temperature: \(temperature), Uptime: \(uptime)")
+    }
+
     private func handleDroneMessage(_ elementName: String, _ parent: String) {
         switch elementName {
         case "message":

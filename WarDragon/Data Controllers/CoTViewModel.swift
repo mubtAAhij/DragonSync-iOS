@@ -14,6 +14,8 @@ class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
     private var cotListener: NWListener?
     private var statusListener: NWListener?
+    private var multicastConnection: NWConnection?
+    private let multicastGroup = "224.0.0.1"
     private let cotPortMC: UInt16 = 6969
     private let statusPortZMQ: UInt16 = 4225
     private let listenerQueue = DispatchQueue(label: "CoTListenerQueue")
@@ -76,23 +78,64 @@ class CoTViewModel: ObservableObject {
         parameters.prohibitedInterfaceTypes = [.cellular]
         parameters.requiredInterfaceType = .wifi
         
-        // Start CoT multicast listener
-        if let nwPort = NWEndpoint.Port(rawValue: cotPortMC) {
-            do {
-                let listener = try NWListener(using: parameters, on: nwPort)
-                setupListener(listener, port: cotPortMC)
-            } catch let error {
-                print("Failed to create listener on port \(cotPortMC): \(error.localizedDescription)")
+        // Create UDP listener
+        do {
+            cotListener = try NWListener(using: parameters, on: NWEndpoint.Port(integerLiteral: cotPortMC))
+            cotListener?.stateUpdateHandler = { [weak self] state in
+                switch state {
+                case .ready:
+                    print("UDP listener ready")
+                    if let listener = self?.cotListener {
+                        self?.setupNewConnections(for: listener)
+                    }
+                case .failed(let error):
+                    print("UDP listener failed: \(error)")
+                case .cancelled:
+                    print("UDP listener cancelled")
+                default:
+                    break
+                }
             }
+            
+            cotListener?.newConnectionHandler = { [weak self] connection in
+                connection.stateUpdateHandler = { state in
+                    switch state {
+                    case .ready:
+                        print("New connection ready")
+                    case .failed(let error):
+                        print("Connection failed: \(error)")
+                    case .cancelled:
+                        print("Connection cancelled")
+                    default:
+                        break
+                    }
+                }
+                
+                connection.start(queue: self?.listenerQueue ?? .main)
+                self?.receiveMessages(from: connection)
+            }
+            
+            cotListener?.start(queue: listenerQueue)
+            
+        } catch {
+            print("Failed to create UDP listener: \(error)")
         }
     }
-    
+
+    private func setupNewConnections(for listener: NWListener) {
+        print("Setting up new connections")
+    }
+
     private func setupListener(_ listener: NWListener?, port: UInt16) {
-        listener?.stateUpdateHandler = { state in
+        listener?.stateUpdateHandler = { [weak self] state in
+            guard let self = self else { return }
+            
             DispatchQueue.main.async {
                 switch state {
                 case .ready:
                     print("Listener ready on port \(port)")
+                    // Set up receive handler for multicast
+                    self.setupMulticastReceive(port: port)
                 case .failed(let error):
                     print("Listener failed on port \(port) with error: \(error.localizedDescription)")
                 case .cancelled:
@@ -103,12 +146,32 @@ class CoTViewModel: ObservableObject {
             }
         }
         
-        listener?.newConnectionHandler = { [weak self] connection in
-            connection.start(queue: self?.listenerQueue ?? .main)
-            self?.receiveMessages(from: connection)  // Removed type parameter
+        listener?.start(queue: self.listenerQueue)
+    }
+
+    private func setupMulticastReceive(port: UInt16) {
+        let multicastGroup = "224.0.0.1" // Your multicast group address
+        let connection = NWConnection(
+            host: .init(multicastGroup),
+            port: .init(integerLiteral: port),
+            using: cotListener?.parameters ?? .udp
+        )
+        
+        connection.stateUpdateHandler = { [weak self] state in
+            switch state {
+            case .ready:
+                print("Multicast connection ready")
+                self?.receiveMessages(from: connection)
+            case .failed(let error):
+                print("Multicast connection failed: \(error)")
+            case .cancelled:
+                print("Multicast connection cancelled")
+            default:
+                break
+            }
         }
         
-        listener?.start(queue: self.listenerQueue)
+        connection.start(queue: listenerQueue)
     }
     
     private func receiveMessages(from connection: NWConnection) {
@@ -136,30 +199,24 @@ class CoTViewModel: ObservableObject {
             if let message = String(data: data, encoding: .utf8) {
                 print("Received data: \(message)")
                 
-                // 1. Check for XML Status message first
-                if message.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("Received data: <?xml") &&
-                   message.contains("<remarks>CPU Usage:") {
+                // Check for Status message first (has both b-m-p-s-m type and remarks with CPU Usage)
+                if message.contains("type=\"b-m-p-s-m\"") && message.contains("<remarks>CPU Usage:") {
                     print("Processing Status XML message")
-                    let rawXML = message.replacingOccurrences(of: "Received data: ", with: "")
-                                      .trimmingCharacters(in: .whitespacesAndNewlines)
+                    let parser = XMLParser(data: data)
+                    let cotParserDelegate = CoTMessageParser()
+                    parser.delegate = cotParserDelegate
                     
-                    if let xmlData = rawXML.data(using: .utf8) {
-                        let parser = XMLParser(data: xmlData)
-                        let cotParserDelegate = CoTMessageParser()
-                        parser.delegate = cotParserDelegate
-                        
-                        if parser.parse(), let statusMessage = cotParserDelegate.statusMessage {
-                            DispatchQueue.main.async {
-                                self.statusViewModel.statusMessages.append(statusMessage)
-                            }
-                        } else {
-                            print("Failed to parse Status XML message.")
+                    if parser.parse(), let statusMessage = cotParserDelegate.statusMessage {
+                        DispatchQueue.main.async {
+                            self.statusViewModel.statusMessages.append(statusMessage)
                         }
+                    } else {
+                        print("Failed to parse Status XML message.")
                     }
                     return
                 }
                 
-                // 2. Check for ESP32 JSON Drone message
+                // If not a status message, check for ESP32 JSON
                 if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{"),
                    let jsonData = message.data(using: .utf8),
                    let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
@@ -174,7 +231,7 @@ class CoTViewModel: ObservableObject {
                     return
                 }
                 
-                // 3. Check for XML Drone message
+                // Finally check for regular XML drone message
                 if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
                     print("Processing XML Drone message")
                     let parser = XMLParser(data: data)
@@ -222,6 +279,8 @@ class CoTViewModel: ObservableObject {
     
     func stopListening() {
         isListeningCot = false
+        multicastConnection?.cancel() // Add this line
+        multicastConnection = nil    // Add this line
         cotListener?.cancel()
         statusListener?.cancel()
         cotListener = nil

@@ -110,46 +110,44 @@ class DroneMessageGenerator:
       return json.dumps(message)
    
    def generate_status_message(self):
-      runtime = time.time() - self.start_time  # Use actual timestamp not runtime
+         runtime = int(time.time() - self.start_time)
+         current_time = datetime.now(timezone.utc)
+         time_str = current_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+         stale_str = (current_time + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+         lat = round(random.uniform(*self.lat_range), 6)
+         lon = round(random.uniform(*self.lon_range), 6)
       
-      # MAC-style serial number to match DragonSync
-      mac_serial = ''.join([random.choice('0123456789abcdef') for _ in range(12)])
+         # Generate system stats
+         serial_number = f"wardragon-{random.randint(100,101):08x}"
+         cpu_usage = round(random.uniform(0, 100), 1)
       
-      message = {
-         "timestamp": runtime,  # Direct timestamp
-         "gps_data": {
-            "latitude": round(random.uniform(*self.lat_range), 6),
-            "longitude": round(random.uniform(*self.lon_range), 6),
-            "altitude": round(random.uniform(0, 100), 1),
-            "speed": round(random.uniform(0, 30), 1)
-         },
-         "serial_number": mac_serial,  # MAC format like "8447091c1561"
-         "system_stats": {
-            "cpu_usage": round(random.uniform(0, 5), 1),  # Lower CPU values like shown
-            "memory": {
-               "total": 8054636544,  # Exact values from image
-               "available": 3868450816,
-               "percent": 52.0,
-               "used": 3007385600,
-               "free": 1158946816,
-               "active": 3558670336,
-               "inactive": 2120343552,
-               "buffers": 406798336,
-               "cached": 3481505792,
-               "shared": 698163200,
-               "slab": 483831808
-            },
-            "disk": {
-               "total": 250375438336,  # Match exact disk values
-               "used": 87526760448,
-               "free": 150055772160,
-               "percent": 36.8
-            },
-            "temperature": 34.0,  # Number not string
-            "uptime": runtime
-         }
-      }
-      return json.dumps(message)
+         # Memory in MB
+         total_memory = 8192
+         available_memory = round(random.uniform(total_memory * 0.3, total_memory * 0.8), 2)
+      
+         # Disk in MB
+         total_disk = 512000
+         used_disk = round(random.uniform(total_disk * 0.1, total_disk * 0.9), 2)
+      
+         message = f"""<?xml version='1.0' encoding='UTF-8'?>
+   <event version="2.0" 
+               uid="{serial_number}" 
+               type="b-m-p-s-m" 
+               time="{time_str}" 
+               start="{time_str}" 
+               stale="{stale_str}" 
+               how="m-g">
+      <point lat="{lat}" lon="{lon}" hae="1236" ce="35.0" le="999999"/>
+      <detail>
+         <contact endpoint="" phone="" callsign="{serial_number}"/>
+         <precisionlocation geopointsrc="gps" altsrc="gps"/>
+         <remarks>CPU Usage: {cpu_usage}%, Memory Total: {total_memory} MB, Memory Available: {available_memory} MB, Disk Total: {total_disk} MB, Disk Used: {used_disk} MB, Temperature: {round(random.uniform(30, 70), 1)}°C, Uptime: {runtime} seconds</remarks>
+         <color argb="-256"/>
+         <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/Ground_Vehicle.png"/>
+      </detail>
+   </event>"""
+      
+         return message
 
 def clear_screen():
    os.system('cls' if os.name == 'nt' else 'clear')
