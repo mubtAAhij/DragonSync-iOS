@@ -44,6 +44,11 @@ struct SettingsView: View {
                     ))
                     .textContentType(.URL)
                     .autocapitalization(.none)
+                } else {
+                    TextField("Multicast Host", text: .init(
+                        get: { settings.multicastHost },
+                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0) }
+                    ))
                 }
                 
                 Toggle("Active", isOn: .init(

@@ -15,7 +15,7 @@ class CoTViewModel: ObservableObject {
     private var cotListener: NWListener?
     private var statusListener: NWListener?
     private var multicastConnection: NWConnection?
-    private let multicastGroup = "224.0.0.1"
+    private let multicastGroup = Settings.shared.multicastHost
     private let cotPortMC: UInt16 = 6969
     private let statusPortZMQ: UInt16 = 4225
     private let listenerQueue = DispatchQueue(label: "CoTListenerQueue")
@@ -80,18 +80,19 @@ class CoTViewModel: ObservableObject {
         
         // Create UDP listener
         do {
+            let activeHost = Settings.shared.activeHost
             cotListener = try NWListener(using: parameters, on: NWEndpoint.Port(integerLiteral: cotPortMC))
             cotListener?.stateUpdateHandler = { [weak self] state in
                 switch state {
                 case .ready:
-                    print("UDP listener ready")
+                    print("UDP listener ready on \(activeHost)")
                     if let listener = self?.cotListener {
                         self?.setupNewConnections(for: listener)
                     }
                 case .failed(let error):
                     print("UDP listener failed: \(error)")
                 case .cancelled:
-                    print("UDP listener cancelled")
+                    print("UDP listener cancelled on \(activeHost)")
                 default:
                     break
                 }
@@ -129,17 +130,18 @@ class CoTViewModel: ObservableObject {
     private func setupListener(_ listener: NWListener?, port: UInt16) {
         listener?.stateUpdateHandler = { [weak self] state in
             guard let self = self else { return }
-            
+            let activeHost = Settings.shared.activeHost
+
             DispatchQueue.main.async {
                 switch state {
                 case .ready:
-                    print("Listener ready on port \(port)")
+                    print("Listener ready on \(activeHost) and port \(port)")
                     // Set up receive handler for multicast
                     self.setupMulticastReceive(port: port)
                 case .failed(let error):
-                    print("Listener failed on port \(port) with error: \(error.localizedDescription)")
+                    print("Listener failed on \(activeHost) and port \(port) with error: \(error.localizedDescription)")
                 case .cancelled:
-                    print("Listener cancelled on port \(port)")
+                    print("Listener cancelled on \(activeHost) and port \(port)")
                 default:
                     break
                 }
@@ -150,7 +152,7 @@ class CoTViewModel: ObservableObject {
     }
 
     private func setupMulticastReceive(port: UInt16) {
-        let multicastGroup = "224.0.0.1"
+        let multicastGroup = Settings.shared.multicastHost
         let connection = NWConnection(
             host: .init(multicastGroup),
             port: .init(integerLiteral: port),
