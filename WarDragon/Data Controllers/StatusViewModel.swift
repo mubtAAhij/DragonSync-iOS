@@ -12,12 +12,14 @@ import SwiftUI
 class StatusViewModel: ObservableObject {
     @Published var statusMessages: [StatusMessage] = []
     
-    struct StatusMessage: Identifiable {
-        let id = UUID()
+    struct StatusMessage: Identifiable  {
+        var id: String { uid }
+        let uid: String
         var serialNumber: String
         var timestamp: Double
         var gpsData: GPSData
         var systemStats: SystemStats
+        
         
         struct GPSData {
             var latitude: Double
@@ -61,20 +63,20 @@ class StatusViewModel: ObservableObject {
     }
     
     func handleStatusMessage(_ message: String) {
-        if let data = message.data(using: .utf8) {
-            let parser = CoTMessageParser()
-            let xmlParser = XMLParser(data: data)
-            xmlParser.delegate = parser
-            
-            if xmlParser.parse(), let statusMessage = parser.statusMessage {
-                DispatchQueue.main.async {
-                    if let index = self.statusMessages.firstIndex(where: { $0.serialNumber == statusMessage.serialNumber }) {
-                        self.statusMessages[index] = statusMessage
-                    } else {
-                        self.statusMessages.append(statusMessage)
+            if let data = message.data(using: .utf8) {
+                let parser = CoTMessageParser()
+                let xmlParser = XMLParser(data: data)
+                xmlParser.delegate = parser
+                
+                if xmlParser.parse(), let statusMessage = parser.statusMessage {
+                    DispatchQueue.main.async {
+                        if let index = self.statusMessages.firstIndex(where: { $0.uid == statusMessage.uid }) {
+                            self.statusMessages[index] = statusMessage
+                        } else {
+                            self.statusMessages.append(statusMessage)
+                        }
                     }
                 }
             }
         }
-    }
 }

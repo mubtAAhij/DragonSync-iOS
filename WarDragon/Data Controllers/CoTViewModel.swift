@@ -150,7 +150,7 @@ class CoTViewModel: ObservableObject {
     }
 
     private func setupMulticastReceive(port: UInt16) {
-        let multicastGroup = "224.0.0.1" // Your multicast group address
+        let multicastGroup = "224.0.0.1"
         let connection = NWConnection(
             host: .init(multicastGroup),
             port: .init(integerLiteral: port),
@@ -199,7 +199,7 @@ class CoTViewModel: ObservableObject {
             if let message = String(data: data, encoding: .utf8) {
                 print("Received data: \(message)")
                 
-                // Check for Status message first (has both b-m-p-s-m type and remarks with CPU Usage)
+                // Check for Status message first (has both status code type and remarks with CPU Usage)
                 if message.contains("type=\"b-m-p-s-m\"") && message.contains("<remarks>CPU Usage:") {
                     print("Processing Status XML message")
                     let parser = XMLParser(data: data)
@@ -207,9 +207,7 @@ class CoTViewModel: ObservableObject {
                     parser.delegate = cotParserDelegate
                     
                     if parser.parse(), let statusMessage = cotParserDelegate.statusMessage {
-                        DispatchQueue.main.async {
-                            self.statusViewModel.statusMessages.append(statusMessage)
-                        }
+                        self.updateStatusMessage(statusMessage) // Use deduplication logic here
                     } else {
                         print("Failed to parse Status XML message.")
                     }
@@ -252,18 +250,31 @@ class CoTViewModel: ObservableObject {
             }
         }
     }
-
+    
+    private func updateStatusMessage(_ message: StatusViewModel.StatusMessage) {
+        DispatchQueue.main.async {
+            if let index = self.statusViewModel.statusMessages.firstIndex(where: { $0.uid == message.uid }) {
+                // Update existing status message
+                self.statusViewModel.statusMessages[index] = message
+                print("Updated existing status message: \(message.uid)")
+            } else {
+                // Add new status message
+                self.statusViewModel.statusMessages.append(message)
+                print("Added new status message: \(message.uid)")
+            }
+        }
+    }
     
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
             if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
                 // Update existing message
                 self.parsedMessages[index] = message
-                print("Updated existing drone: \(message.uid)")
+                print("Updated existing: \(message.uid)")
             } else {
                 // Add new message
                 self.parsedMessages.append(message)
-                print("Added new drone: \(message.uid)")
+                print("Added new: \(message.uid)")
                 self.sendNotification(for: message)
             }
         }

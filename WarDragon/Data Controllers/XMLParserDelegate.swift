@@ -83,12 +83,14 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         case "remarks":
             parseRemarks(remarks)
         case "event":
+            let uid = eventAttributes["uid"] ?? "unknown" 
             let serialNumber = eventAttributes["uid"] ?? "unknown"
             let lat = Double(pointAttributes["lat"] ?? "0.0") ?? 0.0
             let lon = Double(pointAttributes["lon"] ?? "0.0") ?? 0.0
             let altitude = Double(pointAttributes["hae"] ?? "0.0") ?? 0.0
 
             statusMessage = StatusViewModel.StatusMessage(
+                uid: uid,
                 serialNumber: serialNumber,
                 timestamp: uptime,
                 gpsData: .init(
@@ -128,7 +130,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     }
 
     private func parseRemarks(_ remarks: String) {
-        print("Parsing remarks: \(remarks)")
+        //print("Parsing remarks: \(remarks)")
         let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         
         for component in components {
