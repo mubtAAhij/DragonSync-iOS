@@ -61,94 +61,18 @@ class StatusViewModel: ObservableObject {
     }
     
     func handleStatusMessage(_ message: String) {
-        if let data = message.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        if let data = message.data(using: .utf8) {
+            let parser = CoTMessageParser()
+            let xmlParser = XMLParser(data: data)
+            xmlParser.delegate = parser
             
-            // Match the dragonsync.py output here for tests
-            guard let serialNumber = json["serial_number"] as? String,
-                  let timestamp = json["timestamp"] as? Double,
-                  let gpsData = json["gps_data"] as? [String: Any],
-                  let systemStats = json["system_stats"] as? [String: Any],
-                  let latitude = gpsData["latitude"] as? Double,
-                  let longitude = gpsData["longitude"] as? Double,
-                  let altitude = gpsData["altitude"] as? Double,
-                  let speed = gpsData["speed"] as? Double,
-                  let cpuUsage = systemStats["cpu_usage"] as? Double,
-                  let memory = systemStats["memory"] as? [String: Any],
-                  let disk = systemStats["disk"] as? [String: Any],
-                  let temperature = systemStats["temperature"] as? Double,
-                  let uptime = systemStats["uptime"] as? Double else {
-                print("Failed to parse status message fields")
-                return
-            }
-            
-            // Parse memory details
-            guard let memTotal = memory["total"] as? Int64,
-                  let memAvailable = memory["available"] as? Int64,
-                  let memPercent = memory["percent"] as? Double,
-                  let memUsed = memory["used"] as? Int64,
-                  let memFree = memory["free"] as? Int64,
-                  let memActive = memory["active"] as? Int64,
-                  let memInactive = memory["inactive"] as? Int64,
-                  let memBuffers = memory["buffers"] as? Int64,
-                  let memCached = memory["cached"] as? Int64,
-                  let memShared = memory["shared"] as? Int64,
-                  let memSlab = memory["slab"] as? Int64 else {
-                print("Failed to parse memory stats")
-                return
-            }
-            
-            // Parse disk details
-            guard let diskTotal = disk["total"] as? Int64,
-                  let diskUsed = disk["used"] as? Int64,
-                  let diskFree = disk["free"] as? Int64,
-                  let diskPercent = disk["percent"] as? Double else {
-                print("Failed to parse disk stats")
-                return
-            }
-            
-            let statusMessage = StatusMessage(
-                serialNumber: serialNumber,
-                timestamp: timestamp,
-                gpsData: .init(
-                    latitude: latitude,
-                    longitude: longitude,
-                    altitude: altitude,
-                    speed: speed
-                ),
-                systemStats: .init(
-                    cpuUsage: cpuUsage,
-                    memory: .init(
-                        total: memTotal,
-                        available: memAvailable,
-                        percent: memPercent,
-                        used: memUsed,
-                        free: memFree,
-                        active: memActive,
-                        inactive: memInactive,
-                        buffers: memBuffers,
-                        cached: memCached,
-                        shared: memShared,
-                        slab: memSlab
-                    ),
-                    disk: .init(
-                        total: diskTotal,
-                        used: diskUsed,
-                        free: diskFree,
-                        percent: diskPercent
-                    ),
-                    temperature: temperature,
-                    uptime: uptime
-                )
-            )
-            
-            DispatchQueue.main.async {
-                if let index = self.statusMessages.firstIndex(where: { $0.serialNumber == serialNumber }) {
-                    self.statusMessages[index] = statusMessage
-                    print("Updated status message for \(serialNumber)")
-                } else {
-                    self.statusMessages.append(statusMessage)
-                    print("Added new status message for \(serialNumber)")
+            if xmlParser.parse(), let statusMessage = parser.statusMessage {
+                DispatchQueue.main.async {
+                    if let index = self.statusMessages.firstIndex(where: { $0.serialNumber == statusMessage.serialNumber }) {
+                        self.statusMessages[index] = statusMessage
+                    } else {
+                        self.statusMessages.append(statusMessage)
+                    }
                 }
             }
         }

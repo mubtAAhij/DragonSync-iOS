@@ -135,26 +135,36 @@ class CoTViewModel: ObservableObject {
 
             if let message = String(data: data, encoding: .utf8) {
                 print("Received data: \(message)")
-
-                // Check if it's a Status message
-                if let jsonData = message.data(using: .utf8),
-                   let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-                   parsedJson["serial_number"] != nil,
-                   parsedJson["gps_data"] != nil,
-                   parsedJson["system_stats"] != nil {
-                    print("Processing as Status message")
-                    DispatchQueue.main.async {
-                        self.statusViewModel.handleStatusMessage(message) // Directly use `handleStatusMessage`
+                
+                // 1. Check for XML Status message first
+                if message.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("Received data: <?xml") &&
+                   message.contains("<remarks>CPU Usage:") {
+                    print("Processing Status XML message")
+                    let rawXML = message.replacingOccurrences(of: "Received data: ", with: "")
+                                      .trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    if let xmlData = rawXML.data(using: .utf8) {
+                        let parser = XMLParser(data: xmlData)
+                        let cotParserDelegate = CoTMessageParser()
+                        parser.delegate = cotParserDelegate
+                        
+                        if parser.parse(), let statusMessage = cotParserDelegate.statusMessage {
+                            DispatchQueue.main.async {
+                                self.statusViewModel.statusMessages.append(statusMessage)
+                            }
+                        } else {
+                            print("Failed to parse Status XML message.")
+                        }
                     }
                     return
                 }
-
-                // Check if it's a Drone message
+                
+                // 2. Check for ESP32 JSON Drone message
                 if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{"),
                    let jsonData = message.data(using: .utf8),
                    let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
                    parsedJson["Basic ID"] != nil {
-                    print("Processing as ESP32 Drone message")
+                    print("Processing ESP32 Drone message")
                     let parser = CoTMessageParser()
                     if let parsedMessage = parser.parseESP32Message(parsedJson) {
                         DispatchQueue.main.async {
@@ -163,32 +173,25 @@ class CoTViewModel: ObservableObject {
                     }
                     return
                 }
-
-                // Attempt XML parsing if JSON doesn't match any known structures
+                
+                // 3. Check for XML Drone message
                 if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
-                    print("Processing as XML Drone message")
+                    print("Processing XML Drone message")
                     let parser = XMLParser(data: data)
                     let cotParserDelegate = CoTMessageParser()
                     parser.delegate = cotParserDelegate
-
-                    if parser.parse(), let parsedMessage = cotParserDelegate.cotMessage {
+                    
+                    if parser.parse(), let cotMessage = cotParserDelegate.cotMessage {
                         DispatchQueue.main.async {
-                            self.updateMessage(parsedMessage)
+                            self.updateMessage(cotMessage)
                         }
                     } else {
-                        print("Failed to parse XML.")
+                        print("Failed to parse Drone XML message.")
                     }
                     return
                 }
 
                 print("Unrecognized message format.")
-            }
-        
-        
-            if !isComplete {
-                self.receiveMessages(from: connection)
-            } else {
-                connection.cancel()
             }
         }
     }
