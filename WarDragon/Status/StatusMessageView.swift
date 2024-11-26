@@ -332,8 +332,8 @@ struct StatusMessageView: View {
                 
                 // Location Data
                 VStack(alignment: .trailing, spacing: 8) {
-                    LocationDataRow(title: "LAT", value: String(format: "%.4f°", message.gpsData.latitude))
-                    LocationDataRow(title: "LON", value: String(format: "%.4f°", message.gpsData.longitude))
+                    LocationDataRow(title: "", value: String(format: "%.4f°", message.gpsData.latitude))
+                    LocationDataRow(title: "", value: String(format: "%.4f°", message.gpsData.longitude))
                     LocationDataRow(title: "ALT", value: String(format: "%.1fm", message.gpsData.altitude))
                     LocationDataRow(title: "SPD", value: String(format: "%.1fm/s", message.gpsData.speed))
                 }

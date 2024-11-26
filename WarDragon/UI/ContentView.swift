@@ -15,12 +15,13 @@ struct ContentView: View {
     @StateObject private var settings = Settings.shared
     @State private var showAlert = false
     @State private var latestMessage: CoTViewModel.CoTMessage?
-    @State private var selectedTab = 0
+    @State private var selectedTab: Int
     
     init() {
         let statusVM = StatusViewModel()
         _statusViewModel = StateObject(wrappedValue: statusVM)
         _cotViewModel = StateObject(wrappedValue: CoTViewModel(statusViewModel: statusVM))
+        _selectedTab = State(initialValue: Settings.shared.isListening ? 0 : 2)
     }
     
     var body: some View {

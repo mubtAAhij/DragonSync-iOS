@@ -118,7 +118,7 @@ class DroneMessageGenerator:
          lon = round(random.uniform(*self.lon_range), 6)
       
          # Generate system stats
-         serial_number = f"wardragon-{random.randint(100,102)}"
+         serial_number = f"wardragon-{random.randint(100,100)}"
          cpu_usage = round(random.uniform(0, 100), 1)
       
          # Memory in MB
