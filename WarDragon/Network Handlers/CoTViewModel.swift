@@ -12,6 +12,7 @@ import CoreLocation
 
 class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
+    private var zmqHandler: ZMQHandler?
     private var cotListener: NWListener?
     private var statusListener: NWListener?
     private var multicastConnection: NWConnection?
@@ -57,7 +58,6 @@ class CoTViewModel: ObservableObject {
                 self?.requestNotificationPermission()
             }
         }
-        
     }
     
     private func requestNotificationPermission() {
@@ -72,114 +72,76 @@ class CoTViewModel: ObservableObject {
     func startListening() {
         stopListening()
         isListeningCot = true
-        
+
+        switch Settings.shared.connectionMode {
+        case .multicast:
+            startMulticastListening()
+        case .zmq:
+            startZMQListening()
+        case .both:
+            startMulticastListening()
+            startZMQListening()
+        }
+    }
+
+    private func startMulticastListening() {
         let parameters = NWParameters.udp
         parameters.allowLocalEndpointReuse = true
         parameters.prohibitedInterfaceTypes = [.cellular]
         parameters.requiredInterfaceType = .wifi
-        
-        // Create UDP listener
+
         do {
-            let activeHost = Settings.shared.activeHost
             cotListener = try NWListener(using: parameters, on: NWEndpoint.Port(integerLiteral: cotPortMC))
-            cotListener?.stateUpdateHandler = { [weak self] state in
+            cotListener?.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    print("UDP listener ready on \(activeHost)")
-                    if let listener = self?.cotListener {
-                        self?.setupNewConnections(for: listener)
-                    }
+                    print("Multicast listener ready.")
                 case .failed(let error):
-                    print("UDP listener failed: \(error)")
+                    print("Multicast listener failed: \(error)")
                 case .cancelled:
-                    print("UDP listener cancelled on \(activeHost)")
+                    print("Multicast listener cancelled.")
                 default:
                     break
                 }
             }
-            
+
             cotListener?.newConnectionHandler = { [weak self] connection in
-                connection.stateUpdateHandler = { state in
-                    switch state {
-                    case .ready:
-                        print("New connection ready")
-                    case .failed(let error):
-                        print("Connection failed: \(error)")
-                    case .cancelled:
-                        print("Connection cancelled")
-                    default:
-                        break
-                    }
-                }
-                
                 connection.start(queue: self?.listenerQueue ?? .main)
                 self?.receiveMessages(from: connection)
             }
-            
+
             cotListener?.start(queue: listenerQueue)
-            
         } catch {
-            print("Failed to create UDP listener: \(error)")
+            print("Failed to create multicast listener: \(error)")
         }
     }
 
-    private func setupNewConnections(for listener: NWListener) {
-        print("Setting up new connections")
-    }
+    private func startZMQListening() {
+        zmqHandler = ZMQHandler()
+        let zmqHost = Settings.shared.zmqHost
+        let telemetryPort = UInt16(Settings.shared.zmqTelemetryPort)
+        let statusPort = UInt16(Settings.shared.statusPort)
 
-    private func setupListener(_ listener: NWListener?, port: UInt16) {
-        listener?.stateUpdateHandler = { [weak self] state in
-            guard let self = self else { return }
-            let activeHost = Settings.shared.activeHost
-
-            DispatchQueue.main.async {
-                switch state {
-                case .ready:
-                    print("Listener ready on \(activeHost) and port \(port)")
-                    // Set up receive handler for multicast
-                    self.setupMulticastReceive(port: port)
-                case .failed(let error):
-                    print("Listener failed on \(activeHost) and port \(port) with error: \(error.localizedDescription)")
-                case .cancelled:
-                    print("Listener cancelled on \(activeHost) and port \(port)")
-                default:
-                    break
-                }
+        zmqHandler?.connect(
+            host: zmqHost,
+            zmqTelemetryPort: telemetryPort,
+            statusPort: statusPort,
+            onTelemetry: { message in
+                print("Received telemetry message: \(message)")
+                // Process telemetry messages
+            },
+            onStatus: { message in
+                print("Received status message: \(message)")
+                // Process status messages
             }
-        }
-        
-        listener?.start(queue: self.listenerQueue)
-    }
-
-    private func setupMulticastReceive(port: UInt16) {
-        let multicastGroup = Settings.shared.multicastHost
-        let connection = NWConnection(
-            host: .init(multicastGroup),
-            port: .init(integerLiteral: port),
-            using: cotListener?.parameters ?? .udp
         )
-        
-        connection.stateUpdateHandler = { [weak self] state in
-            switch state {
-            case .ready:
-                print("Multicast connection ready")
-                self?.receiveMessages(from: connection)
-            case .failed(let error):
-                print("Multicast connection failed: \(error)")
-            case .cancelled:
-                print("Multicast connection cancelled")
-            default:
-                break
-            }
-        }
-        
-        connection.start(queue: listenerQueue)
+        print("ZMQ listeners started.")
     }
     
     private func receiveMessages(from connection: NWConnection) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
-
+            
             defer {
                 if !isComplete && self.isListeningCot {
                     self.receiveMessages(from: connection)
@@ -187,17 +149,17 @@ class CoTViewModel: ObservableObject {
                     connection.cancel()
                 }
             }
-
+            
             if let error = error {
                 print("Error receiving data: \(error.localizedDescription)")
                 return
             }
-
+            
             guard let data = data, !data.isEmpty else {
                 print("No data received.")
                 return
             }
-
+            
             if let message = String(data: data, encoding: .utf8) {
                 print("Received data: \(message)")
                 
@@ -247,7 +209,7 @@ class CoTViewModel: ObservableObject {
                     }
                     return
                 }
-
+                
                 print("Unrecognized message format.")
             }
         }
@@ -292,13 +254,15 @@ class CoTViewModel: ObservableObject {
     
     func stopListening() {
         isListeningCot = false
-        multicastConnection?.cancel() // Add this line
-        multicastConnection = nil    // Add this line
+        multicastConnection?.cancel()
+        multicastConnection = nil
         cotListener?.cancel()
         statusListener?.cancel()
         cotListener = nil
         statusListener = nil
-        print("Listeners stopped and ports released.")
+        zmqHandler?.disconnect()
+        zmqHandler = nil
+        print("Listeners stopped and ZMQ disconnected.")
     }
     
     func resetListener() {

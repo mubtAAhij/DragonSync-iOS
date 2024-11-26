@@ -36,6 +36,7 @@ struct SettingsView: View {
                         .tag(mode)
                     }
                 }
+                .disabled(settings.isListening) 
                 
                 if settings.connectionMode != .multicast {
                     TextField("ZMQ Host", text: .init(

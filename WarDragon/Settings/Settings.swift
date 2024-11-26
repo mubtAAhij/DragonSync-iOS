@@ -34,6 +34,7 @@ class Settings: ObservableObject {
     @AppStorage("notificationsEnabled") private(set) var notificationsEnabled = true
     @AppStorage("keepScreenOn") private(set) var keepScreenOn = false
     @AppStorage("telemetryPort") private(set) var telemetryPort: Int = 6969
+    @AppStorage("zmqTelemetryPort") private(set) var zmqTelemetryPort: Int = 4224
     @AppStorage("statusPort") private(set) var statusPort: Int = 4225
     @AppStorage("isListening") private(set) var isListening = false
     
@@ -53,23 +54,23 @@ class Settings: ObservableObject {
     }
     
     func updateConnection(mode: ConnectionMode, host: String? = nil) {
-        if let host = host {
-            switch mode {
-            case .multicast:
-                multicastHost = host
-            case .zmq:
-                zmqHost = host
-            case .both:
-                break
-            }
-        }
+        // Update the connection mode
         connectionMode = mode
 
-        telemetryPort = (mode == .zmq) ? 4224 : 6969
+        // Dynamically update the host based on the mode
+        switch mode {
+        case .multicast:
+            multicastHost = host ?? multicastHost
+        case .zmq:
+            zmqHost = host ?? zmqHost
+        case .both:
+            multicastHost = host ?? multicastHost // Optionally set both
+            zmqHost = host ?? zmqHost
+        }
         
+        telemetryPort = (mode == .zmq) ? zmqTelemetryPort : 6969
         objectWillChange.send()
     }
-
     
     func toggleListening(_ active: Bool) {
         isListening = active

@@ -20,7 +20,7 @@ class ZMQHandler: ObservableObject {
     private var statusHandler: ((String) -> Void)?
     
     func connect(host: String,
-                telemetryPort: UInt16,
+                zmqTelemetryPort: UInt16,
                 statusPort: UInt16,
                 onTelemetry: @escaping (String) -> Void,
                 onStatus: @escaping (String) -> Void) {
@@ -34,7 +34,7 @@ class ZMQHandler: ObservableObject {
         parameters.prohibitedInterfaceTypes = [.cellular]
         parameters.requiredInterfaceType = .wifi
         
-        setupConnection(for: "telemetry", host: host, port: telemetryPort, parameters: parameters) { connection in
+        setupConnection(for: "telemetry", host: host, port: zmqTelemetryPort, parameters: parameters) { connection in
             self.telemetryConnection = connection
         }
         

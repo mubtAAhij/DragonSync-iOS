@@ -98,12 +98,7 @@ struct ContentView: View {
         }
         .onChange(of: settings.connectionMode) {
             if settings.isListening {
-//                CoTViewModel(
-//                    mode: settings.connectionMode,
-//                    host: settings.zmqHost,
-//                    telemetryPort: UInt16(settings.telemetryPort),
-//                    statusPort: UInt16(settings.statusPort)
-//                )
+                // Handle switch when enabled, for now just do not allow
             }
         }
     }
