@@ -11,6 +11,7 @@ import Network
 class ZMQHandler: ObservableObject {
     @Published var isConnected = false
     @Published var connectionError: String?
+    @Published var subscribedTopics: [String] = [] // Tracks current subscriptions
     
     private var telemetryConnection: NWConnection?
     private var statusConnection: NWConnection?
@@ -20,10 +21,10 @@ class ZMQHandler: ObservableObject {
     private var statusHandler: ((String) -> Void)?
     
     func connect(host: String,
-                zmqTelemetryPort: UInt16,
-                statusPort: UInt16,
-                onTelemetry: @escaping (String) -> Void,
-                onStatus: @escaping (String) -> Void) {
+                 zmqTelemetryPort: UInt16,
+                 statusPort: UInt16,
+                 onTelemetry: @escaping (String) -> Void,
+                 onStatus: @escaping (String) -> Void) {
         disconnect()
         
         telemetryHandler = onTelemetry
@@ -31,8 +32,6 @@ class ZMQHandler: ObservableObject {
         
         let parameters = NWParameters.tcp
         parameters.allowLocalEndpointReuse = true
-        parameters.prohibitedInterfaceTypes = [.cellular]
-        parameters.requiredInterfaceType = .wifi
         
         setupConnection(for: "telemetry", host: host, port: zmqTelemetryPort, parameters: parameters) { connection in
             self.telemetryConnection = connection
@@ -44,7 +43,7 @@ class ZMQHandler: ObservableObject {
     }
     
     private func setupConnection(for type: String, host: String, port: UInt16, parameters: NWParameters,
-                               completion: @escaping (NWConnection) -> Void) {
+                                 completion: @escaping (NWConnection) -> Void) {
         let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(integerLiteral: port))
         let connection = NWConnection(to: endpoint, using: parameters)
         
@@ -56,23 +55,10 @@ class ZMQHandler: ObservableObject {
                 print("\(type) connection ready")
                 self.isConnected = true
                 
-                // Send ZMQ subscribe messages
-                let sub1 = Data([0x01]) + "{\"AUX_ADV_IND\"".data(using: .utf8)!
-                let sub2 = Data([0x01]) + "{\"DroneID\"".data(using: .utf8)!
+                // Subscribe to default topics
+                self.subscribeToDefaultTopics(connection: connection, type: type)
                 
-                connection.batch {
-                    connection.send(content: sub1, completion: .contentProcessed { error in
-                        if let error = error {
-                            print("Error sending \(type) subscribe 1: \(error)")
-                        }
-                    })
-                    connection.send(content: sub2, completion: .contentProcessed { error in
-                        if let error = error {
-                            print("Error sending \(type) subscribe 2: \(error)")
-                        }
-                    })
-                }
-                
+                // Start receiving messages
                 self.receiveMessages(from: connection, type: type)
                 
             case .failed(let error):
@@ -91,6 +77,32 @@ class ZMQHandler: ObservableObject {
         
         completion(connection)
         connection.start(queue: queue)
+    }
+    
+    private func subscribeToDefaultTopics(connection: NWConnection, type: String) {
+        // Default topics
+        let topics = ["{\"AUX_ADV_IND\"}", "{\"DroneID\"}"]
+        
+        for topic in topics {
+            addSubscription(topic: topic, to: connection, type: type)
+        }
+    }
+    
+    func addSubscription(topic: String, to connection: NWConnection?, type: String) {
+        guard let connection = connection else { return }
+        
+        let subscribeData = Data([0x01]) + topic.data(using: .utf8)!
+        
+        connection.send(content: subscribeData, completion: .contentProcessed { error in
+            if let error = error {
+                print("Error subscribing to topic '\(topic)' on \(type): \(error)")
+            } else {
+                DispatchQueue.main.async {
+                    self.subscribedTopics.append(topic)
+                }
+                print("Subscribed to topic '\(topic)' on \(type)")
+            }
+        })
     }
     
     private func receiveMessages(from connection: NWConnection, type: String) {
@@ -120,13 +132,11 @@ class ZMQHandler: ObservableObject {
     
     func disconnect() {
         if let telemetryConnection = telemetryConnection {
-            let unsub1 = Data([0x00]) + "{\"AUX_ADV_IND\"".data(using: .utf8)!
-            let unsub2 = Data([0x00]) + "{\"DroneID\"".data(using: .utf8)!
-            
-            telemetryConnection.batch {
-                telemetryConnection.send(content: unsub1, completion: .contentProcessed { _ in })
-                telemetryConnection.send(content: unsub2, completion: .contentProcessed { _ in })
-            }
+            unsubscribeFromAllTopics(connection: telemetryConnection, type: "telemetry")
+        }
+        
+        if let statusConnection = statusConnection {
+            unsubscribeFromAllTopics(connection: statusConnection, type: "status")
         }
         
         telemetryConnection?.cancel()
@@ -134,11 +144,19 @@ class ZMQHandler: ObservableObject {
         telemetryConnection = nil
         statusConnection = nil
         isConnected = false
-        telemetryHandler = nil
-        statusHandler = nil
+        subscribedTopics.removeAll()
+    }
+    
+    private func unsubscribeFromAllTopics(connection: NWConnection, type: String) {
+        for topic in subscribedTopics {
+            let unsubscribeData = Data([0x00]) + topic.data(using: .utf8)!
+            connection.send(content: unsubscribeData, completion: .contentProcessed { _ in })
+        }
+        print("Unsubscribed from all topics on \(type)")
     }
     
     deinit {
         disconnect()
     }
 }
+
