@@ -17,8 +17,8 @@ class CoTViewModel: ObservableObject {
     private var statusListener: NWListener?
     private var multicastConnection: NWConnection?
     private let multicastGroup = Settings.shared.multicastHost
-    private let cotPortMC: UInt16 = 6969
-    private let statusPortZMQ: UInt16 = 4225
+    private let cotPortMC = UInt16(Settings.shared.multicastPort)
+    private let statusPortZMQ = UInt16(Settings.shared.zmqStatusPort)
     private let listenerQueue = DispatchQueue(label: "CoTListenerQueue")
     private var statusViewModel = StatusViewModel()
     public var isListeningCot = false
@@ -117,34 +117,68 @@ class CoTViewModel: ObservableObject {
     }
 
     private func startZMQListening() {
-        zmqHandler = ZMQHandler()
-        let zmqHost = Settings.shared.zmqHost
-        let telemetryPort = UInt16(Settings.shared.zmqTelemetryPort)
-        let statusPort = UInt16(Settings.shared.statusPort)
-
+        zmqHandler = ZMQHandler(cotViewModel: self)
+        
         zmqHandler?.connect(
-            host: zmqHost,
-            zmqTelemetryPort: telemetryPort,
-            statusPort: statusPort,
-            onTelemetry: { message in
-                print("Received telemetry message: \(message)")
-                // Process telemetry messages
+            host: Settings.shared.zmqHost,
+            zmqTelemetryPort: UInt16(Settings.shared.zmqTelemetryPort),
+            zmqStatusPort: UInt16(Settings.shared.zmqStatusPort),
+            onTelemetry: { [weak self] message in
+                if let data = message.data(using: .utf8) {
+                    self?.processIncomingMessage(data)
+                }
             },
-            onStatus: { message in
-                print("Received status message: \(message)")
-                // Process status messages
+            onStatus: { [weak self] message in
+                if let data = message.data(using: .utf8) {
+                    self?.processIncomingMessage(data)
+                }
             }
         )
-        print("ZMQ listeners started.")
     }
     
-    private func receiveMessages(from connection: NWConnection) {
+    // Extract the message processing logic to be reusable
+        private func processIncomingMessage(_ data: Data) {
+            guard let message = String(data: data, encoding: .utf8) else { return }
+            
+            // Use existing message handling logic
+            if message.contains("type=\"b-m-p-s-m\"") && message.contains("<remarks>CPU Usage:") {
+                let parser = XMLParser(data: data)
+                let cotParserDelegate = CoTMessageParser()
+                parser.delegate = cotParserDelegate
+                
+                if parser.parse(), let statusMessage = cotParserDelegate.statusMessage {
+                    self.updateStatusMessage(statusMessage)
+                }
+            } else if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{"),
+                      let jsonData = message.data(using: .utf8),
+                      let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+                      parsedJson["Basic ID"] != nil {
+                let parser = CoTMessageParser()
+                if let parsedMessage = parser.parseESP32Message(parsedJson) {
+                    DispatchQueue.main.async {
+                        self.updateMessage(parsedMessage)
+                    }
+                }
+            } else if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
+                let parser = XMLParser(data: data)
+                let cotParserDelegate = CoTMessageParser()
+                parser.delegate = cotParserDelegate
+                
+                if parser.parse(), let cotMessage = cotParserDelegate.cotMessage {
+                    DispatchQueue.main.async {
+                        self.updateMessage(cotMessage)
+                    }
+                }
+            }
+        }
+    
+    private func receiveMessages(from connection: NWConnection, isZMQ: Bool = false) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
             
             defer {
-                if !isComplete && self.isListeningCot {
-                    self.receiveMessages(from: connection)
+                if !isComplete && (isZMQ ? self.zmqHandler?.isConnected == true : self.isListeningCot) {
+                    self.receiveMessages(from: connection, isZMQ: isZMQ)
                 } else {
                     connection.cancel()
                 }

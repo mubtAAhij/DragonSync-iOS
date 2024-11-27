@@ -36,12 +36,28 @@ struct SettingsView: View {
                         .tag(mode)
                     }
                 }
-                .disabled(settings.isListening) 
+                .disabled(settings.isListening)
                 
-                if settings.connectionMode != .multicast {
+                if settings.connectionMode == .both {
                     TextField("ZMQ Host", text: .init(
                         get: { settings.zmqHost },
-                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0) }
+                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: true) }
+                    ))
+                    .textContentType(.URL)
+                    .autocapitalization(.none)
+                    .disabled(settings.isListening)
+                    
+                    TextField("Multicast Host", text: .init(
+                        get: { settings.multicastHost },
+                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: false) }
+                    ))
+                    .textContentType(.URL)
+                    .autocapitalization(.none)
+                    .disabled(settings.isListening)
+                } else if settings.connectionMode == .zmq {
+                    TextField("ZMQ Host", text: .init(
+                        get: { settings.zmqHost },
+                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: true) }
                     ))
                     .textContentType(.URL)
                     .autocapitalization(.none)
@@ -49,7 +65,7 @@ struct SettingsView: View {
                 } else {
                     TextField("Multicast Host", text: .init(
                         get: { settings.multicastHost },
-                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0) }
+                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: false) }
                     ))
                     .textContentType(.URL)
                     .autocapitalization(.none)
@@ -75,19 +91,54 @@ struct SettingsView: View {
             }
             
             Section("Ports") {
-                HStack {
-                    Text("CoT Messages")
-                    Spacer()
-                    Text(verbatim: String(settings.telemetryPort))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                HStack {
-                    Text("ZMQ Status")
-                    Spacer()
-                    Text(verbatim: String(settings.statusPort))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+                switch settings.connectionMode {
+                case .multicast:
+                    HStack {
+                        Text("Multicast")
+                        Spacer()
+                        Text(verbatim: String(settings.multicastPort))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    
+                case .zmq:
+                    HStack {
+                        Text("ZMQ Telemetry")
+                        Spacer()
+                        Text(verbatim: String(settings.zmqTelemetryPort))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    HStack {
+                        Text("ZMQ Status")
+                        Spacer()
+                        Text(verbatim: String(settings.zmqStatusPort))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    
+                case .both:
+                    HStack {
+                        Text("Multicast")
+                        Spacer()
+                        Text(verbatim: String(settings.multicastPort))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    HStack {
+                        Text("ZMQ Telemetry")
+                        Spacer()
+                        Text(verbatim: String(settings.zmqTelemetryPort))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    HStack {
+                        Text("ZMQ Status")
+                        Spacer()
+                        Text(verbatim: String(settings.zmqStatusPort))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
                 }
             }
             

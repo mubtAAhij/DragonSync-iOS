@@ -22,7 +22,7 @@ class ZMQHandler: ObservableObject {
     
     func connect(host: String,
                  zmqTelemetryPort: UInt16,
-                 statusPort: UInt16,
+                 zmqStatusPort: UInt16,
                  onTelemetry: @escaping (String) -> Void,
                  onStatus: @escaping (String) -> Void) {
         disconnect()
@@ -37,7 +37,7 @@ class ZMQHandler: ObservableObject {
             self.telemetryConnection = connection
         }
         
-        setupConnection(for: "status", host: host, port: statusPort, parameters: parameters) { connection in
+        setupConnection(for: "status", host: host, port: zmqStatusPort, parameters: parameters) { connection in
             self.statusConnection = connection
         }
     }
@@ -105,30 +105,46 @@ class ZMQHandler: ObservableObject {
         })
     }
     
+    private weak var cotViewModel: CoTViewModel?
+    
+    init(cotViewModel: CoTViewModel) {
+        self.cotViewModel = cotViewModel
+    }
+    
     private func receiveMessages(from connection: NWConnection, type: String) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                print("\(type) receive error: \(error)")
-                return
-            }
-            
-            if let data = data, let message = String(data: data, encoding: .utf8) {
-                DispatchQueue.main.async {
-                    if type == "telemetry" {
-                        self.telemetryHandler?(message)
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+                guard let self = self else { return }
+                
+                defer {
+                    if !isComplete && self.isConnected {
+                        self.receiveMessages(from: connection, type: type)
                     } else {
-                        self.statusHandler?(message)
+                        connection.cancel()
+                    }
+                }
+                
+                if let error = error {
+                    print("\(type) receive error: \(error)")
+                    return
+                }
+                
+                guard let data = data, !data.isEmpty else {
+                    print("No data received.")
+                    return
+                }
+                
+                // Simply pass the received data to the appropriate handler
+                if let message = String(data: data, encoding: .utf8) {
+                    DispatchQueue.main.async {
+                        if type == "telemetry" {
+                            self.telemetryHandler?(message)
+                        } else {
+                            self.statusHandler?(message)
+                        }
                     }
                 }
             }
-            
-            if !isComplete && self.isConnected {
-                self.receiveMessages(from: connection, type: type)
-            }
         }
-    }
     
     func disconnect() {
         if let telemetryConnection = telemetryConnection {
