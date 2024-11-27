@@ -96,8 +96,25 @@ class Settings: ObservableObject {
         connectionMode = mode
     }
     
+    func isHostConfigurationValid() -> Bool {
+        switch connectionMode {
+        case .multicast:
+            return !multicastHost.isEmpty
+        case .zmq:
+            return !zmqHost.isEmpty
+        case .both:
+            return !multicastHost.isEmpty && !zmqHost.isEmpty
+        }
+    }
+    
     func toggleListening(_ active: Bool) {
+        if active == isListening {
+            return
+        }
+        
+        // Set the state first
         isListening = active
+        objectWillChange.send()
     }
     
     func updatePreferences(notifications: Bool, screenOn: Bool) {

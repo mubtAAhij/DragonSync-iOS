@@ -74,8 +74,17 @@ struct SettingsView: View {
                 
                 Toggle("Active", isOn: .init(
                     get: { settings.isListening },
-                    set: { settings.toggleListening($0) }
+                    set: { newValue in
+                        if newValue {
+                            settings.toggleListening(true)
+                            cotHandler.startListening()
+                        } else {
+                            settings.toggleListening(false)
+                            cotHandler.stopListening()
+                        }
+                    }
                 ))
+                .disabled(!settings.isHostConfigurationValid())
             }
             
             Section("Preferences") {

@@ -70,7 +70,10 @@ class CoTViewModel: ObservableObject {
     }
     
     func startListening() {
-        stopListening()
+        // Prevent multiple starts
+        guard !isListeningCot else { return }
+        
+        stopListening()  // Clean up any existing connections
         isListeningCot = true
 
         switch Settings.shared.connectionMode {
@@ -287,6 +290,8 @@ class CoTViewModel: ObservableObject {
     }
     
     func stopListening() {
+        guard isListeningCot else { return }
+        
         isListeningCot = false
         multicastConnection?.cancel()
         multicastConnection = nil
