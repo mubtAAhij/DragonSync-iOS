@@ -25,7 +25,10 @@ class ZMQHandler: ObservableObject {
                  zmqStatusPort: UInt16,
                  onTelemetry: @escaping (String) -> Void,
                  onStatus: @escaping (String) -> Void) {
-        disconnect()
+        if isConnected {
+            print("Already connected. Disconnecting before reconnecting.")
+            disconnect()
+        }
         
         telemetryHandler = onTelemetry
         statusHandler = onStatus
@@ -41,6 +44,7 @@ class ZMQHandler: ObservableObject {
             self.statusConnection = connection
         }
     }
+    
     
     private func setupConnection(for type: String, host: String, port: UInt16, parameters: NWParameters,
                                  completion: @escaping (NWConnection) -> Void) {
@@ -90,6 +94,10 @@ class ZMQHandler: ObservableObject {
     
     func addSubscription(topic: String, to connection: NWConnection?, type: String) {
         guard let connection = connection else { return }
+        guard !subscribedTopics.contains(topic) else {
+            print("Already subscribed to topic '\(topic)' on \(type)")
+            return
+        }
         
         let subscribeData = Data([0x01]) + topic.data(using: .utf8)!
         
@@ -105,6 +113,7 @@ class ZMQHandler: ObservableObject {
         })
     }
     
+    
     private weak var cotViewModel: CoTViewModel?
     
     init(cotViewModel: CoTViewModel) {
@@ -112,47 +121,52 @@ class ZMQHandler: ObservableObject {
     }
     
     private func receiveMessages(from connection: NWConnection, type: String) {
-            connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-                guard let self = self else { return }
-                
-                defer {
-                    if !isComplete && self.isConnected {
-                        self.receiveMessages(from: connection, type: type)
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+            guard let self = self else {
+                print("\(type) connection handler deallocated.")
+                return
+            }
+            
+            defer {
+                if !isComplete && self.isConnected {
+                    self.receiveMessages(from: connection, type: type)
+                } else {
+                    connection.cancel()
+                }
+            }
+            
+            if let error = error {
+                print("\(type) receive error: \(error)")
+                return
+            }
+            
+            guard let data = data, !data.isEmpty else {
+                print("No data received on \(type).")
+                return
+            }
+            
+            if let message = String(data: data, encoding: .utf8) {
+                DispatchQueue.main.async {
+                    if type == "telemetry" {
+                        self.telemetryHandler?(message)
                     } else {
-                        connection.cancel()
-                    }
-                }
-                
-                if let error = error {
-                    print("\(type) receive error: \(error)")
-                    return
-                }
-                
-                guard let data = data, !data.isEmpty else {
-                    print("No data received.")
-                    return
-                }
-                
-                // Simply pass the received data to the appropriate handler
-                if let message = String(data: data, encoding: .utf8) {
-                    DispatchQueue.main.async {
-                        if type == "telemetry" {
-                            self.telemetryHandler?(message)
-                        } else {
-                            self.statusHandler?(message)
-                        }
+                        self.statusHandler?(message)
                     }
                 }
             }
         }
+    }
+    
     
     func disconnect() {
-        if let telemetryConnection = telemetryConnection {
-            unsubscribeFromAllTopics(connection: telemetryConnection, type: "telemetry")
-        }
-        
-        if let statusConnection = statusConnection {
-            unsubscribeFromAllTopics(connection: statusConnection, type: "status")
+        if isConnected {
+            if let telemetryConnection = telemetryConnection {
+                unsubscribeFromAllTopics(connection: telemetryConnection, type: "telemetry")
+            }
+            
+            if let statusConnection = statusConnection {
+                unsubscribeFromAllTopics(connection: statusConnection, type: "status")
+            }
         }
         
         telemetryConnection?.cancel()
@@ -162,6 +176,7 @@ class ZMQHandler: ObservableObject {
         isConnected = false
         subscribedTopics.removeAll()
     }
+    
     
     private func unsubscribeFromAllTopics(connection: NWConnection, type: String) {
         for topic in subscribedTopics {
