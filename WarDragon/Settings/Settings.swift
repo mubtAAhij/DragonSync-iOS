@@ -88,11 +88,6 @@ class Settings: ObservableObject {
             }
         }
         
-        // Stop listening before changing mode
-        if isListening {
-            toggleListening(false)
-        }
-        
         connectionMode = mode
     }
     
