@@ -93,7 +93,6 @@ struct LocationDataRow: View {
     }
 }
 
-// MARK: - MemoryDetailView
 struct MemoryDetailView: View {
     let memory: StatusViewModel.StatusMessage.SystemStats.MemoryStats
     
@@ -102,21 +101,30 @@ struct MemoryDetailView: View {
         return String(format: "%.1f GB", gb)
     }
     
+    private var memoryUsagePercent: Double {
+        guard memory.total > 0 else {
+            return 0
+        }
+        
+        let usedMemory = memory.total - memory.available
+        return (Double(usedMemory) / Double(memory.total)) * 100
+    }
+    
     var body: some View {
         VStack(spacing: 12) {
             HStack {
                 CircularGauge(
-                    value: memory.percent,
+                    value: memoryUsagePercent,
                     maxValue: 100,
                     title: "USED",
                     unit: "%",
-                    color: memoryColor(percent: memory.percent)
+                    color: memoryColor(percent: memoryUsagePercent)
                 )
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Total: \(formatBytes(memory.total))")
                     Text("Available: \(formatBytes(memory.available))")
-                    Text("Used: \(formatBytes(memory.used))")
+                    Text("Used: \(formatBytes(memory.total - memory.available))")
                 }
                 .font(.system(.caption, design: .monospaced))
                 .foregroundColor(.gray)
@@ -219,9 +227,10 @@ struct SystemStatsView: View {
             // Memory and Disk section
             VStack(spacing: 12) {
                 Button(action: { showingMemoryDetail.toggle() }) {
+                    let memoryUsagePercent = calculateMemoryUsagePercent(stats.memory)
                     ResourceBar(
                         title: "MEMORY",
-                        usedPercent: stats.memory.percent,
+                        usedPercent: memoryUsagePercent,
                         details: formatMemory(stats.memory),
                         color: memoryColor(percent: stats.memory.percent)
                     )
@@ -229,7 +238,7 @@ struct SystemStatsView: View {
                 
                 ResourceBar(
                     title: "DISK",
-                    usedPercent: stats.disk.percent,
+                    usedPercent: calculateDiskUsagePercent(stats.disk),
                     details: formatDisk(stats.disk),
                     color: diskColor(percent: stats.disk.percent)
                 )
@@ -252,50 +261,72 @@ struct SystemStatsView: View {
         }
     }
     
+    private func calculateDiskUsagePercent(_ diskStats: StatusViewModel.StatusMessage.SystemStats.DiskStats) -> Double {
+        guard diskStats.total > 0 else {
+            return 0
+        }
+        
+        return (Double(diskStats.used) / Double(diskStats.total)) * 100
+    }
+    
+    
+    
+    private func calculateMemoryUsagePercent(_ memoryStats: StatusViewModel.StatusMessage.SystemStats.MemoryStats) -> Double {
+        guard memoryStats.total > 0 else {
+            return 0
+        }
+        
+        let usedMemory = memoryStats.total - memoryStats.available
+        return (Double(usedMemory) / Double(memoryStats.total)) * 100
+    }
+    
+    
+    
     // Formatting and color helper functions
-        private func formatMemory(_ memory: StatusViewModel.StatusMessage.SystemStats.MemoryStats) -> String {
-            let usedGB = Double(memory.used) / 1_073_741_824
-            let totalGB = Double(memory.total) / 1_073_741_824
-            return String(format: "%.1f/%.1fGB", usedGB, totalGB)
+    private func formatMemory(_ memory: StatusViewModel.StatusMessage.SystemStats.MemoryStats) -> String {
+        let usedBytes = memory.total - memory.available
+        let usedGB = Double(usedBytes) / 1_073_741_824
+        let totalGB = Double(memory.total) / 1_073_741_824
+        return String(format: "%.1f/%.1fGB", usedGB, totalGB)
+    }
+    
+    private func formatDisk(_ disk: StatusViewModel.StatusMessage.SystemStats.DiskStats) -> String {
+        let usedGB = Double(disk.used) / 1_073_741_824
+        let totalGB = Double(disk.total) / 1_073_741_824
+        return String(format: "%.1f/%.1fGB", usedGB, totalGB)
+    }
+    
+    private func gaugeColor(for value: Double) -> Color {
+        switch value {
+        case 0..<60: return .green
+        case 60..<80: return .yellow
+        default: return .red
         }
-        
-        private func formatDisk(_ disk: StatusViewModel.StatusMessage.SystemStats.DiskStats) -> String {
-            let usedGB = Double(disk.used) / 1_073_741_824
-            let totalGB = Double(disk.total) / 1_073_741_824
-            return String(format: "%.1f/%.1fGB", usedGB, totalGB)
+    }
+    
+    private func temperatureColor(_ temp: Double) -> Color {
+        switch temp {
+        case 0..<50: return .green
+        case 50..<70: return .yellow
+        default: return .red
         }
-        
-        private func gaugeColor(for value: Double) -> Color {
-            switch value {
-            case 0..<60: return .green
-            case 60..<80: return .yellow
-            default: return .red
-            }
+    }
+    
+    private func memoryColor(percent: Double) -> Color {
+        switch percent {
+        case 0..<70: return .green
+        case 70..<85: return .yellow
+        default: return .red
         }
-        
-        private func temperatureColor(_ temp: Double) -> Color {
-            switch temp {
-            case 0..<50: return .green
-            case 50..<70: return .yellow
-            default: return .red
-            }
+    }
+    
+    private func diskColor(percent: Double) -> Color {
+        switch percent {
+        case 0..<75: return .green
+        case 75..<90: return .yellow
+        default: return .red
         }
-        
-        private func memoryColor(percent: Double) -> Color {
-            switch percent {
-            case 0..<70: return .green
-            case 70..<85: return .yellow
-            default: return .red
-            }
-        }
-        
-        private func diskColor(percent: Double) -> Color {
-            switch percent {
-            case 0..<75: return .green
-            case 75..<90: return .yellow
-            default: return .red
-            }
-        }
+    }
 }
 
 // MARK: - Main StatusMessageView

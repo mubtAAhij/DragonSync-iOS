@@ -51,6 +51,8 @@ class StatusViewModel: ObservableObject {
                 var cached: Int64
                 var shared: Int64
                 var slab: Int64
+               
+
             }
             
             struct DiskStats {
