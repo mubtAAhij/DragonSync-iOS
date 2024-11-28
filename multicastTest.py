@@ -4,11 +4,16 @@ import os
 import random
 import json
 import struct
+import zmq
 from datetime import datetime, timezone, timedelta
 
-MULTICAST_GROUP = '224.0.0.1'
-COT_PORT = 6969
-STATUS_PORT = 4225
+class Config:
+    def __init__(self):
+        self.multicast_group = '224.0.0.1'
+        self.cot_port = 4224
+        self.status_port = 4225
+        self.broadcast_mode = 'multicast'  # or 'zmq'
+        self.zmq_host = '0.0.0.0'
 
 class DroneMessageGenerator:
    def __init__(self):
@@ -118,7 +123,7 @@ class DroneMessageGenerator:
          lon = round(random.uniform(*self.lon_range), 6)
       
          # Generate system stats
-         serial_number = f"wardragon-{random.randint(100,100)}"
+         serial_number = f"wardragon-{random.randint(100,102)}"
          cpu_usage = round(random.uniform(0, 100), 1)
       
          # Memory in MB
@@ -149,6 +154,12 @@ class DroneMessageGenerator:
       
          return message
 
+def setup_zmq():
+    context = zmq.Context()
+    cot_socket = context.socket(zmq.PUB)
+    status_socket = context.socket(zmq.PUB)
+    return context, cot_socket, status_socket
+
 def clear_screen():
    os.system('cls' if os.name == 'nt' else 'clear')
    
@@ -161,82 +172,142 @@ def get_valid_number(prompt, min_val, max_val):
          print(f"Please enter a number between {min_val} and {max_val}")
       except ValueError:
          print("Please enter a valid number")
-         
+
+def configure_settings(config):
+    clear_screen()
+    print("📝 Configure Settings")
+    print("\n1. Change Broadcast Mode")
+    print("2. Change Host/Group")
+    print("3. Change CoT Port")
+    print("4. Change Status Port")
+    print("5. Back to Main Menu")
+    
+    choice = input("\nEnter your choice (1-5): ")
+    
+    if choice == '1':
+        mode = input("Enter broadcast mode (multicast/zmq): ").lower()
+        if mode in ['multicast', 'zmq']:
+            config.broadcast_mode = mode
+            
+    elif choice == '2':
+        if config.broadcast_mode == 'multicast':
+            config.multicast_group = input("Enter multicast group (e.g., 0.0.0.0): ")
+        else:
+            config.zmq_host = input("Enter ZMQ host (e.g., 127.0.0.1): ")
+            
+    elif choice == '3':
+        try:
+            config.cot_port = int(input("Enter CoT port: "))
+        except ValueError:
+            print("Invalid port number")
+            
+    elif choice == '4':
+        try:
+            config.status_port = int(input("Enter Status port: "))
+        except ValueError:
+            print("Invalid port number")
+
 def main_menu():
-   generator = DroneMessageGenerator()
-   
-   while True:
-      clear_screen()
-      print("🐉 DragonLink Multicast Test Data Broadcaster 🐉")
-      print("\n1. Original Format (CoT Port 4224)")
-      print("2. ESP32 Format (CoT Port 4224)")
-      print("3. Status Messages (Status Port 4225)")
-      print("4. Broadcast All")
-      print("5. Exit")
-      
-      choice = input("\nEnter your choice (1-5): ")
-      
-      if choice == '5':
-         print("\n👋 Goodbye!")
-         break
-      
-      if choice in ['1', '2', '3', '4']:
-         interval = get_valid_number("\nEnter broadcast interval in seconds (0.1-60): ", 0.1, 60)
-         
-         # Create sockets
-         cot_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-         status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-         
-         # Set up multicast
-         ttl = struct.pack('b', 1)
-         cot_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-         status_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-         cot_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-         status_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-         
-         clear_screen()
-         print(f"🚀 Broadcasting messages every {interval} seconds")
-         if choice in ['1', '2', '4']:
-            print(f"CoT messages to: {MULTICAST_GROUP}:{COT_PORT}")
-         if choice in ['3', '4']:
-            print(f"Status messages to: {MULTICAST_GROUP}:{STATUS_PORT}")
-         print("Press Ctrl+C to return to menu\n")
-         
-         try:
-            while True:
-               if choice in ['1', '4']:
-                  message = generator.generate_original_format()
-                  cot_sock.sendto(message.encode(), (MULTICAST_GROUP, COT_PORT))
-                  print(f"📡 Sent Original format message at {time.strftime('%H:%M:%S')}")
-                  
-               if choice in ['2', '4']:
-                  message = generator.generate_esp32_format()
-                  cot_sock.sendto(message.encode(), (MULTICAST_GROUP, COT_PORT))
-                  print(f"📡 Sent ESP32 format message at {time.strftime('%H:%M:%S')}")
-                  print(message + "\n")
-                  
-               if choice in ['3', '4']:
-                  message = generator.generate_status_message()
-                  # Change this line - it should go to COT_PORT now that everything is multicast
-                  cot_sock.sendto(message.encode(), (MULTICAST_GROUP, COT_PORT))  # Changed from STATUS_PORT
-                  print(f"📡 Sent Status message at {time.strftime('%H:%M:%S')}")
-                  print(message + "\n")
-                  
-               time.sleep(interval)
-         except KeyboardInterrupt:
-            print("\n\n🛑 Broadcast stopped")
-            cot_sock.close()
-            status_sock.close()
-            input("\nPress Enter to return to menu...")
-      else:
-         print("\n❌ Invalid choice. Press Enter to try again...")
-         input()
-         
+    config = Config()
+    generator = DroneMessageGenerator()
+    
+    while True:
+        clear_screen()
+        print("🐉 DragonLink Test Data Broadcaster 🐉")
+        print("\nCurrent Settings:")
+        print(f"Mode: {config.broadcast_mode}")
+        print(f"Host/Group: {config.multicast_group if config.broadcast_mode == 'multicast' else config.zmq_host}")
+        print(f"CoT Port: {config.cot_port}")
+        print(f"Status Port: {config.status_port}")
+        
+        print("\n1. Original Format")
+        print("2. ESP32 Format")
+        print("3. Status Messages")
+        print("4. Broadcast All")
+        print("5. Configure Settings")
+        print("6. Exit")
+        
+        choice = input("\nEnter your choice (1-6): ")
+        
+        if choice == '6':
+            print("\n👋 Goodbye!")
+            break
+            
+        if choice == '5':
+            configure_settings(config)
+            continue
+            
+        if choice in ['1', '2', '3', '4']:
+            interval = get_valid_number("\nEnter broadcast interval in seconds (0.1-60): ", 0.1, 60)
+            
+            if config.broadcast_mode == 'multicast':
+                # Create multicast sockets
+                cot_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                
+                # Set up multicast
+                ttl = struct.pack('b', 1)
+                cot_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                status_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                cot_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+                status_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+            else:
+                # Setup ZMQ
+                context, cot_sock, status_sock = setup_zmq()
+                cot_sock.bind(f"tcp://{config.zmq_host}:{config.cot_port}")
+                status_sock.bind(f"tcp://{config.zmq_host}:{config.status_port}")
+
+            clear_screen()
+            print(f"🚀 Broadcasting messages every {interval} seconds via {config.broadcast_mode}")
+            print(f"CoT messages to: {config.cot_port}")
+            print(f"Status messages to: {config.status_port}")
+            print("Press Ctrl+C to return to menu\n")
+            
+            try:
+                while True:
+                    if choice in ['1', '4']:
+                        message = generator.generate_original_format()
+                        if config.broadcast_mode == 'multicast':
+                            cot_sock.sendto(message.encode(), (config.multicast_group, config.cot_port))
+                        else:
+                            cot_sock.send_string(message)
+                        print(f"📡 Sent Original format message at {time.strftime('%H:%M:%S')}")
+                    
+                    if choice in ['2', '4']:
+                        message = generator.generate_esp32_format()
+                        if config.broadcast_mode == 'multicast':
+                            cot_sock.sendto(message.encode(), (config.multicast_group, config.cot_port))
+                        else:
+                            cot_sock.send_string(message)
+                        print(f"📡 Sent ESP32 format message at {time.strftime('%H:%M:%S')}")
+                        print(message + "\n")
+                    
+                    if choice in ['3', '4']:
+                        message = generator.generate_status_message()
+                        if config.broadcast_mode == 'multicast':
+                            cot_sock.sendto(message.encode(), (config.multicast_group, config.cot_port))
+                        else:
+                            status_sock.send_string(message)
+                        print(f"📡 Sent Status message at {time.strftime('%H:%M:%S')}")
+                        print(message + "\n")
+                    
+                    time.sleep(interval)
+            except KeyboardInterrupt:
+                print("\n\n🛑 Broadcast stopped")
+                if config.broadcast_mode == 'multicast':
+                    cot_sock.close()
+                    status_sock.close()
+                else:
+                    context.destroy()
+                input("\nPress Enter to return to menu...")
+        else:
+            print("\n❌ Invalid choice. Press Enter to try again...")
+            input()
+
 if __name__ == "__main__":
-   try:
-      main_menu()
-   except KeyboardInterrupt:
-      print("\n\n👋 Program terminated by user")
-   except Exception as e:
-      print(f"\n❌ An error occurred: {e}")
-      
+    try:
+        main_menu()
+    except KeyboardInterrupt:
+        print("\n\n👋 Program terminated by user")
+    except Exception as e:
+        print(f"\n❌ An error occurred: {e}")
