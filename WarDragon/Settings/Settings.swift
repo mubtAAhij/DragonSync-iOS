@@ -11,7 +11,7 @@ import SwiftUI
 enum ConnectionMode: String, Codable, CaseIterable {
     case multicast = "Multicast"
     case zmq = "Direct ZMQ"
-    case both = "Both"
+//    case both = "Both"
     
     var icon: String {
         switch self {
@@ -19,8 +19,8 @@ enum ConnectionMode: String, Codable, CaseIterable {
             return "antenna.radiowaves.left.and.right"
         case .zmq:
             return "network"
-        case .both:
-            return "network.badge.shield.half.filled"
+//        case .both:
+//            return "network.badge.shield.half.filled"
         }
     }
 }
@@ -97,8 +97,8 @@ class Settings: ObservableObject {
             return !multicastHost.isEmpty
         case .zmq:
             return !zmqHost.isEmpty
-        case .both:
-            return !multicastHost.isEmpty && !zmqHost.isEmpty
+//        case .both:
+//            return !multicastHost.isEmpty && !zmqHost.isEmpty
         }
     }
     

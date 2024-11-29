@@ -38,23 +38,25 @@ struct SettingsView: View {
                 }
                 .disabled(settings.isListening)
                 
-                if settings.connectionMode == .both {
-                    TextField("ZMQ Host", text: .init(
-                        get: { settings.zmqHost },
-                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: true) }
-                    ))
-                    .textContentType(.URL)
-                    .autocapitalization(.none)
-                    .disabled(settings.isListening)
-                    
-                    TextField("Multicast Host", text: .init(
-                        get: { settings.multicastHost },
-                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: false) }
-                    ))
-                    .textContentType(.URL)
-                    .autocapitalization(.none)
-                    .disabled(settings.isListening)
-                } else if settings.connectionMode == .zmq {
+//                if settings.connectionMode == .both {
+//                    TextField("ZMQ Host", text: .init(
+//                        get: { settings.zmqHost },
+//                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: true) }
+//                    ))
+//                    .textContentType(.URL)
+//                    .autocapitalization(.none)
+//                    .disabled(settings.isListening)
+//                    
+//                    TextField("Multicast Host", text: .init(
+//                        get: { settings.multicastHost },
+//                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: false) }
+//                    ))
+//                    .textContentType(.URL)
+//                    .autocapitalization(.none)
+//                    .disabled(settings.isListening)
+//                } else
+                
+                if settings.connectionMode == .zmq {
                     TextField("ZMQ Host", text: .init(
                         get: { settings.zmqHost },
                         set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: true) }
@@ -126,28 +128,28 @@ struct SettingsView: View {
                             .monospacedDigit()
                     }
                     
-                case .both:
-                    HStack {
-                        Text("Multicast")
-                        Spacer()
-                        Text(verbatim: String(settings.multicastPort))
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                    HStack {
-                        Text("ZMQ Telemetry")
-                        Spacer()
-                        Text(verbatim: String(settings.zmqTelemetryPort))
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                    HStack {
-                        Text("ZMQ Status")
-                        Spacer()
-                        Text(verbatim: String(settings.zmqStatusPort))
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
+//                case .both:
+//                    HStack {
+//                        Text("Multicast")
+//                        Spacer()
+//                        Text(verbatim: String(settings.multicastPort))
+//                            .foregroundStyle(.secondary)
+//                            .monospacedDigit()
+//                    }
+//                    HStack {
+//                        Text("ZMQ Telemetry")
+//                        Spacer()
+//                        Text(verbatim: String(settings.zmqTelemetryPort))
+//                            .foregroundStyle(.secondary)
+//                            .monospacedDigit()
+//                    }
+//                    HStack {
+//                        Text("ZMQ Status")
+//                        Spacer()
+//                        Text(verbatim: String(settings.zmqStatusPort))
+//                            .foregroundStyle(.secondary)
+//                            .monospacedDigit()
+//                    }
                 }
             }
             
@@ -178,8 +180,8 @@ struct SettingsView: View {
                 return "antenna.radiowaves.left.and.right.circle.fill"
             case .zmq:
                 return "network.badge.shield.half.filled"
-            case .both:
-                return "network.slash.circle.fill"
+//            case .both:
+//                return "network.slash.circle.fill"
             }
         } else {
             return "bolt.horizontal.circle"

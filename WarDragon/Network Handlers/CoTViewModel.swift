@@ -81,9 +81,9 @@ class CoTViewModel: ObservableObject {
             startMulticastListening()
         case .zmq:
             startZMQListening()
-        case .both:
-            startMulticastListening()
-            startZMQListening()
+//        case .both:
+//            startMulticastListening()
+//            startZMQListening()
         }
     }
 
