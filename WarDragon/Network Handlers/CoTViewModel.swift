@@ -293,15 +293,22 @@ class CoTViewModel: ObservableObject {
         guard isListeningCot else { return }
         
         isListeningCot = false
+        
+        // Clean up multicast if using it
         multicastConnection?.cancel()
         multicastConnection = nil
         cotListener?.cancel()
         statusListener?.cancel()
         cotListener = nil
         statusListener = nil
-        zmqHandler?.disconnect()
-        zmqHandler = nil
-        print("Listeners stopped and ZMQ disconnected.")
+        
+        // Properly disconnect ZMQ if using it
+        if let zmqHandler = zmqHandler {
+            zmqHandler.disconnect()
+            self.zmqHandler = nil
+        }
+        
+        print("All listeners stopped and connections cleaned up.")
     }
     
     func resetListener() {

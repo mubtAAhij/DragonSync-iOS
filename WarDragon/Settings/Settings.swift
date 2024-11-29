@@ -107,9 +107,17 @@ class Settings: ObservableObject {
             return
         }
         
-        // Set the state first
-        isListening = active
-        objectWillChange.send()
+        // Ensure clean disconnect before changing state
+        if !active && isListening {
+            // Give time for unsubscribe messages to be sent
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isListening = active
+                self.objectWillChange.send()
+            }
+        } else {
+            isListening = active
+            objectWillChange.send()
+        }
     }
     
     func updatePreferences(notifications: Bool, screenOn: Bool) {
