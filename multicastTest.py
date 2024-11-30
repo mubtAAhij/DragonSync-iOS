@@ -155,10 +155,14 @@ class DroneMessageGenerator:
          return message
 
 def setup_zmq():
-    context = zmq.Context()
-    cot_socket = context.socket(zmq.PUB)
-    status_socket = context.socket(zmq.PUB)
-    return context, cot_socket, status_socket
+  context = zmq.Context()
+  cot_socket = context.socket(zmq.PUB)
+  status_socket = context.socket(zmq.PUB)
+  
+  cot_socket.setsockopt(zmq.XPUB_VERBOSE, True)
+  status_socket.setsockopt(zmq.XPUB_VERBOSE, True)
+  
+  return context, cot_socket, status_socket
 
 def clear_screen():
    os.system('cls' if os.name == 'nt' else 'clear')
