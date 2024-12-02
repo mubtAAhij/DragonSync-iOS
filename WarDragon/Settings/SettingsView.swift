@@ -74,8 +74,8 @@ struct SettingsView: View {
                     .disabled(settings.isListening)
                 }
                 
-                Toggle("Active", isOn: .init(
-                    get: { settings.isListening },
+                Toggle(isOn: .init(
+                    get: { settings.isListening && cotHandler.isListeningCot },
                     set: { newValue in
                         if newValue {
                             settings.toggleListening(true)
@@ -85,7 +85,9 @@ struct SettingsView: View {
                             cotHandler.stopListening()
                         }
                     }
-                ))
+                )) {
+                    Text(settings.isListening && cotHandler.isListeningCot ? "Active" : "Inactive")
+                }
                 .disabled(!settings.isHostConfigurationValid())
             }
             
