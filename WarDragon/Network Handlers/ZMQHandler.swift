@@ -109,7 +109,9 @@ class ZMQHandler: ObservableObject {
                 case .failed(let error):
                     print("\(type) connection failed: \(error)")
                     self.connectionError = error.localizedDescription
-                    self.handleConnectionDrop(type: type, host: host, port: port, parameters: parameters)
+                    if !self.isDisconnecting {  // Only handle drops if not intentionally disconnecting
+                        self.handleConnectionDrop(type: type, host: host, port: port, parameters: parameters)
+                    }
                     
                 case .cancelled:
                     print("\(type) connection cancelled")
@@ -150,7 +152,7 @@ class ZMQHandler: ObservableObject {
                 }
                 
                 guard let data = data, data.count == 64 else {
-                    print("Invalid greeting received for \(type)")
+                    print("Invalid greeting received for \(type), greeting: \(String(describing: data))")
                     return
                 }
                 
@@ -240,7 +242,7 @@ class ZMQHandler: ObservableObject {
             statusAttempts += 1
         }
         
-//        print("telem attempts: \(telemetryAttempts) and status attempts: \(statusAttempts)")
+        print("telem attempts: \(telemetryAttempts) and status attempts: \(statusAttempts)")
         
         if (type == "telemetry" && telemetryAttempts < maxConnectionAttempts) ||
             (type == "status" && statusAttempts < maxConnectionAttempts) {
@@ -268,12 +270,7 @@ class ZMQHandler: ObservableObject {
                     self.connectionError = "Connection lost after \(self.maxConnectionAttempts) attempts"
                 }
             }
-            
-//            if type == "telemetry" {
-//                telemetryAttempts = 0
-//            } else {
-//                statusAttempts = 0
-//            }
+
         }
     }
     
