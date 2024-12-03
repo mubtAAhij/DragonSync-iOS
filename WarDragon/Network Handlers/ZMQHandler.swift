@@ -213,11 +213,11 @@ class ZMQHandler: ObservableObject {
                         print("\(name) Unexpected Error: \(error)")
                     }
                 }
-                // Add a 5-second delay after processing each message
-                if self.shouldContinueRunning {
-                    print("\(name): Sleeping for 5 seconds...")
-                    Thread.sleep(forTimeInterval: 5.0)
-                }
+//                // Add a 5-second delay after processing each message
+//                if self.shouldContinueRunning {
+//                    print("\(name): Sleeping for 5 seconds...")
+//                    Thread.sleep(forTimeInterval: 5.0)
+//                }
             }
             print("\(name) receiver stopped.")
         }
