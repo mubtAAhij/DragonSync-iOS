@@ -7,26 +7,8 @@
 import Foundation
 import SwiftyZeroMQ5
 
-/// Handles ZeroMQ connections for both XPUB telemetry and PUB status messages
+
 class ZMQHandler: ObservableObject {
-    
-    // MARK: - Types
-    
-    /// Callback type for handling received messages
-    typealias MessageHandler = (String) -> Void
-    
-    /// Custom errors specific to ZMQHandler
-    enum HandlerError: Error {
-        case invalidHost
-        case invalidPort
-        case socketSetupFailed
-        case connectionFailed
-        case contextCreationFailed
-    }
-    
-    // MARK: - Properties
-    
-    /// Published state indicating if ZMQ connections are active
     @Published var isConnected = false {
         didSet {
             if oldValue != isConnected {
@@ -37,28 +19,15 @@ class ZMQHandler: ObservableObject {
         }
     }
     
-    // Private properties
     private var context: SwiftyZeroMQ.Context?
-    private var telemetrySocket: SwiftyZeroMQ.Socket?  // For XPUB telemetry data
-    private var statusSocket: SwiftyZeroMQ.Socket?     // For PUB status data
-    private var telemetryQueue: DispatchQueue?
-    private var statusQueue: DispatchQueue?
+    private var telemetrySocket: SwiftyZeroMQ.Socket?
+    private var statusSocket: SwiftyZeroMQ.Socket?
+    private var poller: SwiftyZeroMQ.Poller?
+    private var pollingQueue: DispatchQueue?
     private var shouldContinueRunning = false
     
-    // Socket configuration constants
-    private static let defaultHighWaterMark: Int32 = 1000
-    private static let defaultReceiveTimeout: Int32 = 1000  // milliseconds
-    private static let defaultBufferSize: Int = 65536      // 64KB
+    typealias MessageHandler = (String) -> Void
     
-    // MARK: - Public Methods
-    
-    /// Establishes connections to both telemetry and status publishers
-    /// - Parameters:
-    ///   - host: The host address to connect to
-    ///   - zmqTelemetryPort: Port for telemetry data (XPUB)
-    ///   - zmqStatusPort: Port for status data (PUB)
-    ///   - onTelemetry: Callback for received telemetry messages
-    ///   - onStatus: Callback for received status messages
     func connect(
         host: String,
         zmqTelemetryPort: UInt16,
@@ -66,214 +35,238 @@ class ZMQHandler: ObservableObject {
         onTelemetry: @escaping MessageHandler,
         onStatus: @escaping MessageHandler
     ) {
-        // Validate inputs
-        guard !host.isEmpty else {
-            print("Error: Invalid host")
+        guard !host.isEmpty && zmqTelemetryPort > 0 && zmqStatusPort > 0 else {
+            print("Invalid connection parameters")
             return
         }
         
-        guard zmqTelemetryPort > 0 && zmqStatusPort > 0 else {
-            print("Error: Invalid ports")
-            return
-        }
-        
-        // Prevent duplicate connections
         guard !isConnected else {
             print("Already connected")
             return
         }
         
-        // Ensure clean state
         disconnect()
         shouldContinueRunning = true
         
         do {
-            // Initialize and configure context
+            // Initialize context and poller
             context = try SwiftyZeroMQ.Context()
-            try configureContext(context!)
+            poller = SwiftyZeroMQ.Poller()
             
-            // Setup sockets
-            telemetrySocket = try setupTelemetrySocket(
-                context: context!,
-                host: host,
-                port: zmqTelemetryPort
-            )
+            // Setup telemetry socket
+            telemetrySocket = try context?.socket(.subscribe)
+            try telemetrySocket?.setSubscribe("")
+            try configureSocket(telemetrySocket!)
+            try telemetrySocket?.connect("tcp://\(host):\(zmqTelemetryPort)")
+            try poller?.register(socket: telemetrySocket!, flags: .pollIn)
             
-            statusSocket = try setupStatusSocket(
-                context: context!,
-                host: host,
-                port: zmqStatusPort
-            )
+            // Setup status socket
+            statusSocket = try context?.socket(.subscribe)
+            try statusSocket?.setSubscribe("")
+            try configureSocket(statusSocket!)
+            try statusSocket?.connect("tcp://\(host):\(zmqStatusPort)")
+            try poller?.register(socket: statusSocket!, flags: .pollIn)
             
-            // Create dedicated queues
-            telemetryQueue = DispatchQueue(label: "com.wardragon.telemetry", qos: .userInitiated)
-            statusQueue = DispatchQueue(label: "com.wardragon.status", qos: .userInitiated)
-            
-            // Start receive loops
-            startReceiving(
-                socket: telemetrySocket!,
-                queue: telemetryQueue!,
-                name: "Telemetry",
-                handler: onTelemetry
-            )
-            
-            startReceiving(
-                socket: statusSocket!,
-                queue: statusQueue!,
-                name: "Status",
-                handler: onStatus
-            )
+            // Start polling on background queue
+            pollingQueue = DispatchQueue(label: "com.wardragon.zmq.polling")
+            startPolling(onTelemetry: onTelemetry, onStatus: onStatus)
             
             isConnected = true
+            print("ZMQ: Connected successfully")
             
-        } catch let error as SwiftyZeroMQ.ZeroMQError {
-            handleZMQError(error)
-            disconnect()
         } catch {
-            print("Unexpected error during connection: \(error)")
+            print("ZMQ Setup Error: \(error)")
             disconnect()
         }
     }
     
-    // MARK: - Private Methods
-    
-    private func configureContext(_ context: SwiftyZeroMQ.Context) throws {
-        try context.setBlocky(true)     // Default but explicit
-        try context.setIOThreads(1)     // Single I/O thread sufficient for our needs
-        try context.setMaxSockets(2)    // We only need 2 sockets
-    }
-    
-    private func setupTelemetrySocket(
-        context: SwiftyZeroMQ.Context,
-        host: String,
-        port: UInt16
-    ) throws -> SwiftyZeroMQ.Socket {
-        print("Setting up telemetry SUB socket...")
-        let socket = try context.socket(.subscribe)
-        try configureSocket(socket)
-        print("Connecting SUB to tcp://\(host):\(port)...")
-        try socket.connect("tcp://\(host):\(port)")
-        return socket
-    }
-    
-    private func setupStatusSocket(
-        context: SwiftyZeroMQ.Context,
-        host: String,
-        port: UInt16
-    ) throws -> SwiftyZeroMQ.Socket {
-        print("Setting up status SUB socket...")
-        let socket = try context.socket(.subscribe)
-        try configureSocket(socket)
-        try socket.connect("tcp://\(host):\(port)")
-        print("Connecting SUB to tcp://\(host):\(port)...")
-        try socket.connect("tcp://\(host):\(port)")
-        return socket
-    }
-    
     private func configureSocket(_ socket: SwiftyZeroMQ.Socket) throws {
-        try socket.setRecvHighWaterMark(Self.defaultHighWaterMark)
+        try socket.setRecvHighWaterMark(1000)
         try socket.setLinger(0)
-        try socket.setMaxReconnectInterval(10)
-        try socket.setRecvTimeout(Self.defaultReceiveTimeout)
+        try socket.setRecvTimeout(1000)
         try socket.setImmediate(true)
-        try socket.setSubscribe("")  // Subscribe to all topics
     }
     
-    private func startReceiving(
-        socket: SwiftyZeroMQ.Socket,
-        queue: DispatchQueue,
-        name: String,
-        handler: @escaping MessageHandler
-    ) {
-        print("Starting \(name) receiver...")
-        
-        queue.async { [weak self] in
+    private func startPolling(onTelemetry: @escaping MessageHandler, onStatus: @escaping MessageHandler) {
+        pollingQueue?.async { [weak self] in
             guard let self = self else { return }
             
             while self.shouldContinueRunning {
                 do {
-                    print("\(name): Waiting for message...")
-                    
-                    if let data = try socket.recv(bufferLength: Self.defaultBufferSize) {
-                        if let message = String(data: data, encoding: .utf8) {
-                            print("\(name): Received message: \(message)")
-                            DispatchQueue.main.async {
-                                handler(message)
+                    if let items = try self.poller?.poll(timeout: 0.1) {
+                        for (socket, events) in items {
+                            if events.contains(.pollIn) {
+                                // Get raw data from socket
+                                if let data = try socket.recv(bufferLength: 65536),
+                                   let jsonString = String(data: data, encoding: .utf8) {
+                                    
+                                    // Convert to XML based on socket type
+                                    if socket === self.telemetrySocket {
+                                        if let xmlMessage = self.convertTelemetryToXML(jsonString) {
+                                            DispatchQueue.main.async {
+                                                onTelemetry(xmlMessage)
+                                            }
+                                        }
+                                    } else if socket === self.statusSocket {
+                                        if let xmlMessage = self.convertStatusToXML(jsonString) {
+                                            DispatchQueue.main.async {
+                                                onStatus(xmlMessage)
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                        } else {
-                            print("\(name): Failed to decode message as UTF-8")
                         }
                     }
                 } catch let error as SwiftyZeroMQ.ZeroMQError {
-                    print("\(name) Error: \(error.description)")
                     if error.description != "Resource temporarily unavailable" && self.shouldContinueRunning {
-                        self.handleZMQError(error, context: name)
+                        print("ZMQ Polling Error: \(error)")
                     }
                 } catch {
                     if self.shouldContinueRunning {
-                        print("\(name) Unexpected Error: \(error)")
+                        print("ZMQ Polling Error: \(error)")
                     }
                 }
-//                // Add a 5-second delay after processing each message
-//                if self.shouldContinueRunning {
-//                    print("\(name): Sleeping for 5 seconds...")
-//                    Thread.sleep(forTimeInterval: 5.0)
-//                }
             }
-            print("\(name) receiver stopped.")
         }
     }
     
-    private func handleZMQError(_ error: SwiftyZeroMQ.ZeroMQError, context: String = "") {
-        let errorContext = context.isEmpty ? "" : "[\(context)] "
-        switch error.description {
-        case "Context was terminated":
-            print("\(errorContext)Context was terminated")
-        case "Resource temporarily unavailable":
-            print("\(errorContext)Non-blocking operation would block")
-        case "Invalid argument":
-            print("\(errorContext)Invalid argument")
-        case "Bad address":
-            print("\(errorContext)Memory fault")
-        case "Interrupted system call":
-            print("\(errorContext)Operation interrupted")
-        default:
-            print("\(errorContext)ZMQ Error: \(error)")
+    private func convertTelemetryToXML(_ jsonString: String) -> String? {
+        guard let jsonData = jsonString.data(using: .utf8) else { return nil }
+        
+        do {
+            // Handle both array and single object formats
+            if let array = try JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
+                return createDroneXML(from: array)
+            } else if let dict = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                return createDroneXML(from: [dict])
+            }
+        } catch {
+            print("Telemetry JSON parsing error: \(error)")
         }
+        return nil
     }
     
-    // MARK: - Lifecycle
+    private func convertStatusToXML(_ jsonString: String) -> String? {
+        guard let jsonData = jsonString.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
+            return nil
+        }
+        return createStatusXML(json)
+    }
     
-    // Disconnect all ZMQ connections and clean up resources
+    private func createDroneXML(from messages: [[String: Any]]) -> String {
+        var droneInfo: [String: Any] = [:]
+        
+        // Parse all message parts
+        for message in messages {
+            if let basicId = message["Basic ID"] as? [String: Any],
+               let idType = basicId["id_type"] as? String {
+                if (idType == "Serial Number (ANSI/CTA-2063-A)" ||
+                    idType == "CAA Assigned Registration ID") &&
+                    droneInfo["id"] == nil {
+                    droneInfo["id"] = basicId["id"] as? String ?? "unknown"
+                }
+            }
+            
+            if let location = message["Location/Vector Message"] as? [String: Any] {
+                droneInfo["lat"] = location["latitude"] as? Double ?? 0.0
+                droneInfo["lon"] = location["longitude"] as? Double ?? 0.0
+                droneInfo["speed"] = location["speed"] as? Double ?? 0.0
+                droneInfo["vspeed"] = location["vert_speed"] as? Double ?? 0.0
+                droneInfo["alt"] = location["geodetic_altitude"] as? Double ?? 0.0
+                droneInfo["height"] = location["height_agl"] as? Double ?? 0.0
+            }
+            
+            if let selfId = message["Self-ID Message"] as? [String: Any] {
+                droneInfo["description"] = selfId["text"] as? String ?? ""
+            }
+            
+            if let system = message["System Message"] as? [String: Any] {
+                droneInfo["pilot_lat"] = system["latitude"] as? Double ?? 0.0
+                droneInfo["pilot_lon"] = system["longitude"] as? Double ?? 0.0
+            }
+        }
+        
+        var id = droneInfo["id"] as? String ?? "unknown"
+        if !id.starts(with: "drone-") {
+            id = "drone-\(id)"
+        }
+        
+        return """
+        <event version="2.0" uid="\(id)" type="a-f-G-U-C">
+          <point lat="\(droneInfo["lat"] as? Double ?? 0.0)" lon="\(droneInfo["lon"] as? Double ?? 0.0)" hae="\(droneInfo["alt"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
+          <detail>
+            <contact callsign="\(id)"/>
+            <track course="0" speed="\(droneInfo["speed"] as? Double ?? 0.0)"/>
+            <remarks>\(droneInfo["description"] as? String ?? "")</remarks>
+            <Speed>\(droneInfo["speed"] as? Double ?? 0.0)</Speed>
+            <VerticalSpeed>\(droneInfo["vspeed"] as? Double ?? 0.0)</VerticalSpeed>
+            <Altitude>\(droneInfo["alt"] as? Double ?? 0.0)</Altitude>
+            <height>\(droneInfo["height"] as? Double ?? 0.0)</height>
+            <PilotLocation>
+              <lat>\(droneInfo["pilot_lat"] as? Double ?? 0.0)</lat>
+              <lon>\(droneInfo["pilot_lon"] as? Double ?? 0.0)</lon>
+            </PilotLocation>
+          </detail>
+        </event>
+        """
+    }
+    
+    private func createStatusXML(_ json: [String: Any]) -> String {
+        let serialNumber = json["serial_number"] as? String ?? "8447891c1561"
+        let gpsData = json["gps_data"] as? [String: Any] ?? [:]
+        let systemStats = json["system_stats"] as? [String: Any] ?? [:]
+        
+        let memory = systemStats["memory"] as? [String: Any] ?? [:]
+        let memoryTotal = Double(memory["total"] as? Int64 ?? 0) / (1024 * 1024)
+        let memoryAvailable = Double(memory["available"] as? Int64 ?? 0) / (1024 * 1024)
+        
+        let disk = systemStats["disk"] as? [String: Any] ?? [:]
+        let diskTotal = Double(disk["total"] as? Int64 ?? 0) / (1024 * 1024)
+        let diskUsed = Double(disk["used"] as? Int64 ?? 0) / (1024 * 1024)
+
+        // Exact format that CoTMessageParser.parseRemarks() expects
+        let remarks = "CPU Usage: \(systemStats["cpu_usage"] as? Double ?? 0.0)%, " +
+                     "Memory Total: \(String(format: "%.1f", memoryTotal)) MB, " +
+                     "Memory Available: \(String(format: "%.1f", memoryAvailable)) MB, " +
+                     "Disk Total: \(String(format: "%.1f", diskTotal)) MB, " +
+                     "Disk Used: \(String(format: "%.1f", diskUsed)) MB, " +
+                     "Temperature: \(systemStats["temperature"] as? Double ?? 0.0)°C, " +
+                     "Uptime: \(systemStats["uptime"] as? Double ?? 0.0) seconds"
+
+        return """
+        <event version="2.0" uid="\(serialNumber)" type="b-m-p-s-m">
+            <point lat="\(gpsData["latitude"] as? Double ?? 0.0)" lon="\(gpsData["longitude"] as? Double ?? 0.0)" hae="\(gpsData["altitude"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
+            <detail>
+                <status readiness="true"/>
+                <remarks>\(remarks)</remarks>
+            </detail>
+        </event>
+        """
+    }
+    
     func disconnect() {
-        print("ZMQHandler: Disconnect called")
+        print("ZMQ: Disconnecting...")
         shouldContinueRunning = false
         
         do {
-            print("ZMQHandler: Closing sockets...")
             try telemetrySocket?.close()
             try statusSocket?.close()
-            
-            print("ZMQHandler: Terminating context...")
             try context?.terminate()
-        } catch let error as SwiftyZeroMQ.ZeroMQError {
-            handleZMQError(error)
         } catch {
-            print("Cleanup Error: \(error)")
+            print("ZMQ Cleanup Error: \(error)")
         }
         
         telemetrySocket = nil
         statusSocket = nil
         context = nil
-        telemetryQueue = nil
-        statusQueue = nil
+        poller = nil
         isConnected = false
-        print("ZMQHandler: Disconnect complete")
+        print("ZMQ: Disconnected")
     }
     
     deinit {
-        if isConnected {
-            disconnect()
-        }
+        disconnect()
     }
 }

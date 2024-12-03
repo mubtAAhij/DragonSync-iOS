@@ -1,83 +1,177 @@
-
-
-import zmq
-import json
-import threading
 import time
+import os
+import random
+import json
+import zmq
+from datetime import datetime
 
-class ZMQDecoder:
-    def __init__(self, zmq_host="0.0.0.0", zmq_port=4224):
-        self.zmq_host = zmq_host
-        self.zmq_port = zmq_port
-        self.context = zmq.Context()
-        self.publisher = self.context.socket(zmq.PUB)
+class Config:
+    def __init__(self):
+        self.zmq_host = '0.0.0.0'
+        self.telemetry_port = 4224  # Port for decoded drone data
+        self.status_port = 4225     # Port for system status
+
+class MessageGenerator:
+    def __init__(self):
+        self.start_time = time.time()
+
+    def generate_decoded_drone_message(self, use_ble=True):
+        """Emulate zmq_decoder.py output format"""
+        drone_id = f"DRONE{random.randint(100,103)}"
+        lat = round(random.uniform(25.0, 49.0), 6)
+        lon = round(random.uniform(-125.0, -67.0), 6)
         
-    def start(self):
-        zmq_address = f"tcp://{self.zmq_host}:{self.zmq_port}"
-        self.publisher.bind(zmq_address)
-        print(f"ZMQDecoder started at {zmq_address}")
-        
-        # Continuously publish dummy data
-        while True:
-            # Simulate sending messages on specific topics
-            topics = ["AUX_ADV_IND", "DroneID"]
-            for topic in topics:
-                message = {
-                    "topic": topic,
-                    "data": f"Dummy data for {topic}",
-                    "timestamp": time.time()
+        if use_ble:
+            message = {
+                "Basic ID": {
+                    "id_type": "Serial Number (ANSI/CTA-2063-A)",
+                    "id": drone_id
+                },
+                "Location/Vector Message": {
+                    "latitude": lat,
+                    "longitude": lon,
+                    "speed": round(random.uniform(0, 30), 1),
+                    "vert_speed": round(random.uniform(-5, 5), 1),
+                    "geodetic_altitude": round(random.uniform(50, 400), 1),
+                    "height_agl": round(random.uniform(20, 200), 1)
+                },
+                "Self-ID Message": {
+                    "text": f"Test Drone {drone_id}"
+                },
+                "System Message": {
+                    "latitude": lat + random.uniform(-0.001, 0.001),
+                    "longitude": lon + random.uniform(-0.001, 0.001)
                 }
-                self.publisher.send_string(f"{topic} {json.dumps(message)}")
-                print(f"Published: {message}")
-                time.sleep(5)  # Adjust the frequency of message publication as needed
-                
-                
-class ZMQMonitor:
-    def __init__(self, zmq_decoder_host="127.0.0.1", zmq_decoder_port=4224):
-        self.zmq_decoder_host = zmq_decoder_host
-        self.zmq_decoder_port = zmq_decoder_port
-        self.context = zmq.Context()
-        self.subscriber = self.context.socket(zmq.SUB)
+            }
+        else:
+            message = {
+                "DroneID": {
+                    f"{drone_id}-MAC": {
+                        "Basic ID": {
+                            "id_type": "CAA Registration ID",
+                            "id": drone_id
+                        },
+                        "Location/Vector Message": {
+                            "latitude": lat,
+                            "longitude": lon,
+                            "speed": round(random.uniform(0, 30), 1),
+                            "vert_speed": round(random.uniform(-5, 5), 1),
+                            "geodetic_altitude": round(random.uniform(50, 400), 1),
+                            "height_agl": round(random.uniform(20, 200), 1)
+                        }
+                    }
+                }
+            }
+        return json.dumps(message)
+
+    def generate_system_status(self):
+        """Emulate wardragon_monitor.py output format"""
+        runtime = int(time.time() - self.start_time)
         
-    def connect(self):
-        zmq_address = f"tcp://{self.zmq_decoder_host}:{self.zmq_decoder_port}"
-        self.subscriber.connect(zmq_address)
-        # Subscribe to all topics
-        self.subscriber.setsockopt_string(zmq.SUBSCRIBE, "")
-        print(f"ZMQMonitor connected to {zmq_address}")
+        return json.dumps({
+            'timestamp': time.time(),
+            'gps_data': {
+                'latitude': round(random.uniform(25.0, 49.0), 6),
+                'longitude': round(random.uniform(-125.0, -67.0), 6),
+                'altitude': round(random.uniform(0, 1000), 1),
+                'speed': round(random.uniform(0, 30), 1)
+            },
+            'serial_number': f"wardragon-{random.randint(100,102)}",
+            'system_stats': {
+                'cpu_usage': round(random.uniform(0, 100), 1),
+                'memory': {
+                    'total': 8589934592,
+                    'available': random.randint(2147483648, 6442450944),
+                    'percent': round(random.uniform(20, 80), 1),
+                    'used': random.randint(2147483648, 6442450944),
+                    'free': random.randint(2147483648, 6442450944)
+                },
+                'disk': {
+                    'total': 256000000000,
+                    'used': random.randint(50000000000, 200000000000),
+                    'free': random.randint(50000000000, 200000000000),
+                    'percent': round(random.uniform(20, 80), 1)
+                },
+                'temperature': round(random.uniform(30, 70), 1),
+                'uptime': runtime
+            }
+        })
+
+def setup_zmq():
+    context = zmq.Context()
+    telemetry_socket = context.socket(zmq.PUB)
+    status_socket = context.socket(zmq.PUB)
+    return context, telemetry_socket, status_socket
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def main():
+    config = Config()
+    generator = MessageGenerator()
+    
+    while True:
+        clear_screen()
+        print("🐉 DragonSync Test Publisher 🐉")
+        print("\nPublishing to:")
+        print(f"Telemetry: {config.zmq_host}:{config.telemetry_port}")
+        print(f"Status: {config.zmq_host}:{config.status_port}")
         
-    def listen(self):
-        print("ZMQMonitor listening for messages...")
-        while True:
+        print("\n1. Send BLE Drone Messages")
+        print("2. Send WiFi DroneID Messages")
+        print("3. Send System Status")
+        print("4. Send All Types")
+        print("5. Exit")
+        
+        choice = input("\nChoice (1-5): ")
+        
+        if choice == '5':
+            break
+            
+        if choice in ['1', '2', '3', '4']:
             try:
-                # Receive topic and message
-                raw_message = self.subscriber.recv_string()
-                topic, message = raw_message.split(" ", 1)
-                print(f"Received on topic '{topic}': {message}")
-                
-                # Decode JSON message
-                data = json.loads(message)
-                self.process_message(topic, data)
-                
+                interval = float(input("\nSend interval in seconds (0.1-60): "))
+                if not (0.1 <= interval <= 60):
+                    print("Interval must be between 0.1 and 60 seconds")
+                    continue
+            except ValueError:
+                print("Invalid interval")
+                continue
+
+            context, telemetry_socket, status_socket = setup_zmq()
+            telemetry_socket.bind(f"tcp://{config.zmq_host}:{config.telemetry_port}")
+            status_socket.bind(f"tcp://{config.zmq_host}:{config.status_port}")
+
+            print(f"\n🚀 Publishing test data every {interval} seconds")
+            print("Press Ctrl+C to stop\n")
+            
+            try:
+                while True:
+                    if choice in ['1', '4']:
+                        message = generator.generate_decoded_drone_message(use_ble=True)
+                        telemetry_socket.send_string(message)
+                        print(f"📡 Sent BLE drone message")
+
+                    if choice in ['2', '4']:
+                        message = generator.generate_decoded_drone_message(use_ble=False)
+                        telemetry_socket.send_string(message)
+                        print(f"📡 Sent WiFi drone message")
+
+                    if choice in ['3', '4']:
+                        message = generator.generate_system_status()
+                        status_socket.send_string(message)
+                        print(f"📡 Sent system status")
+
+                    time.sleep(interval)
+                    
             except KeyboardInterrupt:
-                print("ZMQMonitor shutting down...")
-                break
-            except Exception as e:
-                print(f"Error processing message: {e}")
-                
-    def process_message(self, topic, data):
-        # Handle received messages (forward, store, etc.)
-        print(f"Processed message from topic '{topic}': {data}")
-        
-        
+                print("\n🛑 Publishing stopped")
+                context.destroy()
+                input("\nPress Enter to continue...")
+
 if __name__ == "__main__":
-    # Start ZMQDecoder in a separate thread
-    decoder = ZMQDecoder(zmq_host="0.0.0.0", zmq_port=4224)
-    decoder_thread = threading.Thread(target=decoder.start, daemon=True)
-    decoder_thread.start()
-    
-    # Start ZMQMonitor in the main thread
-    monitor = ZMQMonitor(zmq_decoder_host="127.0.0.1", zmq_decoder_port=4224)
-    monitor.connect()
-    monitor.listen()
-    
+    try:
+        main()
+        print("\n👋 Goodbye!")
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
