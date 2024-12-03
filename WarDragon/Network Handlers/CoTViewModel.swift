@@ -120,7 +120,7 @@ class CoTViewModel: ObservableObject {
     }
 
     private func startZMQListening() {
-        zmqHandler = ZMQHandler(cotViewModel: self)
+        zmqHandler = ZMQHandler()
         
         zmqHandler?.connect(
             host: Settings.shared.zmqHost,

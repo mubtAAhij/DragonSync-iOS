@@ -6,7 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BD6EB8993310167A6208B806 /* Pods_WarDragon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 72A6AFE341D2FC1AA9B7820B /* Pods_WarDragon.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		2E4EBB06F82A4ED8AF0592B0 /* Pods-WarDragon.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WarDragon.release.xcconfig"; path = "Target Support Files/Pods-WarDragon/Pods-WarDragon.release.xcconfig"; sourceTree = "<group>"; };
+		72A6AFE341D2FC1AA9B7820B /* Pods_WarDragon.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_WarDragon.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		767799E10750B691DFA0F099 /* Pods-WarDragon.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WarDragon.debug.xcconfig"; path = "Target Support Files/Pods-WarDragon/Pods-WarDragon.debug.xcconfig"; sourceTree = "<group>"; };
+		EBDA89DB2CFE82EB00E510D6 /* SwiftyZeroMQ5.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftyZeroMQ5.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		EBFDAFBD2CEB98C8007CBD1F /* WarDragon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WarDragon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -36,17 +44,38 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BD6EB8993310167A6208B806 /* Pods_WarDragon.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AE2CD03C50DA0595C0F4E8C4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				EBDA89DB2CFE82EB00E510D6 /* SwiftyZeroMQ5.framework */,
+				72A6AFE341D2FC1AA9B7820B /* Pods_WarDragon.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		DD62DDFE830930B12B400DBC /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				767799E10750B691DFA0F099 /* Pods-WarDragon.debug.xcconfig */,
+				2E4EBB06F82A4ED8AF0592B0 /* Pods-WarDragon.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		EBFDAFB42CEB98C8007CBD1F = {
 			isa = PBXGroup;
 			children = (
 				EBFDAFBF2CEB98C8007CBD1F /* WarDragon */,
 				EBFDAFBE2CEB98C8007CBD1F /* Products */,
+				DD62DDFE830930B12B400DBC /* Pods */,
+				AE2CD03C50DA0595C0F4E8C4 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -65,9 +94,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = EBFDAFCC2CEB98C9007CBD1F /* Build configuration list for PBXNativeTarget "WarDragon" */;
 			buildPhases = (
+				F2A0C27822D94BE7148FDE08 /* [CP] Check Pods Manifest.lock */,
 				EBFDAFB92CEB98C8007CBD1F /* Sources */,
 				EBFDAFBA2CEB98C8007CBD1F /* Frameworks */,
 				EBFDAFBB2CEB98C8007CBD1F /* Resources */,
+				19803A6405C5C43BF2E8CCCC /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -77,8 +108,6 @@
 				EBFDAFBF2CEB98C8007CBD1F /* WarDragon */,
 			);
 			name = WarDragon;
-			packageProductDependencies = (
-			);
 			productName = WarDragon;
 			productReference = EBFDAFBD2CEB98C8007CBD1F /* WarDragon.app */;
 			productType = "com.apple.product-type.application";
@@ -107,8 +136,6 @@
 			);
 			mainGroup = EBFDAFB42CEB98C8007CBD1F;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EBFDAFBE2CEB98C8007CBD1F /* Products */;
 			projectDirPath = "";
@@ -128,6 +155,48 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		19803A6405C5C43BF2E8CCCC /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-WarDragon/Pods-WarDragon-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-WarDragon/Pods-WarDragon-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WarDragon/Pods-WarDragon-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		F2A0C27822D94BE7148FDE08 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-WarDragon-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		EBFDAFB92CEB98C8007CBD1F /* Sources */ = {
@@ -256,6 +325,7 @@
 		};
 		EBFDAFCD2CEB98C9007CBD1F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 767799E10750B691DFA0F099 /* Pods-WarDragon.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -268,6 +338,7 @@
 				DEVELOPMENT_TEAM = A64B5QV548;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WarDragon/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Dragon;
@@ -302,6 +373,7 @@
 		};
 		EBFDAFCE2CEB98C9007CBD1F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2E4EBB06F82A4ED8AF0592B0 /* Pods-WarDragon.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -314,6 +386,7 @@
 				DEVELOPMENT_TEAM = A64B5QV548;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WarDragon/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Dragon;
