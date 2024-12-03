@@ -126,7 +126,7 @@ class ZMQHandler: ObservableObject {
             
             isConnected = true
             
-        } catch let error as ZeroMQError {
+        } catch let error as SwiftyZeroMQ.ZeroMQError {
             handleZMQError(error)
             disconnect()
         } catch {
@@ -146,7 +146,7 @@ class ZMQHandler: ObservableObject {
             
             // Then terminate context
             try context?.terminate()
-        } catch let error as ZeroMQError {
+        } catch let error as SwiftyZeroMQ.ZeroMQError {
             handleZMQError(error)
         } catch {
             print("Cleanup Error: \(error)")
@@ -196,7 +196,7 @@ class ZMQHandler: ObservableObject {
     private func configureSocket(_ socket: SwiftyZeroMQ.Socket) throws {
         try socket.setRecvHighWaterMark(Self.defaultHighWaterMark)
         try socket.setLinger(0)
-        try socket.setReceiveTimeout(Self.defaultReceiveTimeout)
+        try socket.setRecvTimeout(Self.defaultReceiveTimeout)
         try socket.setImmediate(true)
         try socket.setSubscribe("")  // Subscribe to all topics
     }
@@ -219,9 +219,9 @@ class ZMQHandler: ObservableObject {
                             }
                         }
                     }
-                } catch let error as ZeroMQError {
+                } catch let error as SwiftyZeroMQ.ZeroMQError {
                     // Ignore EAGAIN which just means no message available
-                    if error.errorCode != EAGAIN && self.shouldContinueRunning {
+                    if error.description != "Resource temporarily unavailable" && self.shouldContinueRunning {
                         self.handleZMQError(error, context: name)
                     }
                 } catch {
@@ -233,18 +233,18 @@ class ZMQHandler: ObservableObject {
         }
     }
     
-    private func handleZMQError(_ error: ZeroMQError, context: String = "") {
+    private func handleZMQError(_ error: SwiftyZeroMQ.ZeroMQError, context: String = "") {
         let errorContext = context.isEmpty ? "" : "[\(context)] "
-        switch error.errorCode {
-        case ETERM:
+        switch error.description {
+        case "Context was terminated":
             print("\(errorContext)Context was terminated")
-        case EAGAIN:
+        case "Resource temporarily unavailable":
             print("\(errorContext)Non-blocking operation would block")
-        case EINVAL:
+        case "Invalid argument":
             print("\(errorContext)Invalid argument")
-        case EFAULT:
+        case "Bad address":
             print("\(errorContext)Memory fault")
-        case EINTR:
+        case "Interrupted system call":
             print("\(errorContext)Operation interrupted")
         default:
             print("\(errorContext)ZMQ Error: \(error)")

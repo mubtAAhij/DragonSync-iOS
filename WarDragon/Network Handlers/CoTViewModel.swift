@@ -121,23 +121,22 @@ class CoTViewModel: ObservableObject {
 
     private func startZMQListening() {
         zmqHandler = ZMQHandler()
-        zmqHandler?.connect()
-
-//        zmqHandler?.connect(
-//            host: Settings.shared.zmqHost,
-//            zmqTelemetryPort: UInt16(Settings.shared.zmqTelemetryPort),
-//            zmqStatusPort: UInt16(Settings.shared.zmqStatusPort),
-//            onTelemetry: { [weak self] message in
-//                if let data = message.data(using: .utf8) {
-//                    self?.processIncomingMessage(data)
-//                }
-//            },
-//            onStatus: { [weak self] message in
-//                if let data = message.data(using: .utf8) {
-//                    self?.processIncomingMessage(data)
-//                }
-//            }
-//        )
+        
+        zmqHandler?.connect(
+            host: Settings.shared.zmqHost,
+            zmqTelemetryPort: UInt16(Settings.shared.zmqTelemetryPort),
+            zmqStatusPort: UInt16(Settings.shared.zmqStatusPort),
+            onTelemetry: { [weak self] message in
+                if let data = message.data(using: .utf8) {
+                    self?.processIncomingMessage(data)
+                }
+            },
+            onStatus: { [weak self] message in
+                if let data = message.data(using: .utf8) {
+                    self?.processIncomingMessage(data)
+                }
+            }
+        )
     }
     
     // Extract the message processing logic to be reusable
