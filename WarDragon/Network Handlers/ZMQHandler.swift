@@ -87,9 +87,6 @@ class ZMQHandler: ObservableObject {
         disconnect()
         shouldContinueRunning = true
         
-        print("Connecting to telemetry XPUB at \(host):\(zmqTelemetryPort)")
-        print("Connecting to status PUB at \(host):\(zmqStatusPort)")
-        
         do {
             // Initialize and configure context
             context = try SwiftyZeroMQ.Context()
@@ -138,33 +135,6 @@ class ZMQHandler: ObservableObject {
         }
     }
     
-    /// Disconnect all ZMQ connections and clean up resources
-    func disconnect() {
-        print("ZMQHandler: Disconnect called")
-        shouldContinueRunning = false
-        
-        do {
-            print("ZMQHandler: Closing sockets...")
-            try telemetrySocket?.close()
-            try statusSocket?.close()
-            
-            print("ZMQHandler: Terminating context...")
-            try context?.terminate()
-        } catch let error as SwiftyZeroMQ.ZeroMQError {
-            handleZMQError(error)
-        } catch {
-            print("Cleanup Error: \(error)")
-        }
-
-        telemetrySocket = nil
-        statusSocket = nil
-        context = nil
-        telemetryQueue = nil
-        statusQueue = nil
-        isConnected = false
-        print("ZMQHandler: Disconnect complete")
-    }
-    
     // MARK: - Private Methods
     
     private func configureContext(_ context: SwiftyZeroMQ.Context) throws {
@@ -179,9 +149,8 @@ class ZMQHandler: ObservableObject {
         port: UInt16
     ) throws -> SwiftyZeroMQ.Socket {
         print("Setting up telemetry SUB socket...")
-        let socket = try context.socket(.subscribe)  // Changed to .subscribe to connect to XPUB
-        try socket.setLinger(0)
-        try socket.setSubscribe("")  // Subscribe to all messages
+        let socket = try context.socket(.subscribe)
+        try configureSocket(socket)
         print("Connecting SUB to tcp://\(host):\(port)...")
         try socket.connect("tcp://\(host):\(port)")
         return socket
@@ -192,8 +161,10 @@ class ZMQHandler: ObservableObject {
         host: String,
         port: UInt16
     ) throws -> SwiftyZeroMQ.Socket {
-        let socket = try context.socket(.subscribe)  // For PUB server
+        let socket = try context.socket(.subscribe)
         try configureSocket(socket)
+        try socket.connect("tcp://\(host):\(port)")
+        print("Connecting SUB to tcp://\(host):\(port)...")
         try socket.connect("tcp://\(host):\(port)")
         return socket
     }
@@ -201,6 +172,7 @@ class ZMQHandler: ObservableObject {
     private func configureSocket(_ socket: SwiftyZeroMQ.Socket) throws {
         try socket.setRecvHighWaterMark(Self.defaultHighWaterMark)
         try socket.setLinger(0)
+        try socket.setMaxReconnectInterval(10)
         try socket.setRecvTimeout(Self.defaultReceiveTimeout)
         try socket.setImmediate(true)
         try socket.setSubscribe("")  // Subscribe to all topics
@@ -220,6 +192,7 @@ class ZMQHandler: ObservableObject {
             while self.shouldContinueRunning {
                 do {
                     print("\(name): Waiting for message...")
+                    
                     if let data = try socket.recv(bufferLength: Self.defaultBufferSize) {
                         if let message = String(data: data, encoding: .utf8) {
                             print("\(name): Received message: \(message)")
@@ -239,6 +212,11 @@ class ZMQHandler: ObservableObject {
                     if self.shouldContinueRunning {
                         print("\(name) Unexpected Error: \(error)")
                     }
+                }
+                // Add a 5-second delay after processing each message
+                if self.shouldContinueRunning {
+                    print("\(name): Sleeping for 5 seconds...")
+                    Thread.sleep(forTimeInterval: 5.0)
                 }
             }
             print("\(name) receiver stopped.")
@@ -265,7 +243,36 @@ class ZMQHandler: ObservableObject {
     
     // MARK: - Lifecycle
     
+    // Disconnect all ZMQ connections and clean up resources
+    func disconnect() {
+        print("ZMQHandler: Disconnect called")
+        shouldContinueRunning = false
+        
+        do {
+            print("ZMQHandler: Closing sockets...")
+            try telemetrySocket?.close()
+            try statusSocket?.close()
+            
+            print("ZMQHandler: Terminating context...")
+            try context?.terminate()
+        } catch let error as SwiftyZeroMQ.ZeroMQError {
+            handleZMQError(error)
+        } catch {
+            print("Cleanup Error: \(error)")
+        }
+        
+        telemetrySocket = nil
+        statusSocket = nil
+        context = nil
+        telemetryQueue = nil
+        statusQueue = nil
+        isConnected = false
+        print("ZMQHandler: Disconnect complete")
+    }
+    
     deinit {
-        disconnect()
+        if isConnected {
+            disconnect()
+        }
     }
 }
