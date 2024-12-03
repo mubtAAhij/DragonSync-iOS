@@ -1,0 +1,21 @@
+PODS:
+  - SwiftyZeroMQ5 (1.3.0)
+
+DEPENDENCIES:
+  - SwiftyZeroMQ5 (from `https://github.com/lukeswitz/SwiftyZeroMQ5.git`)
+
+EXTERNAL SOURCES:
+  SwiftyZeroMQ5:
+    :git: https://github.com/lukeswitz/SwiftyZeroMQ5.git
+
+CHECKOUT OPTIONS:
+  SwiftyZeroMQ5:
+    :commit: 96d5a1dd1509953610aae38b17584a252bcbd0b8
+    :git: https://github.com/lukeswitz/SwiftyZeroMQ5.git
+
+SPEC CHECKSUMS:
+  SwiftyZeroMQ5: c90dc55fb029cda964523843791659a2ead798ed
+
+PODFILE CHECKSUM: a3b1bdd6123db7a6fd77986ffb730b7328a323e4
+
+COCOAPODS: 1.16.2
