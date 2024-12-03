@@ -161,6 +161,7 @@ class ZMQHandler: ObservableObject {
         host: String,
         port: UInt16
     ) throws -> SwiftyZeroMQ.Socket {
+        print("Setting up status SUB socket...")
         let socket = try context.socket(.subscribe)
         try configureSocket(socket)
         try socket.connect("tcp://\(host):\(port)")
