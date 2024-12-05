@@ -18,25 +18,6 @@ class ZMQHandler {
         }
     }
     
-    private struct Metrics {
-        var messageCount: Int = 0
-        var errorCount: Int = 0
-        var lastMessageTime: Date?
-        var lastErrorTime: Date?
-        var reconnectAttempts: Int = 0
-        var bytesReceived: Int64 = 0
-    }
-    
-    private struct Config {
-        let maxReconnectAttempts: Int = 10
-        let maxReconnectDelay: TimeInterval = 30.0
-        let healthCheckInterval: TimeInterval = 5.0
-    }
-    
-    private var metrics = Metrics()
-    private let config = Config()
-    private let healthCheckTimer: DispatchSourceTimer
-    
     private var context: SwiftyZeroMQ.Context?
     private var telemetrySocket: SwiftyZeroMQ.Socket?
     private var statusSocket: SwiftyZeroMQ.Socket?
@@ -50,25 +31,6 @@ class ZMQHandler {
     
     //MARK - Connection
     
-    init() {
-        healthCheckTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
-        healthCheckTimer.schedule(deadline: .now() + config.healthCheckInterval,
-                                  repeating: config.healthCheckInterval)
-        healthCheckTimer.setEventHandler { [weak self] in
-            self?.performHealthCheck()
-        }
-    }
-    
-    private func performHealthCheck() {
-        guard isConnected else { return }
-        
-        if let lastMessage = metrics.lastMessageTime,
-           Date().timeIntervalSince(lastMessage) > config.healthCheckInterval * 2 {
-            print("Connection may be stale, attempting recovery...")
-            disconnect()
-        }
-    }
-    
     func connect(
         host: String,
         zmqTelemetryPort: UInt16,
@@ -80,7 +42,6 @@ class ZMQHandler {
         
         disconnect()
         shouldContinueRunning = true
-        metrics.reconnectAttempts += 1
         
         do {
             try setupZMQ(
@@ -173,10 +134,6 @@ class ZMQHandler {
             return
         }
         
-        metrics.messageCount += 1
-        metrics.lastMessageTime = Date()
-        metrics.bytesReceived += Int64(data.count)
-        
         DispatchQueue.main.async {
             if socket === self.telemetrySocket {
                 if let processed = self.processor.processTelemetryMessage(message) {
@@ -206,10 +163,6 @@ class ZMQHandler {
                 onStatus: onStatus
             )
         }
-    }
-    
-    private func getMetrics() -> Metrics {
-        return metrics
     }
     
     func disconnect() {
