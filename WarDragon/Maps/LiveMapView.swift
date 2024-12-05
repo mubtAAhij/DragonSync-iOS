@@ -54,7 +54,7 @@ struct LiveMapView: View {
                 Button(action: { showDroneList.toggle() }) {
                     Text("\(uniqueDrones.count) Drones")
                         .padding()
-                        .background(.ultraThinMaterial)
+                        .background(Color.black)
                         .cornerRadius(20)
                 }
                 .padding(.bottom)

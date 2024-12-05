@@ -21,7 +21,7 @@ struct CircularGauge: View {
         VStack {
             ZStack {
                 Circle()
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                    .stroke(Color.gray, lineWidth: 8)
                 Circle()
                     .trim(from: 0, to: CGFloat(value / maxValue))
                     .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
@@ -32,7 +32,7 @@ struct CircularGauge: View {
                         .foregroundColor(color)
                     Text(unit)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(color.opacity(0.8))
+                        .foregroundColor(color)
                 }
             }
             .frame(width: 80, height: 80)
@@ -64,7 +64,7 @@ struct ResourceBar: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Rectangle()
-                        .fill(Color.gray.opacity(0.2))
+                        .fill(Color.gray)
                     Rectangle()
                         .fill(color)
                         .frame(width: geometry.size.width * CGFloat(usedPercent / 100.0))
@@ -140,7 +140,7 @@ struct MemoryDetailView: View {
             }
         }
         .padding()
-        .background(Color.black.opacity(0.6))
+        .background(Color.black)
         .cornerRadius(12)
     }
     
@@ -183,7 +183,7 @@ struct MemoryBarView: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Rectangle()
-                        .fill(Color.gray.opacity(0.2))
+                        .fill(Color.gray)
                     Rectangle()
                         .fill(color)
                         .frame(width: geometry.size.width * CGFloat(percentage / 100))
@@ -354,7 +354,7 @@ struct StatusMessageView: View {
                     .foregroundColor(.orange)
             }
             .padding(8)
-            .background(Color.black.opacity(0.8))
+            .background(Color.black)
             
             HStack(spacing: 16) {
                 // System Stats
@@ -381,14 +381,14 @@ struct StatusMessageView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.green.opacity(0.3), lineWidth: 1)
+                    .strokeBorder(Color.green, lineWidth: 1)
             )
         }
-        .background(Color.black.opacity(0.4))
+        .background(Color.black)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.green.opacity(0.3), lineWidth: 1)
+                .strokeBorder(Color.green, lineWidth: 1)
         )
     }
     

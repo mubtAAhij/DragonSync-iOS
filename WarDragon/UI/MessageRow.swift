@@ -49,7 +49,7 @@ struct MessageRow: View {
                 .cornerRadius(10)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                        .stroke(Color.gray, lineWidth: 1)
                 )
                 .onTapGesture {
                     if let lat = Double(message.lat),
