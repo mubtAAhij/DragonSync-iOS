@@ -104,6 +104,48 @@ class DroneMessageGenerator:
       # Format message as a string for multicast transmission
       return json.dumps(message)
     
+    def generate_bt45_message(self):
+      """Generate BT4/5 format message with AUX_ADV_IND structure"""
+      runtime = int(time.time() - self.start_time)
+      
+      # Use consistent drone IDs for easier tracking
+      drone_id = f"DRONE{random.randint(100,103)}"
+      
+      # Generate random but valid coordinates
+      lat = round(random.uniform(*self.lat_range), 6) 
+      lon = round(random.uniform(*self.lon_range), 6)
+      
+      message = {
+        "AUX_ADV_IND": {
+          "aa": 0x8e89bed6,  # Required OpenDroneID identifier
+          "addr": drone_id,
+          "rssi": random.randint(-90, -40)  # Realistic RSSI values
+        },
+        "AdvData": "16FFFA0D..."  # This would be actual OpenDroneID payload
+      }
+      
+      return json.dumps(message)
+    
+    def generate_wifi_message(self):
+      """Generate WiFi format message with DroneID structure"""
+      mac = f"AA:BB:CC:{random.randint(0,255):02X}:{random.randint(0,255):02X}:{random.randint(0,255):02X}"
+      
+      message = {
+        "DroneID": {
+          mac: {
+            "AdvData": "...",  # OpenDroneID payload as hex
+            "Location/Vector Message": {
+              "latitude": round(random.uniform(*self.lat_range), 6),
+              "longitude": round(random.uniform(*self.lon_range), 6),
+              "altitude": round(random.uniform(50, 400), 1),
+              "speed": round(random.uniform(0, 30), 1),
+              "heading": round(random.uniform(0, 360), 1)
+            }
+          }
+        }
+      }
+      
+      return json.dumps(message)
     
     def get_timestamps(self):
       now = datetime.now(timezone.utc)
