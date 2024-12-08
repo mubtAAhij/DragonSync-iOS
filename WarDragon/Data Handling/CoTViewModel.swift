@@ -10,8 +10,10 @@ import Network
 import UserNotifications
 import CoreLocation
 
+
 class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
+    @Published var droneSignatures: [DroneSignature] = []
     private var zmqHandler: ZMQHandler?
     private var cotListener: NWListener?
     private var statusListener: NWListener?
@@ -267,19 +269,25 @@ class CoTViewModel: ObservableObject {
     }
     
     private func updateMessage(_ message: CoTMessage) {
-        DispatchQueue.main.async {
-            if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
-                // Update existing message
-                self.parsedMessages[index] = message
-                print("Updated existing: \(message.uid)")
-            } else {
-                // Add new message
-                self.parsedMessages.append(message)
-                print("Added new: \(message.uid)")
-                self.sendNotification(for: message)
+            DispatchQueue.main.async {
+                // Update existing messages
+                if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
+                    self.parsedMessages[index] = message
+                } else {
+                    self.parsedMessages.append(message)
+                    self.sendNotification(for: message)
+                }
+                
+                // Update signatures if needed
+                if let signature = self.droneSignatures.first(where: { $0.primaryId.id == message.uid }) {
+                    let matchScore = DroneSignatureGenerator().matchSignatures(
+                        signature,
+                        DroneSignatureGenerator().createSignature(from: ["Basic ID": ["id": message.uid]])
+                    )
+                    print("Updated signature match score: \(matchScore)")
+                }
             }
         }
-    }
     
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
         let content = UNMutableNotificationContent()
