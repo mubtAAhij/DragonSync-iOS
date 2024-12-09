@@ -20,24 +20,60 @@ final class ZMQMessageProcessor {
         if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{"),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             
+            // Check for BT4/5 messages
             if let advInfo = json["AUX_ADV_IND"] as? [String: Any] {
                 return processBT45Message(json, advInfo)
-            } else if let droneId = json["DroneID"] as? [String: Any] {
+            }
+            
+            // Check for WiFi messages
+            if let droneId = json["DroneID"] as? [String: Any] {
                 return processWiFiMessage(json, droneId)
-            } else if json["Basic ID"] != nil {
+            }
+            
+            // ESP32 Message check by looking for protocol_version
+            if let basicID = json["Basic ID"] as? [String: Any],
+               basicID["protocol_version"] == nil,
+               let _ = json["Location/Vector Message"] {
                 return processESP32Message(json)
             }
+            
+            // Regular Message (rich structure)
+            if let _ = json["Basic ID"],
+               let _ = json["Location/Vector Message"] {
+                return processRegularMessage(json)
+            }
+            
+            // Unrecognized message format
+            print("⚠️ Unrecognized telemetry message format: \(message)")
+            return nil
         }
         return nil
     }
-
+    
+    
+    private func processRegularMessage(_ json: [String: Any]) -> String? {
+        guard json["Basic ID"] != nil,  // Check existence of "Basic ID"
+              let id = (json["Basic ID"] as? [String: Any])?["id"] as? String,
+              let location = json["Location/Vector Message"] as? [String: Any],
+              let _ = location["latitude"] as? Double,
+              let _ = location["longitude"] as? Double else {
+            return nil
+        }
+        
+        // Create a unique drone ID for regular messages
+        let droneId: String = "REGULAR-\(id)"
+        
+        let signature = signatureGenerator.createSignature(from: json)
+        return createCoTMessage(signature: signature, droneId: droneId)
+    }
+    
     func processStatusMessage(_ message: String) -> String? {
         if message.contains("type=\"b-m-p-s-m\"") && message.contains("<remarks>CPU Usage:") {
             return message // Already in correct XML format
         }
         return nil
     }
-
+    
     // MARK: - Private Message Handlers
     private func processBT45Message(_ json: [String: Any], _ advInfo: [String: Any]) -> String? {
         guard let advData = json["AdvData"] as? String,
@@ -62,7 +98,7 @@ final class ZMQMessageProcessor {
         let signature = signatureGenerator.createSignature(from: json)
         return createCoTMessage(signature: signature, droneId: droneId)
     }
-
+    
     private func processWiFiMessage(_ json: [String: Any], _ droneId: [String: Any]) -> String? {
         for (mac, field) in droneId {
             guard let fieldData = field as? [String: Any] else { continue }
@@ -83,8 +119,8 @@ final class ZMQMessageProcessor {
         }
         return nil
     }
-
-
+    
+    
     private func processESP32Message(_ json: [String: Any]) -> String? {
         guard let basicId = json["Basic ID"] as? [String: Any],
               let id = basicId["id"] as? String,
@@ -141,7 +177,7 @@ final class ZMQMessageProcessor {
             </DroneMetadata>
             """
         } else { "" }
-
+        
         return """
         <event version="2.0" uid="\(droneId)" type="\(droneType)" time="\(timestamp)" start="\(timestamp)" stale="\(timestamp)" how="m-g">
             <point lat="\(signature.position.coordinate.latitude)" lon="\(signature.position.coordinate.longitude)" hae="\(signature.position.altitude)" ce="9999999" le="9999999"/>
