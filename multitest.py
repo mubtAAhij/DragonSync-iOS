@@ -23,7 +23,6 @@ class DroneMessageGenerator:
     self.start_time = time.time()
     
   def generate_complete_message(self, mode="zmq"):
-    """Generate a detailed drone message with data matching the example image."""
     now = datetime.now(timezone.utc)
     timestamp = now.strftime("%Y-%m-%d %H:%M:%S UTC")
     timestamp_raw = int(now.timestamp())
@@ -105,70 +104,164 @@ class DroneMessageGenerator:
       return json.dumps(message)
     
     def generate_bt45_message(self):
-      """Generate BT4/5 format message with AUX_ADV_IND structure"""
-      runtime = int(time.time() - self.start_time)
-      
-      # Use consistent drone IDs for easier tracking
-      drone_id = f"DRONE{random.randint(100,103)}"
-      
-      # Generate random but valid coordinates
-      lat = round(random.uniform(*self.lat_range), 6) 
-      lon = round(random.uniform(*self.lon_range), 6)
-      
-      message = {
-        "AUX_ADV_IND": {
-          "aa": 0x8e89bed6,  # Required OpenDroneID identifier
-          "addr": drone_id,
-          "rssi": random.randint(-90, -40)  # Realistic RSSI values
-        },
-        "AdvData": "16FFFA0D..."  # This would be actual OpenDroneID payload
-      }
-      
-      return json.dumps(message)
+      """Generate BT4/5 message with complete field set"""
+    now = datetime.now(timezone.utc)
+    timestamp = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+    timestamp_raw = int(now.timestamp())
     
-    def generate_wifi_message(self):
-      """Generate WiFi format message with DroneID structure"""
-      mac = f"AA:BB:CC:{random.randint(0,255):02X}:{random.randint(0,255):02X}:{random.randint(0,255):02X}"
-      
-      message = {
-        "DroneID": {
-          mac: {
-            "AdvData": "...",  # OpenDroneID payload as hex
-            "Location/Vector Message": {
-              "latitude": round(random.uniform(*self.lat_range), 6),
-              "longitude": round(random.uniform(*self.lon_range), 6),
-              "altitude": round(random.uniform(50, 400), 1),
-              "speed": round(random.uniform(0, 30), 1),
-              "heading": round(random.uniform(0, 360), 1)
-            }
-          }
+    message = {
+      "AUX_ADV_IND": {
+        "aa": 0x8e89bed6,
+        "addr": f"DRONE{random.randint(100,103)}",
+        "rssi": random.randint(-90, -40)
+      },
+      "AdvData": (
+        # This would be the actual OpenDroneID BT4/5 payload
+        "16FFFA0D" +
+        "0123456789ABCDEF0123456789ABCDEF" +
+        "0123456789ABCDEF0123456789ABCDEF"
+      ),
+      "Basic ID": [
+        {
+          "protocol_version": "F3411.22",
+          "id_type": "Serial Number (ANSI/CTA-2063-A)",
+          "ua_type": "Helicopter (or Multirotor)",
+          "id": f"{random.randint(100000, 999999)}",
+        },
+        {
+          "protocol_version": "F3411.22",
+          "id_type": "CAA Assigned Registration ID",
+          "ua_type": "Helicopter (or Multirotor)",
+          "id": "DJI",
+        }
+      ],
+      "Location/Vector Message": {
+        "op_status": "Airborne",
+        "height_type": "Above Takeoff",
+        "ew_dir_segment": "East",
+        "speed_multiplier": "0.25",
+        "direction": 87,
+        "speed": "0.25 m/s",
+        "vert_speed": "-1.0 m/s",
+        "latitude": round(random.uniform(*self.lat_range), 6),
+        "longitude": round(random.uniform(*self.lon_range), 6),
+        "pressure_altitude": "Undefined",
+        "geodetic_altitude": "64.5 m",
+        "height_agl": "45 m",
+        "vertical_accuracy": "<10 m",
+        "horizontal_accuracy": "<1 m",
+        "baro_accuracy": "<45 m",
+        "speed_accuracy": "<1 m/s",
+        "timestamp": timestamp,
+        "timestamp_accuracy": "0.2 s"
+      },
+      "Authentication Message": {
+        "auth_type": "Message Set Signature",
+        "auth_data": "0" * 64,
+        "page_number": 0,
+        "last_page_index": 0,
+        "protocol_version": "F3411.22",
+        "timestamp": timestamp,
+        "timestamp_raw": timestamp_raw
+      },
+      "Self-ID Message": {
+        "protocol_version": "F3411.22",
+        "text": "Drones ID test flight",
+        "text_type": "Text Description",
+      },
+      "System Message": {
+        "operator_location_type": "Takeoff",
+        "classification_type": "EU",
+        "latitude": round(random.uniform(*self.lat_range), 6),
+        "longitude": round(random.uniform(*self.lon_range), 6),
+        "area_count": 1,
+        "area_radius": 0,
+        "area_ceiling": 0,
+        "ua_classification_category_type": "Open",
+        "ua_classification_category_class": "Class 1",
+        "geodetic_altitude": "64.5 m",
+        "timestamp": timestamp,
+        "timestamp_raw": timestamp_raw
+      },
+      "Operator ID Message": {
+        "protocol_version": "F3411.22",
+        "operator_id_type": "Operator ID",
+        "operator_id": ""
+      }
+    }
+    return json.dumps(message)
+  
+  def generate_wifi_message(self):
+    """Generate WiFi format message with DroneID structure"""
+    mac = f"WIFI-{random.randint(100000,999999)}"
+    now = datetime.now(timezone.utc)
+    timestamp = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+    timestamp_raw = int(now.timestamp())
+    
+    message = {
+      "DroneID": {
+        mac: {
+          "AdvData": "16FFFA0D" + "0" * 64,  # OpenDroneID payload as hex
+          "Basic ID": {
+            "protocol_version": "F3411.22",
+            "id_type": "Serial Number (ANSI/CTA-2063-A)",
+            "ua_type": "Helicopter (or Multirotor)",
+            "id": mac
+          },
+          "Location/Vector Message": {
+            "op_status": "Airborne",
+            "height_type": "Above Takeoff",
+            "speed_multiplier": "0.25",
+            "direction": 87,
+            "speed": "0.25 m/s",
+            "vert_speed": "-1.0 m/s",
+            "latitude": round(random.uniform(*self.lat_range), 6),
+            "longitude": round(random.uniform(*self.lon_range), 6),
+            "pressure_altitude": "Undefined",
+            "geodetic_altitude": "64.5 m",
+            "height_agl": "45 m",
+            "timestamp": timestamp
+          },
+          "System Message": {
+            "operator_location_type": "Takeoff",
+            "latitude": round(random.uniform(*self.lat_range), 6),
+            "longitude": round(random.uniform(*self.lon_range), 6),
+            "timestamp": timestamp,
+            "timestamp_raw": timestamp_raw
+          },
+          "Self-ID Message": {
+            "text": f"WiFi Drone {mac}",
+            "text_type": "Text Description"
+          },
+          "MAC": mac
         }
       }
-      
-      return json.dumps(message)
+    }
     
-    def get_timestamps(self):
-      now = datetime.now(timezone.utc)
-      time_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-      stale = (now + timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
-      return time_str, time_str, stale
+    return json.dumps(message)
+  
+  def get_timestamps(self):
+    now = datetime.now(timezone.utc)
+    time_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    stale = (now + timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return time_str, time_str, stale
+  
+  def generate_original_format(self):
+    time_str, start_str, stale_str = self.get_timestamps()
+    lat = round(random.uniform(*self.lat_range), 4)
+    lon = round(random.uniform(*self.lon_range), 4)
+    drone_id = f"DRONE{random.randint(100,103)}"  # Only use 4 possible drones
     
-    def generate_original_format(self):
-      time_str, start_str, stale_str = self.get_timestamps()
-      lat = round(random.uniform(*self.lat_range), 4)
-      lon = round(random.uniform(*self.lon_range), 4)
-      drone_id = f"DRONE{random.randint(100,103)}"  # Only use 4 possible drones
+    # Random drone type generation
+    base_type = "a-f-G"
+    type_suffixes = ["-U", "-U-C", "-U-S", "-U-R", "-U-F"]
+    drone_type = base_type + random.choice(type_suffixes)
+    
+    # Add operator modifier randomly
+    if random.random() < 0.5:
+      drone_type += "-O"
       
-      # Random drone type generation
-      base_type = "a-f-G"
-      type_suffixes = ["-U", "-U-C", "-U-S", "-U-R", "-U-F"]
-      drone_type = base_type + random.choice(type_suffixes)
-      
-      # Add operator modifier randomly
-      if random.random() < 0.5:
-        drone_type += "-O"
-        
-      return f"""<event version="2.0" uid="drone-{drone_id}" type="{drone_type}" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
+    return f"""<event version="2.0" uid="drone-{drone_id}" type="{drone_type}" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
     <point lat="{lat}" lon="{lon}" hae="100" ce="9999999" le="9999999"/>
     <detail>
       <BasicID>
@@ -192,74 +285,64 @@ class DroneMessageGenerator:
       </System>
     </detail>
 </event>"""
+  
+  def generate_esp32_format(self):
+    """Generate ESP32 format matching UART/JSON example"""
+    runtime = int(time.time() - self.start_time)
     
-    def generate_esp32_format(self):
-      runtime = int(time.time() - self.start_time)
-      
-      # Fixed set of ID types for consistency
-      id_types = [
-        "Serial Number (ANSI/CTA-2063-A)",
-        "CAA Registration ID", 
-        "UTM (USS) Assigned ID",
-        "Operator ID"
-      ]
-      
-      # Use consistent drone IDs
-      drone_id = f"DRONE{random.randint(100,103)}"  # Only use 4 possible drones
-      
-      if random.random() < 0.1:
-        lat, lon = 0.000000, 0.000000
-      else:
-        lat = round(random.uniform(*self.lat_range), 6)
-        lon = round(random.uniform(*self.lon_range), 6)
-        
-      message = {
-        "index": self.msg_index,
-        "runtime": runtime,
-        "Basic ID": {
-          "id": drone_id,  # Use the consistent drone ID instead of "NONE"
-          "id_type": random.choice(id_types)
-        },
-        "Location/Vector Message": {
-          "latitude": lat,
-          "longitude": lon, 
-          "speed": 0 if lat == 0 else round(random.uniform(0, 30), 1),
-          "vert_speed": 0 if lat == 0 else round(random.uniform(-5, 5), 1),
-          "geodetic_altitude": 0 if lat == 0 else round(random.uniform(50, 400), 1),
-          "height_agl": 0 if lat == 0 else round(random.uniform(20, 200), 1)
-        },
-        "Self-ID Message": {
-          "text": f"UAV {drone_id} operational"  # Include drone ID in description
-        },
-        "System Message": {
-          "latitude": 0.000000 if lat == 0 else round(lat + random.uniform(-0.001, 0.001), 6),
-          "longitude": 0.000000 if lon == 0 else round(lon + random.uniform(-0.001, 0.001), 6)
-        }
-      }
-      self.msg_index += 1
-      return json.dumps(message)
-    
-    def generate_status_message(self):
-      runtime = int(time.time() - self.start_time)
-      current_time = datetime.now(timezone.utc)
-      time_str = current_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-      stale_str = (current_time + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    if random.random() < 0.1:  # Sometimes send zero coordinates
+      lat, lon = 0.000000, 0.000000
+    else:
       lat = round(random.uniform(*self.lat_range), 6)
       lon = round(random.uniform(*self.lon_range), 6)
       
-      # Generate system stats
-      serial_number = f"wardragon-{random.randint(100,102)}"
-      cpu_usage = round(random.uniform(0, 100), 1)
-      
-      # Memory in MB
-      total_memory = 8192
-      available_memory = round(random.uniform(total_memory * 0.3, total_memory * 0.8), 2)
-      
-      # Disk in MB
-      total_disk = 512000
-      used_disk = round(random.uniform(total_disk * 0.1, total_disk * 0.9), 2)
-      
-      message = f"""<?xml version='1.0' encoding='UTF-8'?>
+    message = {
+      "index": self.msg_index,
+      "runtime": runtime,
+      "Basic ID": {
+        "id": f"DRONE{random.randint(100,103)}",
+        "id_type": "Serial Number (ANSI/CTA-2063-A)"
+      },
+      "Location/Vector Message": {
+        "latitude": lat,
+        "longitude": lon,
+        "speed": 0 if lat == 0 else round(random.uniform(0, 30), 1),
+        "vert_speed": 0 if lat == 0 else round(random.uniform(-5, 5), 1),
+        "geodetic_altitude": 0 if lat == 0 else round(random.uniform(50, 400), 1),
+        "height_agl": 0 if lat == 0 else round(random.uniform(20, 200), 1)
+      },
+      "Self-ID Message": {
+        "text": "UAV NONE operational"
+      },
+      "System Message": {
+        "latitude": 0.000000 if lat == 0 else round(lat + random.uniform(-0.001, 0.001), 6),
+        "longitude": 0.000000 if lon == 0 else round(lon + random.uniform(-0.001, 0.001), 6)
+      }
+    }
+    self.msg_index += 1
+    return json.dumps(message)
+  
+  def generate_status_message(self):
+    runtime = int(time.time() - self.start_time)
+    current_time = datetime.now(timezone.utc)
+    time_str = current_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    stale_str = (current_time + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    lat = round(random.uniform(*self.lat_range), 6)
+    lon = round(random.uniform(*self.lon_range), 6)
+    
+    # Generate system stats
+    serial_number = f"wardragon-{random.randint(100,102)}"
+    cpu_usage = round(random.uniform(0, 100), 1)
+    
+    # Memory in MB
+    total_memory = 8192
+    available_memory = round(random.uniform(total_memory * 0.3, total_memory * 0.8), 2)
+    
+    # Disk in MB
+    total_disk = 512000
+    used_disk = round(random.uniform(total_disk * 0.1, total_disk * 0.9), 2)
+    
+    message = f"""<?xml version='1.0' encoding='UTF-8'?>
     <event version="2.0" 
                 uid="{serial_number}" 
                 type="b-m-p-s-m" 
@@ -276,17 +359,13 @@ class DroneMessageGenerator:
           <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/Ground_Vehicle.png"/>
       </detail>
     </event>"""
-      
-      return message
     
+    return message
+  
 def setup_zmq():
   context = zmq.Context()
   cot_socket = context.socket(zmq.PUB)
   status_socket = context.socket(zmq.PUB)
-  
-  cot_socket.setsockopt(zmq.XPUB_VERBOSE, True)
-  status_socket.setsockopt(zmq.XPUB_VERBOSE, True)
-  
   return context, cot_socket, status_socket
 
 def clear_screen():
@@ -448,3 +527,4 @@ if __name__ == "__main__":
     print("\n\n👋 Program terminated by user")
   except Exception as e:
     print(f"\n❌ An error occurred: {e}")
+    
