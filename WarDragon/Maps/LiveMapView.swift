@@ -12,8 +12,10 @@ struct LiveMapView: View {
     @ObservedObject var cotViewModel: CoTViewModel
     @State private var mapCameraPosition: MapCameraPosition
     @State private var showDroneList = false
-    @State private var flightPaths: [String: [CLLocationCoordinate2D]] = [:]
-    let timer = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
+    @State private var flightPaths: [String: [(coordinate: CLLocationCoordinate2D, timestamp: Date)]] = [:]
+    @State private var lastProcessedDrones: [String: CoTViewModel.CoTMessage] = [:] // Track last processed drones
+    @State private var shouldUpdateMapView: Bool = false
+    let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect() // Timer for updates
     
     init(cotViewModel: CoTViewModel, initialMessage: CoTViewModel.CoTMessage) {
         self.cotViewModel = cotViewModel
@@ -25,34 +27,64 @@ struct LiveMapView: View {
         )))
     }
     
+    private func cleanOldPathPoints() {
+        let maxAge: TimeInterval = 3600 // 1 hour
+        let now = Date()
+        
+        for (droneId, path) in flightPaths {
+            let updatedPath = path.filter { now.timeIntervalSince($0.timestamp) < maxAge }
+            flightPaths[droneId] = updatedPath
+        }
+    }
+    
     private var uniqueDrones: [CoTViewModel.CoTMessage] {
         var latestDronePositions: [String: CoTViewModel.CoTMessage] = [:]
         for message in cotViewModel.parsedMessages {
-            if let coordinate = message.coordinate {
-                var path = flightPaths[message.uid] ?? []
-                path.append(coordinate)
-                if path.count > 100 {
-                    path.removeFirst()
-                }
-                flightPaths[message.uid] = path
-            }
             latestDronePositions[message.uid] = message
         }
         return Array(latestDronePositions.values)
     }
     
+    func updateFlightPathsIfNewData() {
+        let newMessages = cotViewModel.parsedMessages.filter { message in
+            guard let lastMessage = lastProcessedDrones[message.uid] else {
+                return true // Process if no prior message exists for this uid
+            }
+            return message != lastMessage // Process only if the message is different
+        }
+        
+        guard !newMessages.isEmpty else {
+            shouldUpdateMapView = false // No new data; suppress map updates
+            return
+        }
+        
+        print("Updating flight paths with new data...")
+        for message in newMessages {
+            guard let coordinate = message.coordinate else { continue }
+            
+            var path = flightPaths[message.uid] ?? []
+            path.append((coordinate: coordinate, timestamp: Date()))
+            if path.count > 100 {
+                path.removeFirst()
+            }
+            flightPaths[message.uid] = path
+            
+            // Update the processed message
+            lastProcessedDrones[message.uid] = message
+        }
+        
+        shouldUpdateMapView = true // Trigger map updates
+    }
+    
     var body: some View {
         ZStack {
             Map(position: $mapCameraPosition) {
-                // Flight paths
                 ForEach(flightPaths.keys.sorted(), id: \.self) { droneId in
                     if let path = flightPaths[droneId], path.count > 1 {
-                        MapPolyline(coordinates: path)
+                        MapPolyline(coordinates: path.map { $0.coordinate })
                             .stroke(Color.blue, lineWidth: 2)
                     }
                 }
-                
-                // Drone markers
                 ForEach(uniqueDrones, id: \.uid) { message in
                     if let coordinate = message.coordinate {
                         Annotation(message.uid, coordinate: coordinate) {
@@ -63,7 +95,6 @@ struct LiveMapView: View {
                     }
                 }
             }
-            
             VStack {
                 Spacer()
                 Button(action: { showDroneList.toggle() }) {
@@ -106,14 +137,28 @@ struct LiveMapView: View {
             .presentationDetents([.medium])
         }
         .onReceive(timer) { _ in
-            if let latestMessage = uniqueDrones.last,
-               let lat = Double(latestMessage.lat),
-               let lon = Double(latestMessage.lon) {
+            updateFlightPathsIfNewData()
+            
+            guard shouldUpdateMapView else { return } // Only update if necessary
+            
+            let allCoordinates = uniqueDrones.compactMap { $0.coordinate }
+            if !allCoordinates.isEmpty {
+                print("Rendering new flightpaths & map...")
+                let latitudes = allCoordinates.map(\.latitude)
+                let longitudes = allCoordinates.map(\.longitude)
+                let minLat = latitudes.min()!
+                let maxLat = latitudes.max()!
+                let minLon = longitudes.min()!
+                let maxLon = longitudes.max()!
+                let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2,
+                                                    longitude: (minLon + maxLon) / 2)
+                let deltaLat = max((maxLat - minLat) * 1.2, 0.05)
+                let deltaLon = max((maxLon - minLon) * 1.2, 0.05)
                 withAnimation {
-                    mapCameraPosition = .region(MKCoordinateRegion(
-                        center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                    ))
+                    mapCameraPosition = .region(
+                        MKCoordinateRegion(center: center,
+                                           span: MKCoordinateSpan(latitudeDelta: deltaLat, longitudeDelta: deltaLon))
+                    )
                 }
             }
         }
