@@ -19,8 +19,6 @@ enum ConnectionMode: String, Codable, CaseIterable {
             return "antenna.radiowaves.left.and.right"
         case .zmq:
             return "network"
-            //        case .both:
-            //            return "network.badge.shield.half.filled"
         }
     }
 }
@@ -97,8 +95,6 @@ class Settings: ObservableObject {
             return !multicastHost.isEmpty
         case .zmq:
             return !zmqHost.isEmpty
-            //        case .both:
-            //            return !multicastHost.isEmpty && !zmqHost.isEmpty
         }
     }
     

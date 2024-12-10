@@ -88,7 +88,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             let lat = Double(pointAttributes["lat"] ?? "0.0") ?? 0.0
             let lon = Double(pointAttributes["lon"] ?? "0.0") ?? 0.0
             let altitude = Double(pointAttributes["hae"] ?? "0.0") ?? 0.0
-
+            
             statusMessage = StatusViewModel.StatusMessage(
                 uid: uid,
                 serialNumber: serialNumber,
@@ -128,7 +128,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             break
         }
     }
-
+    
     private func parseRemarks(_ remarks: String) {
         //print("Parsing remarks: \(remarks)")
         let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
@@ -153,9 +153,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
         print("Parsed CPU Usage: \(cpuUsage), Memory Total: \(memoryTotal), Memory Available: \(memoryAvailable), Disk Total: \(diskTotal), Disk Used: \(diskUsed), Temperature: \(temperature), Uptime: \(uptime)")
     }
-
+    
     private func handleDroneMessage(_ elementName: String, _ parent: String) {
-        var messageJson: [String: Any]? // Add this at the top to store possible JSON data
+        var messageJson: [String: Any]?
         
         switch elementName {
         case "message":
@@ -193,7 +193,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     print("Discarding XML drone message with zero coordinates")
                     return
                 }
-
+                
                 cotMessage = CoTViewModel.CoTMessage(
                     uid: eventAttributes["uid"] ?? "",
                     type: eventAttributes["type"] ?? "",
@@ -285,7 +285,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         
         return nil
     }
-
+    
     // MARK: - Helpers
     private func determineUAType(from data: [String: Any]) -> DroneSignature.IdInfo.UAType {
         if let basicID = data["Basic ID"] as? [String: Any],

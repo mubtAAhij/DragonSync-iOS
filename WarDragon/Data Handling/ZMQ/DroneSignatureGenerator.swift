@@ -314,27 +314,31 @@ public final class DroneSignatureGenerator {
     
     private func extractPrimaryId(_ message: [String: Any]) -> DroneSignature.IdInfo {
         if let basicId = message["Basic ID"] as? [String: Any] {
+            // Get UA type from message
+            let uaTypeInt = basicId["ua_type"] as? Int ?? 0
+            let uaType = mapUAType(uaTypeInt)
+            
             return DroneSignature.IdInfo(
-                id: "ESP32-\(basicId["id"] as? String ?? UUID().uuidString)",
+                id: "ID: \(basicId["id"] as? String ?? UUID().uuidString)",
                 type: .utmAssigned,
                 protocolVersion: "1.0",
-                uaType: .helicopter
+                uaType: uaType
             )
         } else if message["AUX_ADV_IND"] != nil {
             let addr = (message["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String ?? UUID().uuidString
             return DroneSignature.IdInfo(
-                id: "BT-\(addr)",
+                id: "ID: \(addr)",
                 type: .serialNumber,
                 protocolVersion: "1.0",
-                uaType: .none
+                uaType: .none // Default until we parse BT UA type
             )
         } else if let droneId = message["DroneID"] as? [String: Any] {
             let mac = droneId.keys.first ?? generateFingerprint(from: droneId)
             return DroneSignature.IdInfo(
-                id: "WIFI-\(mac)",
+                id: "ID: \(mac)",
                 type: .unknown,
                 protocolVersion: "1.0",
-                uaType: .none
+                uaType: .none // Default until we parse WiFi UA type
             )
         }
         
@@ -344,6 +348,27 @@ public final class DroneSignatureGenerator {
             protocolVersion: "1.0",
             uaType: .none
         )
+    }
+    
+    private func mapUAType(_ value: Int) -> DroneSignature.IdInfo.UAType {
+        switch value {
+        case 0: return .none
+        case 1: return .aeroplane
+        case 2: return .helicopter
+        case 3: return .gyroplane
+        case 4: return .hybridLift
+        case 5: return .ornithopter
+        case 6: return .glider
+        case 7: return .kite
+        case 8: return .freeballoon
+        case 9: return .captive
+        case 10: return .airship
+        case 11: return .freeFall
+        case 12: return .rocket
+        case 13: return .tethered
+        case 14: return .groundObstacle
+        default: return .other
+        }
     }
     
     private func extractSecondaryId(_ message: [String: Any]) -> DroneSignature.IdInfo? {

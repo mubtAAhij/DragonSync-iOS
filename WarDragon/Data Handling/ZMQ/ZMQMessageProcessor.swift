@@ -30,13 +30,6 @@ final class ZMQMessageProcessor {
                 return processWiFiMessage(json, droneId)
             }
             
-            // ESP32 Message check by looking for protocol_version
-            if let basicID = json["Basic ID"] as? [String: Any],
-               basicID["protocol_version"] == nil,
-               let _ = json["Location/Vector Message"] {
-                return processESP32Message(json)
-            }
-            
             // Regular Message (rich structure)
             if let _ = json["Basic ID"],
                let _ = json["Location/Vector Message"] {
@@ -118,34 +111,6 @@ final class ZMQMessageProcessor {
             }
         }
         return nil
-    }
-    
-    
-    private func processESP32Message(_ json: [String: Any]) -> String? {
-        guard let basicId = json["Basic ID"] as? [String: Any],
-              let id = basicId["id"] as? String,
-              let location = json["Location/Vector Message"] as? [String: Any],
-              let lat = location["latitude"] as? Double,
-              let lon = location["longitude"] as? Double else {
-            return nil
-        }
-        
-        // Skip invalid locations
-        if lat == 0.0 && lon == 0.0 {
-            return nil
-        }
-        
-        let droneId: String
-        if id != "NONE" && !id.isEmpty {
-            droneId = "ESP32-\(id)"
-        } else if let hwId = basicId["hw_id"] as? String, !hwId.isEmpty {
-            droneId = hwId  // hw_id already includes ESP32- prefix
-        } else {
-            droneId = "ESP32-\(generateFingerprint(from: json))"
-        }
-        
-        let signature = signatureGenerator.createSignature(from: json)
-        return createCoTMessage(signature: signature, droneId: droneId)
     }
     
     // MARK: - Helper Methods

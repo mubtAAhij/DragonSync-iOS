@@ -16,10 +16,15 @@ struct MessageRow: View {
     @State private var showMap = false
     @State private var showLiveMap = false
     
+    private var signature: DroneSignature? {
+        cotViewModel.droneSignatures.first(where: { $0.primaryId.id == message.uid })
+    }
+    
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Image(systemName: "airplane")
+                Image(systemName: signature?.primaryId.uaType.icon ?? "airplane") // dynamic, default to airplane icon
                     .foregroundColor(.blue)
                 Text("Drone ID: \(message.uid)")
                     .font(.headline)

@@ -78,7 +78,7 @@ class CoTViewModel: ObservableObject {
         
         stopListening()  // Clean up any existing connections
         isListeningCot = true
-
+        
         switch Settings.shared.connectionMode {
         case .multicast:
             startMulticastListening()
@@ -86,13 +86,13 @@ class CoTViewModel: ObservableObject {
             startZMQListening()
         }
     }
-
+    
     private func startMulticastListening() {
         let parameters = NWParameters.udp
         parameters.allowLocalEndpointReuse = true
         parameters.prohibitedInterfaceTypes = [.cellular]
         parameters.requiredInterfaceType = .wifi
-
+        
         do {
             cotListener = try NWListener(using: parameters, on: NWEndpoint.Port(integerLiteral: cotPortMC))
             cotListener?.stateUpdateHandler = { state in
@@ -107,18 +107,18 @@ class CoTViewModel: ObservableObject {
                     break
                 }
             }
-
+            
             cotListener?.newConnectionHandler = { [weak self] connection in
                 connection.start(queue: self?.listenerQueue ?? .main)
                 self?.receiveMessages(from: connection)
             }
-
+            
             cotListener?.start(queue: listenerQueue)
         } catch {
             print("Failed to create multicast listener: \(error)")
         }
     }
-
+    
     private func startZMQListening() {
         zmqHandler = ZMQHandler()
         
@@ -140,40 +140,40 @@ class CoTViewModel: ObservableObject {
     }
     
     // Extract the message processing logic to be reusable
-        private func processIncomingMessage(_ data: Data) {
-            guard let message = String(data: data, encoding: .utf8) else { return }
+    private func processIncomingMessage(_ data: Data) {
+        guard let message = String(data: data, encoding: .utf8) else { return }
+        
+        // Use existing message handling logic
+        if message.contains("type=\"b-m-p-s-m\"") && message.contains("<remarks>CPU Usage:") {
+            let parser = XMLParser(data: data)
+            let cotParserDelegate = CoTMessageParser()
+            parser.delegate = cotParserDelegate
             
-            // Use existing message handling logic
-            if message.contains("type=\"b-m-p-s-m\"") && message.contains("<remarks>CPU Usage:") {
-                let parser = XMLParser(data: data)
-                let cotParserDelegate = CoTMessageParser()
-                parser.delegate = cotParserDelegate
-                
-                if parser.parse(), let statusMessage = cotParserDelegate.statusMessage {
-                    self.updateStatusMessage(statusMessage)
+            if parser.parse(), let statusMessage = cotParserDelegate.statusMessage {
+                self.updateStatusMessage(statusMessage)
+            }
+        } else if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{"),
+                  let jsonData = message.data(using: .utf8),
+                  let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+                  parsedJson["Basic ID"] != nil {
+            let parser = CoTMessageParser()
+            if let parsedMessage = parser.parseESP32Message(parsedJson) {
+                DispatchQueue.main.async {
+                    self.updateMessage(parsedMessage)
                 }
-            } else if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{"),
-                      let jsonData = message.data(using: .utf8),
-                      let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-                      parsedJson["Basic ID"] != nil {
-                let parser = CoTMessageParser()
-                if let parsedMessage = parser.parseESP32Message(parsedJson) {
-                    DispatchQueue.main.async {
-                        self.updateMessage(parsedMessage)
-                    }
-                }
-            } else if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
-                let parser = XMLParser(data: data)
-                let cotParserDelegate = CoTMessageParser()
-                parser.delegate = cotParserDelegate
-                
-                if parser.parse(), let cotMessage = cotParserDelegate.cotMessage {
-                    DispatchQueue.main.async {
-                        self.updateMessage(cotMessage)
-                    }
+            }
+        } else if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
+            let parser = XMLParser(data: data)
+            let cotParserDelegate = CoTMessageParser()
+            parser.delegate = cotParserDelegate
+            
+            if parser.parse(), let cotMessage = cotParserDelegate.cotMessage {
+                DispatchQueue.main.async {
+                    self.updateMessage(cotMessage)
                 }
             }
         }
+    }
     
     private func receiveMessages(from connection: NWConnection, isZMQ: Bool = false) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
@@ -267,25 +267,25 @@ class CoTViewModel: ObservableObject {
     }
     
     private func updateMessage(_ message: CoTMessage) {
-            DispatchQueue.main.async {
-                // Update existing messages
-                if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
-                    self.parsedMessages[index] = message
-                } else {
-                    self.parsedMessages.append(message)
-                    self.sendNotification(for: message)
-                }
-                
-                // Update signatures if needed
-                if let signature = self.droneSignatures.first(where: { $0.primaryId.id == message.uid }) {
-                    let matchScore = DroneSignatureGenerator().matchSignatures(
-                        signature,
-                        DroneSignatureGenerator().createSignature(from: ["Basic ID": ["id": message.uid]])
-                    )
-                    print("Updated signature match score: \(matchScore)")
-                }
+        DispatchQueue.main.async {
+            // Update existing messages
+            if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
+                self.parsedMessages[index] = message
+            } else {
+                self.parsedMessages.append(message)
+                self.sendNotification(for: message)
+            }
+            
+            // Update signatures if needed
+            if let signature = self.droneSignatures.first(where: { $0.primaryId.id == message.uid }) {
+                let matchScore = DroneSignatureGenerator().matchSignatures(
+                    signature,
+                    DroneSignatureGenerator().createSignature(from: ["Basic ID": ["id": message.uid]])
+                )
+                print("Updated signature match score: \(matchScore)")
             }
         }
+    }
     
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
         let content = UNMutableNotificationContent()
