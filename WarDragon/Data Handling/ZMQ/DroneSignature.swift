@@ -40,8 +40,29 @@ public struct DroneSignature: Hashable {
             case tethered = "Tethered Powered Aircraft"
             case groundObstacle = "Ground Obstacle"
             case other = "Other"
+            
+            var icon: String {
+                switch self {
+                case .none: return "questionmark.circle"
+                case .aeroplane: return "airplane"
+                case .helicopter: return "airplane.rotors"
+                case .gyroplane: return "airplane.rotors.circle"
+                case .hybridLift: return "airplane.circle"
+                case .ornithopter: return "bird"
+                case .glider: return "paperplane"
+                case .kite: return "wind"
+                case .freeballoon: return "cloud"
+                case .captive: return "cloud.fill"
+                case .airship: return "cloud.circle"
+                case .freeFall: return "arrow.down.circle"
+                case .rocket: return "arrow.up.circle"
+                case .tethered: return "link.circle"
+                case .groundObstacle: return "exclamationmark.triangle"
+                case .other: return "questionmark.circle"
+                }
+            }
         }
-
+        
         public init(id: String, type: IdType, protocolVersion: String, uaType: UAType) {
             self.id = id
             self.type = type
@@ -65,15 +86,15 @@ public struct DroneSignature: Hashable {
             case ground = "Ground Level"
             case wgs84 = "WGS84"
         }
-
+        
         public init(coordinate: CLLocationCoordinate2D,
-                   altitude: Double,
-                   altitudeReference: AltitudeReference,
-                   lastKnownGoodPosition: CLLocationCoordinate2D?,
-                   operatorLocation: CLLocationCoordinate2D?,
-                   horizontalAccuracy: Double?,
-                   verticalAccuracy: Double?,
-                   timestamp: TimeInterval) {
+                    altitude: Double,
+                    altitudeReference: AltitudeReference,
+                    lastKnownGoodPosition: CLLocationCoordinate2D?,
+                    operatorLocation: CLLocationCoordinate2D?,
+                    horizontalAccuracy: Double?,
+                    verticalAccuracy: Double?,
+                    timestamp: TimeInterval) {
             self.coordinate = coordinate
             self.altitude = altitude
             self.altitudeReference = altitudeReference
@@ -86,14 +107,14 @@ public struct DroneSignature: Hashable {
         
         public static func == (lhs: PositionInfo, rhs: PositionInfo) -> Bool {
             return lhs.coordinate.latitude == rhs.coordinate.latitude &&
-                   lhs.coordinate.longitude == rhs.coordinate.longitude &&
-                   lhs.altitude == rhs.altitude &&
-                   lhs.altitudeReference == rhs.altitudeReference &&
-                   lhs.timestamp == rhs.timestamp &&
-                   compareOptionalCoordinates(lhs.lastKnownGoodPosition, rhs.lastKnownGoodPosition) &&
-                   compareOptionalCoordinates(lhs.operatorLocation, rhs.operatorLocation) &&
-                   lhs.horizontalAccuracy == rhs.horizontalAccuracy &&
-                   lhs.verticalAccuracy == rhs.verticalAccuracy
+            lhs.coordinate.longitude == rhs.coordinate.longitude &&
+            lhs.altitude == rhs.altitude &&
+            lhs.altitudeReference == rhs.altitudeReference &&
+            lhs.timestamp == rhs.timestamp &&
+            compareOptionalCoordinates(lhs.lastKnownGoodPosition, rhs.lastKnownGoodPosition) &&
+            compareOptionalCoordinates(lhs.operatorLocation, rhs.operatorLocation) &&
+            lhs.horizontalAccuracy == rhs.horizontalAccuracy &&
+            lhs.verticalAccuracy == rhs.verticalAccuracy
         }
         
         private static func compareOptionalCoordinates(_ lhs: CLLocationCoordinate2D?, _ rhs: CLLocationCoordinate2D?) -> Bool {
@@ -132,12 +153,12 @@ public struct DroneSignature: Hashable {
         public let timestamp: TimeInterval
         
         public init(groundSpeed: Double,
-                   verticalSpeed: Double,
-                   heading: Double,
-                   climbRate: Double?,
-                   turnRate: Double?,
-                   flightPath: [CLLocationCoordinate2D]?,
-                   timestamp: TimeInterval) {
+                    verticalSpeed: Double,
+                    heading: Double,
+                    climbRate: Double?,
+                    turnRate: Double?,
+                    flightPath: [CLLocationCoordinate2D]?,
+                    timestamp: TimeInterval) {
             self.groundSpeed = groundSpeed
             self.verticalSpeed = verticalSpeed
             self.heading = heading
@@ -149,12 +170,12 @@ public struct DroneSignature: Hashable {
         
         public static func == (lhs: MovementVector, rhs: MovementVector) -> Bool {
             return lhs.groundSpeed == rhs.groundSpeed &&
-                   lhs.verticalSpeed == rhs.verticalSpeed &&
-                   lhs.heading == rhs.heading &&
-                   lhs.climbRate == rhs.climbRate &&
-                   lhs.turnRate == rhs.turnRate &&
-                   lhs.timestamp == rhs.timestamp &&
-                   compareFlightPaths(lhs.flightPath, rhs.flightPath)
+            lhs.verticalSpeed == rhs.verticalSpeed &&
+            lhs.heading == rhs.heading &&
+            lhs.climbRate == rhs.climbRate &&
+            lhs.turnRate == rhs.turnRate &&
+            lhs.timestamp == rhs.timestamp &&
+            compareFlightPaths(lhs.flightPath, rhs.flightPath)
         }
         
         private static func compareFlightPaths(_ path1: [CLLocationCoordinate2D]?, _ path2: [CLLocationCoordinate2D]?) -> Bool {
@@ -199,15 +220,15 @@ public struct DroneSignature: Hashable {
             case pressureAltitude = "Pressure Altitude"
             case wgs84 = "WGS84"
         }
-
+        
         public init(heightAboveGround: Double,
-                   heightAboveTakeoff: Double?,
-                   referenceType: HeightReferenceType,
-                   horizontalAccuracy: Double?,
-                   verticalAccuracy: Double?,
-                   consistencyScore: Double,
-                   lastKnownGoodHeight: Double?,
-                   timestamp: TimeInterval) {
+                    heightAboveTakeoff: Double?,
+                    referenceType: HeightReferenceType,
+                    horizontalAccuracy: Double?,
+                    verticalAccuracy: Double?,
+                    consistencyScore: Double,
+                    lastKnownGoodHeight: Double?,
+                    timestamp: TimeInterval) {
             self.heightAboveGround = heightAboveGround
             self.heightAboveTakeoff = heightAboveTakeoff
             self.referenceType = referenceType
@@ -246,13 +267,13 @@ public struct DroneSignature: Hashable {
             case wifi = "WiFi DroneID"
             case esp32 = "ESP32 DroneID"
         }
-
+        
         public init(transmissionType: TransmissionType,
-                   signalStrength: Double?,
-                   frequency: Double?,
-                   protocolType: ProtocolType,
-                   messageTypes: Set<MessageType>,
-                   timestamp: TimeInterval) {
+                    signalStrength: Double?,
+                    frequency: Double?,
+                    protocolType: ProtocolType,
+                    messageTypes: Set<MessageType>,
+                    timestamp: TimeInterval) {
             self.transmissionType = transmissionType
             self.signalStrength = signalStrength
             self.frequency = frequency
@@ -268,12 +289,12 @@ public struct DroneSignature: Hashable {
         public let consistency: Double
         public let startTime: TimeInterval
         public let lastUpdate: TimeInterval
-
+        
         public init(messageSequence: [TransmissionInfo.MessageType],
-                   intervalPattern: [TimeInterval],
-                   consistency: Double,
-                   startTime: TimeInterval,
-                   lastUpdate: TimeInterval) {
+                    intervalPattern: [TimeInterval],
+                    consistency: Double,
+                    startTime: TimeInterval,
+                    lastUpdate: TimeInterval) {
             self.messageSequence = messageSequence
             self.intervalPattern = intervalPattern
             self.consistency = consistency
@@ -294,7 +315,7 @@ public struct DroneSignature: Hashable {
     public let timestamp: TimeInterval
     public let firstSeen: TimeInterval
     public let messageInterval: TimeInterval?
-
+    
     public init(primaryId: IdInfo,
                 secondaryId: IdInfo?,
                 operatorId: String?,

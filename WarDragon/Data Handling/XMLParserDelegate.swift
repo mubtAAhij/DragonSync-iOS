@@ -155,11 +155,14 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     }
 
     private func handleDroneMessage(_ elementName: String, _ parent: String) {
+        var messageJson: [String: Any]? // Add this at the top to store possible JSON data
+        
         switch elementName {
         case "message":
             if let jsonData = messageContent.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
                 print("Found ESP32 JSON message")
+                messageJson = json // Store the parsed JSON
                 cotMessage = parseESP32Message(json)
             }
         case "Speed":
@@ -202,7 +205,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     height: height,
                     pilotLat: pilotLat,
                     pilotLon: pilotLon,
-                    description: droneDescription
+                    description: droneDescription,
+                    uaType: determineUAType(from: messageJson ?? [:])
                 )
             }
         default:
@@ -280,5 +284,32 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
         
         return nil
+    }
+
+    // MARK: - Helpers
+    private func determineUAType(from data: [String: Any]) -> DroneSignature.IdInfo.UAType {
+        if let basicID = data["Basic ID"] as? [String: Any],
+           let uaTypeStr = basicID["ua_type"] as? String {
+            switch uaTypeStr {
+            case "Helicopter (or Multirotor)": return .helicopter
+            case "Aeroplane", "Airplane": return .aeroplane
+            case "Gyroplane": return .gyroplane
+            case "Hybrid Lift": return .hybridLift
+            case "Ornithopter": return .ornithopter
+            case "Glider": return .glider
+            case "Kite": return .kite
+            case "Free Balloon": return .freeballoon
+            case "Captive Balloon": return .captive
+            case "Airship": return .airship
+            case "Free Fall/Parachute": return .freeFall
+            case "Rocket": return .rocket
+            case "Tethered Powered Aircraft": return .tethered
+            case "Ground Obstacle": return .groundObstacle
+            default:
+                print("Unrecognized UA type: \(uaTypeStr), defaulting to helicopter")
+                return .helicopter
+            }
+        }
+        return .helicopter  // Default value if no ua_type found
     }
 }

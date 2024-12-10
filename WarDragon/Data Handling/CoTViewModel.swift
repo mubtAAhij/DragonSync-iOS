@@ -38,6 +38,7 @@ class CoTViewModel: ObservableObject {
         var pilotLat: String
         var pilotLon: String
         var description: String
+        var uaType: DroneSignature.IdInfo.UAType = .helicopter
         
         var coordinate: CLLocationCoordinate2D? {
             guard let latDouble = Double(lat),
@@ -83,9 +84,6 @@ class CoTViewModel: ObservableObject {
             startMulticastListening()
         case .zmq:
             startZMQListening()
-//        case .both:
-//            startMulticastListening()
-//            startZMQListening()
         }
     }
 
