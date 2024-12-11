@@ -8,10 +8,10 @@ Revolutionize your airspace awareness experience with seamless integration with 
 ## Features
 
 - **Real-Time Drone Monitoring**  
-  Effortlessly track the status and location of Remote ID-compliant drones on your iOS device, delivering unparalleled situational awareness.  
+  Effortlessly track the status and location of Remote ID-compliant drones on your iOS device, no setup required.   
 
 - **Instant System Alerts**  
-  Stay informed with real-time notifications about your WarDragon system’s performance, powered by `wardragon_monitor.py` and `dragonsync.py`.  
+  Stay informed with real-time notifications about your WarDragon system’s performance.
 
 - **TAK and ATAK Compatibility**  
   Fully supports TAK/ATAK protocols, enabling integration into tactical and operational environments for enhanced coordination and efficiency.  
@@ -33,10 +33,7 @@ Revolutionize your airspace awareness experience with seamless integration with 
 </p>
 
 - Configurable network settings and an immersive UI. Detail views in the system and live map view show more details and flight paths. 
-    
-<p align="left">
- <img src=https://github.com/user-attachments/assets/e55ddba1-1387-4543-bec9-56d0b7f6f677 width="420")
-</p>
+
 
 ## Installation
 
