@@ -81,7 +81,7 @@ public final class DroneSignatureGenerator {
     // MARK: - Initialization
     public init() {}
     
-    // MARK: - Public Methods
+    // MARK: - Public Algo Methods
     public func createSignature(from message: [String: Any]) -> DroneSignature {
         pruneCache()
         
@@ -148,7 +148,7 @@ public final class DroneSignatureGenerator {
         return matchStrength
     }
     
-    // MARK: - Private Methods
+    // MARK: - Private Fingerprinting Methods
     private func calculateMatchConfidence(_ matchedFields: Set<SignatureMatch.MatchField>) -> Double {
         let weights: [SignatureMatch.MatchField: Double] = [
             .primaryId: 0.3,
@@ -314,39 +314,31 @@ public final class DroneSignatureGenerator {
     
     private func extractPrimaryId(_ message: [String: Any]) -> DroneSignature.IdInfo {
         if let basicId = message["Basic ID"] as? [String: Any] {
-            // Get UA type from message
-            let uaTypeInt = basicId["ua_type"] as? Int ?? 0
-            let uaType = mapUAType(uaTypeInt)
+            // Handle both numeric and string UA types
+            let uaType: DroneSignature.IdInfo.UAType
+            if let uaTypeNum = basicId["ua_type"] as? Int {
+                uaType = mapUAType(uaTypeNum)
+            } else if let uaTypeStr = basicId["ua_type"] as? String,
+                      let uaTypeNum = Int(uaTypeStr) {
+                uaType = mapUAType(uaTypeNum)
+            } else {
+                uaType = .helicopter  // Default if we can't parse UA type
+            }
             
             return DroneSignature.IdInfo(
-                id: "ID: \(basicId["id"] as? String ?? UUID().uuidString)",
+                id: basicId["id"] as? String ?? UUID().uuidString,
                 type: .utmAssigned,
                 protocolVersion: "1.0",
                 uaType: uaType
             )
-        } else if message["AUX_ADV_IND"] != nil {
-            let addr = (message["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String ?? UUID().uuidString
-            return DroneSignature.IdInfo(
-                id: "ID: \(addr)",
-                type: .serialNumber,
-                protocolVersion: "1.0",
-                uaType: .none // Default until we parse BT UA type
-            )
-        } else if let droneId = message["DroneID"] as? [String: Any] {
-            let mac = droneId.keys.first ?? generateFingerprint(from: droneId)
-            return DroneSignature.IdInfo(
-                id: "ID: \(mac)",
-                type: .unknown,
-                protocolVersion: "1.0",
-                uaType: .none // Default until we parse WiFi UA type
-            )
         }
-        
+
+        // Fallback case if no Basic ID found
         return DroneSignature.IdInfo(
             id: UUID().uuidString,
             type: .unknown,
             protocolVersion: "1.0",
-            uaType: .none
+            uaType: .helicopter
         )
     }
     
@@ -461,9 +453,6 @@ public final class DroneSignatureGenerator {
         } else if message["DroneID"] != nil {
             type = .wifi
             messageType = .wifi
-        } else if message["Basic ID"] != nil {
-            type = .esp32
-            messageType = .esp32
         } else {
             type = .unknown
             messageType = .bt45 // Default
@@ -485,8 +474,6 @@ public final class DroneSignatureGenerator {
             messageType = .bt45
         } else if message["DroneID"] != nil {
             messageType = .wifi
-        } else if message["Basic ID"] != nil {
-            messageType = .esp32
         }
         
         var intervals = [TimeInterval]()
