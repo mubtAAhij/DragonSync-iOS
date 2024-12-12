@@ -61,8 +61,8 @@ final class ZMQMessageProcessor {
     }
     
     func processStatusMessage(_ message: String) -> String? {
-        if message.contains("type=\"b-m-p-s-m\"") && message.contains("<remarks>CPU Usage:") {
-            return message // Already in correct XML format
+        if message.contains("<remarks>CPU Usage:") {
+            return message 
         }
         return nil
     }
