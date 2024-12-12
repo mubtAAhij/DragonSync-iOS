@@ -41,9 +41,10 @@ public struct DroneSignature: Hashable {
             case groundObstacle = "Ground Obstacle"
             case other = "Other"
             
+            // Icon to display in messageRow
             var icon: String {
                 switch self {
-                case .none: return "questionmark.circle"
+                case .none: return "airplane.rotors" // use as a fallback
                 case .aeroplane: return "airplane"
                 case .helicopter: return "airplane.rotors"
                 case .gyroplane: return "airplane.rotors.circle"
