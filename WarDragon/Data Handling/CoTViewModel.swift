@@ -14,6 +14,7 @@ import CoreLocation
 class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
     @Published var droneSignatures: [DroneSignature] = []
+    private let signatureGenerator = DroneSignatureGenerator()
     private var zmqHandler: ZMQHandler?
     private var cotListener: NWListener?
     private var statusListener: NWListener?
@@ -24,6 +25,7 @@ class CoTViewModel: ObservableObject {
     private let listenerQueue = DispatchQueue(label: "CoTListenerQueue")
     private var statusViewModel = StatusViewModel()
     public var isListeningCot = false
+    
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
@@ -39,6 +41,23 @@ class CoTViewModel: ObservableObject {
         var pilotLon: String
         var description: String
         var uaType: DroneSignature.IdInfo.UAType = .helicopter
+        var rawMessage: [String: Any]
+        
+        static func == (lhs: CoTViewModel.CoTMessage, rhs: CoTViewModel.CoTMessage) -> Bool {
+            return lhs.uid == rhs.uid &&
+            lhs.type == rhs.type &&
+            lhs.lat == rhs.lat &&
+            lhs.lon == rhs.lon &&
+            lhs.speed == rhs.speed &&
+            lhs.vspeed == rhs.vspeed &&
+            lhs.alt == rhs.alt &&
+            lhs.height == rhs.height &&
+            lhs.pilotLat == rhs.pilotLat &&
+            lhs.pilotLon == rhs.pilotLon &&
+            lhs.description == rhs.description &&
+            lhs.uaType == rhs.uaType
+            // Note: Not comparing rawMessage since Dictionary isn't directly Equatable
+        }
         
         var coordinate: CLLocationCoordinate2D? {
             guard let latDouble = Double(lat),
@@ -139,38 +158,53 @@ class CoTViewModel: ObservableObject {
         )
     }
     
-    // Extract the message processing logic to be reusable
     private func processIncomingMessage(_ data: Data) {
         guard let message = String(data: data, encoding: .utf8) else { return }
         
-        // Use existing message handling logic
-        if message.contains("type=\"b-m-p-s-m\"") && message.contains("<remarks>CPU Usage:") {
-            let parser = XMLParser(data: data)
-            let cotParserDelegate = CoTMessageParser()
-            parser.delegate = cotParserDelegate
-            
-            if parser.parse(), let statusMessage = cotParserDelegate.statusMessage {
+        // Incoming Message (JSON/XML) - Determine type and convert if needed
+        let xmlData: Data
+        if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{") {
+            // Handle JSON input
+            if message.contains("system_stats") {
+                // Status JSON
+                guard let statusXML = self.zmqHandler?.convertStatusToXML(message),
+                      let convertedData = statusXML.data(using: String.Encoding.utf8) else { return }
+                xmlData = convertedData
+            } else if let jsonData = message.data(using: .utf8),
+                      let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+                      parsedJson["Basic ID"] != nil {
+                // ESP32 Drone JSON
+                guard let droneXML = self.zmqHandler?.convertTelemetryToXML(message),
+                      let convertedData = droneXML.data(using: String.Encoding.utf8) else { return }
+                xmlData = convertedData
+            } else {
+                print("Unrecognized JSON format")
+                return
+            }
+        } else {
+            // Already XML
+            xmlData = data
+        }
+        
+        // Parse XML and create appropriate message
+        let parser = CoTMessageParser()
+        let xmlParser = XMLParser(data: xmlData)
+        xmlParser.delegate = parser
+        
+        guard xmlParser.parse() else {
+            print("Failed to parse XML")
+            return
+        }
+        
+        // Update UI with appropriate message type
+        DispatchQueue.main.async {
+            if message.contains("<remarks>CPU Usage:"),
+               let statusMessage = parser.statusMessage {
+                // Status message path
                 self.updateStatusMessage(statusMessage)
-            }
-        } else if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{"),
-                  let jsonData = message.data(using: .utf8),
-                  let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-                  parsedJson["Basic ID"] != nil {
-            let parser = CoTMessageParser()
-            if let parsedMessage = parser.parseESP32Message(parsedJson) {
-                DispatchQueue.main.async {
-                    self.updateMessage(parsedMessage)
-                }
-            }
-        } else if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
-            let parser = XMLParser(data: data)
-            let cotParserDelegate = CoTMessageParser()
-            parser.delegate = cotParserDelegate
-            
-            if parser.parse(), let cotMessage = cotParserDelegate.cotMessage {
-                DispatchQueue.main.async {
-                    self.updateMessage(cotMessage)
-                }
+            } else if let cotMessage = parser.cotMessage {
+                // Drone message path
+                self.updateMessage(cotMessage)
             }
         }
     }
@@ -268,21 +302,22 @@ class CoTViewModel: ObservableObject {
     
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
-            // Update existing messages
+            // Generate/update signature from raw message
+            let signature = self.signatureGenerator.createSignature(from: message.rawMessage)
+            
+            // Update signatures collection
+            if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
+                self.droneSignatures[index] = signature
+            } else {
+                self.droneSignatures.append(signature)
+            }
+            
+            // Update messages collection
             if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
                 self.parsedMessages[index] = message
             } else {
                 self.parsedMessages.append(message)
                 self.sendNotification(for: message)
-            }
-            
-            // Update signatures if needed
-            if let signature = self.droneSignatures.first(where: { $0.primaryId.id == message.uid }) {
-                let matchScore = DroneSignatureGenerator().matchSignatures(
-                    signature,
-                    DroneSignatureGenerator().createSignature(from: ["Basic ID": ["id": message.uid]])
-                )
-                print("Updated signature match score: \(matchScore)")
             }
         }
     }

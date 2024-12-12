@@ -9,6 +9,7 @@ import Foundation
 
 class CoTMessageParser: NSObject, XMLParserDelegate {
     // MARK: - Properties
+    private var rawMessage: [String: Any]?
     private var currentElement = ""
     private var parentElement = ""
     private var elementStack: [String] = []
@@ -25,13 +26,24 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private var messageContent = ""
     private var remarks = ""
     private var cpuUsage: Double = 0.0
+    
     private var memoryTotal: Double = 0.0
     private var memoryAvailable: Double = 0.0
     private var memoryUsed: Double = 0.0
+    private var memoryFree: Double = 0.0
+    private var memoryActive: Double = 0.0
+    private var memoryInactive: Double = 0.0
     private var memoryPercent: Double = 0.0
+    private var memoryBuffers: Double = 0.0
+    private var memoryShared: Double = 0.0
+    private var memorySlab: Double = 0.0
+    private var memoryCached: Double = 0.0
+    
     private var diskTotal: Double = 0.0
     private var diskUsed: Double = 0.0
     private var diskPercent: Double = 0.0
+    private var diskFree: Double = 0.0
+    
     private var temperature: Double = 0.0
     private var uptime: Double = 0.0
     
@@ -67,7 +79,6 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName: String?) {
         let parent = elementStack.dropLast().last ?? ""
         
-        // Handle message type based on event type attribute
         if let type = eventAttributes["type"], type == "b-m-p-s-m" {
             handleStatusMessage(elementName)
         } else {
@@ -77,13 +88,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         elementStack.removeLast()
     }
     
-    // MARK: - Message Handlers
+    // MARK: - Status Message Handler
     private func handleStatusMessage(_ elementName: String) {
         switch elementName {
         case "remarks":
             parseRemarks(remarks)
         case "event":
-            let uid = eventAttributes["uid"] ?? "unknown" 
+            let uid = eventAttributes["uid"] ?? "unknown"
             let serialNumber = eventAttributes["uid"] ?? "unknown"
             let lat = Double(pointAttributes["lat"] ?? "0.0") ?? 0.0
             let lon = Double(pointAttributes["lon"] ?? "0.0") ?? 0.0
@@ -106,13 +117,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         available: Int64(memoryAvailable * 1024 * 1024),
                         percent: memoryPercent,
                         used: Int64(memoryUsed * 1024 * 1024),
-                        free: Int64(memoryAvailable * 1024 * 1024),
-                        active: Int64(memoryUsed * 0.6 * 1024 * 1024),
-                        inactive: Int64(memoryUsed * 0.4 * 1024 * 1024),
-                        buffers: Int64(memoryAvailable * 0.1 * 1024 * 1024),
-                        cached: Int64(memoryAvailable * 0.3 * 1024 * 1024),
-                        shared: Int64(memoryUsed * 0.2 * 1024 * 1024),
-                        slab: Int64(memoryUsed * 0.1 * 1024 * 1024)
+                        free: Int64(memoryFree * 1024 * 1024),
+                        active: Int64(memoryActive * 0.6 * 1024 * 1024),
+                        inactive: Int64(memoryInactive * 0.4 * 1024 * 1024),
+                        buffers: Int64(memoryBuffers * 0.1 * 1024 * 1024),
+                        cached: Int64(memoryCached * 0.3 * 1024 * 1024),
+                        shared: Int64(memoryShared * 0.2 * 1024 * 1024),
+                        slab: Int64(memorySlab * 0.1 * 1024 * 1024)
                     ),
                     disk: .init(
                         total: Int64(diskTotal * 1024 * 1024),
@@ -130,7 +141,6 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     }
     
     private func parseRemarks(_ remarks: String) {
-        //print("Parsing remarks: \(remarks)")
         let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         
         for component in components {
@@ -149,21 +159,104 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 temperature = Double(component.replacingOccurrences(of: "Temperature: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
             } else if component.hasPrefix("Uptime:") {
                 uptime = Double(component.replacingOccurrences(of: "Uptime: ", with: "").replacingOccurrences(of: " seconds", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Used:") {
+                memoryUsed = Double(component.replacingOccurrences(of: "Memory Used: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Free:") {
+                memoryFree = Double(component.replacingOccurrences(of: "Memory Free: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Active:") {
+                memoryActive = Double(component.replacingOccurrences(of: "Memory Active: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Inactive:") {
+                memoryInactive = Double(component.replacingOccurrences(of: "Memory Inactive: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Buffers:") {
+                memoryBuffers = Double(component.replacingOccurrences(of: "Memory Buffers: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Shared:") {
+                memoryShared = Double(component.replacingOccurrences(of: "Memory Shared: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Cached:") {
+                memoryCached = Double(component.replacingOccurrences(of: "Memory Cached: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Slab:") {
+                memorySlab = Double(component.replacingOccurrences(of: "Memory Slab: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Percent:") {
+                memoryPercent = Double(component.replacingOccurrences(of: "Memory Percent: ", with: "").replacingOccurrences(of: " percent", with: "")) ?? 0.0
+            } else if component.hasPrefix("Disk Percent:") {
+                diskPercent = Double(component.replacingOccurrences(of: "Disk Percent: ", with: "").replacingOccurrences(of: " percent", with: "")) ?? 0.0
             }
+            
         }
-        print("Parsed CPU Usage: \(cpuUsage), Memory Total: \(memoryTotal), Memory Available: \(memoryAvailable), Disk Total: \(diskTotal), Disk Used: \(diskUsed), Temperature: \(temperature), Uptime: \(uptime)")
     }
     
+    // MARK: - Message Handler
     private func handleDroneMessage(_ elementName: String, _ parent: String) {
-        var messageJson: [String: Any]?
-        
         switch elementName {
         case "message":
             if let jsonData = messageContent.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-                print("Found ESP32 JSON message")
-                messageJson = json // Store the parsed JSON
-                cotMessage = parseESP32Message(json)
+                rawMessage = json
+                if let basicId = json["Basic ID"] as? [String: Any],
+                   let id = basicId["id"] as? String {
+                    let droneType = buildDroneType(json)
+                    let location = json["Location/Vector Message"] as? [String: Any]
+                    let system = json["System Message"] as? [String: Any]
+                    let selfId = json["Self-ID Message"] as? [String: Any]
+                    
+                    cotMessage = CoTViewModel.CoTMessage(
+                        uid: id,
+                        type: droneType,
+                        lat: String(describing: location?["latitude"] ?? "0.0"),
+                        lon: String(describing: location?["longitude"] ?? "0.0"),
+                        speed: String(describing: location?["speed"] ?? "0.0"),
+                        vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
+                        alt: String(describing: location?["geodetic_altitude"] ?? "0.0"),
+                        height: String(describing: location?["height_agl"] ?? "0.0"),
+                        pilotLat: String(describing: system?["latitude"] ?? "0.0"),
+                        pilotLon: String(describing: system?["longitude"] ?? "0.0"),
+                        description: selfId?["text"] as? String ?? "",
+                        uaType: mapUAType(basicId["ua_type"] as? String),
+                        rawMessage: json
+                    )
+                }
+            }
+        case "event":
+            if cotMessage == nil {
+                let jsonFormat: [String: Any] = [
+                    "Basic ID": [
+                        "id": eventAttributes["uid"] ?? "",
+                        "id_type": ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
+                            ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
+                        "ua_type": "Helicopter (or Multirotor)"
+                    ],
+                    "Location/Vector Message": [
+                        "latitude": pointAttributes["lat"] ?? "0.0",
+                        "longitude": pointAttributes["lon"] ?? "0.0",
+                        "speed": speed,
+                        "vert_speed": vspeed,
+                        "geodetic_altitude": alt,
+                        "height_agl": height
+                    ],
+                    "System Message": [
+                        "latitude": pilotLat,
+                        "longitude": pilotLon
+                    ],
+                    "Self-ID Message": [
+                        "text": droneDescription
+                    ]
+                ]
+                rawMessage = jsonFormat
+                
+                cotMessage = CoTViewModel.CoTMessage(
+                    uid: eventAttributes["uid"] ?? "",
+                    type: eventAttributes["type"] ?? "",
+                    lat: pointAttributes["lat"] ?? "0.0",
+                    lon: pointAttributes["lon"] ?? "0.0",
+                    speed: speed,
+                    vspeed: vspeed,
+                    alt: alt,
+                    height: height,
+                    pilotLat: pilotLat,
+                    pilotLon: pilotLon,
+                    description: droneDescription,
+                    uaType: .helicopter,
+                    rawMessage: jsonFormat
+                )
             }
         case "Speed":
             speed = currentValue
@@ -183,38 +276,11 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             if parent == "PilotLocation" {
                 pilotLon = currentValue
             }
-        case "event":
-            if cotMessage == nil {
-                let lat = pointAttributes["lat"] ?? "0.0"
-                let lon = pointAttributes["lon"] ?? "0.0"
-                
-                // Validate location before alerting
-                if lat == "0.0" || lon == "0.0" {
-                    print("Discarding XML drone message with zero coordinates")
-                    return
-                }
-                
-                cotMessage = CoTViewModel.CoTMessage(
-                    uid: eventAttributes["uid"] ?? "",
-                    type: eventAttributes["type"] ?? "",
-                    lat: lat,
-                    lon: lon,
-                    speed: speed,
-                    vspeed: vspeed,
-                    alt: alt,
-                    height: height,
-                    pilotLat: pilotLat,
-                    pilotLon: pilotLon,
-                    description: droneDescription,
-                    uaType: determineUAType(from: messageJson ?? [:])
-                )
-            }
         default:
             break
         }
     }
     
-    // MARK: - ESP32 Message Parser
     func parseESP32Message(_ jsonData: [String: Any]) -> CoTViewModel.CoTMessage? {
         print("Starting ESP32 parsing")
         var droneType = "a-f-G-U"
@@ -279,37 +345,54 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 height: height,
                 pilotLat: pilotLat,
                 pilotLon: pilotLon,
-                description: description
+                description: description,
+                rawMessage: rawMessage ?? [:]
             )
         }
         
         return nil
     }
     
-    // MARK: - Helpers
-    private func determineUAType(from data: [String: Any]) -> DroneSignature.IdInfo.UAType {
-        if let basicID = data["Basic ID"] as? [String: Any],
-           let uaTypeStr = basicID["ua_type"] as? String {
-            switch uaTypeStr {
-            case "Helicopter (or Multirotor)": return .helicopter
-            case "Aeroplane", "Airplane": return .aeroplane
-            case "Gyroplane": return .gyroplane
-            case "Hybrid Lift": return .hybridLift
-            case "Ornithopter": return .ornithopter
-            case "Glider": return .glider
-            case "Kite": return .kite
-            case "Free Balloon": return .freeballoon
-            case "Captive Balloon": return .captive
-            case "Airship": return .airship
-            case "Free Fall/Parachute": return .freeFall
-            case "Rocket": return .rocket
-            case "Tethered Powered Aircraft": return .tethered
-            case "Ground Obstacle": return .groundObstacle
-            default:
-                print("Unrecognized UA type: \(uaTypeStr), defaulting to helicopter")
-                return .helicopter
+    private func buildDroneType(_ json: [String: Any]) -> String {
+        var droneType = "a-f-G-U"
+        if let basicId = json["Basic ID"] as? [String: Any],
+           let idType = basicId["id_type"] as? String {
+            if idType == "Serial Number (ANSI/CTA-2063-A)" {
+                droneType += "-S"
+            } else if idType == "CAA Assigned Registration ID" {
+                droneType += "-R"
+            } else {
+                droneType += "-U"
             }
         }
-        return .helicopter  // Default value if no ua_type found
+        if let system = json["System Message"] as? [String: Any],
+           let lat = system["latitude"] as? Double,
+           let lon = system["longitude"] as? Double,
+           lat != 0.0 && lon != 0.0 {
+            droneType += "-O"
+        }
+        droneType += "-F"
+        return droneType
+    }
+    
+    private func mapUAType(_ typeStr: String?) -> DroneSignature.IdInfo.UAType {
+        guard let typeStr = typeStr else { return .helicopter }
+        switch typeStr {
+        case "Helicopter (or Multirotor)": return .helicopter
+        case "Aeroplane", "Airplane": return .aeroplane
+        case "Gyroplane": return .gyroplane
+        case "Hybrid Lift": return .hybridLift
+        case "Ornithopter": return .ornithopter
+        case "Glider": return .glider
+        case "Kite": return .kite
+        case "Free Balloon": return .freeballoon
+        case "Captive Balloon": return .captive
+        case "Airship": return .airship
+        case "Free Fall/Parachute": return .freeFall
+        case "Rocket": return .rocket
+        case "Tethered Powered Aircraft": return .tethered
+        case "Ground Obstacle": return .groundObstacle
+        default: return .helicopter
+        }
     }
 }
