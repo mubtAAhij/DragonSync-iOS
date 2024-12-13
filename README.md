@@ -24,13 +24,13 @@
 
 - View decoded OpenDroneID data from serial numbers to operator locations: 
 
-<p align="left">
-  <img src="https://github.com/user-attachments/assets/aa022b5b-5ce3-4798-9004-7509b027c5bf">
-<img src="https://github.com/user-attachments/assets/885d1451-e05a-4393-ba3f-21b34393ed69">
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/aa022b5b-5ce3-4798-9004-7509b027c5bf" width="40%">
+  <img src="https://github.com/user-attachments/assets/885d1451-e05a-4393-ba3f-21b34393ed69" width="50%">
 
   - Configurable network settings and an immersive UI. Detail views in the system and live map view provide insights, flight paths & more
 
-<img src="https://github.com/user-attachments/assets/c72413d8-37f3-4768-8a87-65554e0f2f31">
+<img src="https://github.com/user-attachments/assets/c72413d8-37f3-4768-8a87-65554e0f2f31" width="80%">
 </p>
 
 ## Installation
