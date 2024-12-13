@@ -65,6 +65,9 @@ struct DroneDetailView: View {
                     if let auth = message.authData {
                         InfoRow(title: "Authentication", value: auth)
                     }
+                    if let mac = message.mac {
+                        InfoRow(title: "MAC", value: mac)
+                    }
                 }
                 
                 Group {

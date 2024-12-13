@@ -251,9 +251,9 @@ class ZMQHandler: ObservableObject {
         print("All collected fields: \(droneInfo.keys)")
 
         var id = droneInfo["id"] as? String ?? "unknown"
-        if !id.starts(with: "drone-") {
-            id = "drone-\(id)"
-        }
+//        if !id.starts(with: "drone-") {
+//            id = "drone-\(id)"
+//        }
 
         // Create XML with all available fields
         return """

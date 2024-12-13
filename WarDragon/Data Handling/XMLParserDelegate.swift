@@ -292,7 +292,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         
         if let basicID = jsonData["Basic ID"] as? [String: Any],
            let id = basicID["id"] as? String {
-            let droneId = "ESP32-\(id)"
+            let droneId = id
             
             let idType = basicID["id_type"] as? String ?? "Unknown"
             if idType == "Serial Number (ANSI/CTA-2063-A)" {

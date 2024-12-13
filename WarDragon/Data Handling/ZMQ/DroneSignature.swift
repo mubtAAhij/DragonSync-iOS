@@ -44,19 +44,19 @@ public struct DroneSignature: Hashable {
             // Icon to display in messageRow
             var icon: String {
                 switch self {
-                case .none: return "airplane.rotors" // use as a fallback
+                case .none: return "airplane" // Fallback
                 case .aeroplane: return "airplane"
-                case .helicopter: return "airplane.rotors"
-                case .gyroplane: return "airplane.rotors.circle"
+                case .helicopter: return "airplane" // No specific helicopter symbol available
+                case .gyroplane: return "airplane.circle"
                 case .hybridLift: return "airplane.circle"
                 case .ornithopter: return "bird"
                 case .glider: return "paperplane"
                 case .kite: return "wind"
-                case .freeballoon: return "cloud"
-                case .captive: return "cloud.fill"
-                case .airship: return "cloud.circle"
+                case .freeballoon: return "balloon" // 'balloon' is available in SF Symbols 3 and later
+                case .captive: return "balloon.fill" // 'balloon.fill' is available in SF Symbols 3 and later
+                case .airship: return "airplane.circle"
                 case .freeFall: return "arrow.down.circle"
-                case .rocket: return "arrow.up.circle"
+                case .rocket: return "rocket"
                 case .tethered: return "link.circle"
                 case .groundObstacle: return "exclamationmark.triangle"
                 case .other: return "questionmark.circle"

@@ -26,7 +26,7 @@ struct MessageRow: View {
             HStack {
                 Image(systemName: signature?.primaryId.uaType.icon ?? "airplane") // dynamic, default to airplane icon
                     .foregroundColor(.blue)
-                Text("Drone ID: \(message.uid)")
+                Text("Drone ID: \(message.id)")
                     .font(.headline)
                 
                 Spacer()

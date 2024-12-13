@@ -44,7 +44,7 @@ class CoTViewModel: ObservableObject {
         
         // Basic ID fields
         var idType: String
-        var mac: String
+        var mac: String?
         
         // Location extended fields
         var timeSpeed: String?
