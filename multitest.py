@@ -5,6 +5,7 @@ import time
 import os
 import random
 import json
+import string
 import struct
 import zmq
 from datetime import datetime, timezone, timedelta
@@ -12,9 +13,9 @@ from datetime import datetime, timezone, timedelta
 class Config:
 	def __init__(self):
 		self.multicast_group = '224.0.0.1'
-		self.cot_port = 4224
-		self.status_port = 4225
-		self.broadcast_mode = 'zmq'  # or 'zmq'
+		self.cot_port = 6969
+		self.status_port = 6969
+		self.broadcast_mode = 'multicast'  # or 'zmq'
 		self.zmq_host = '0.0.0.0'
 		
 class DroneMessageGenerator:
@@ -37,7 +38,8 @@ class DroneMessageGenerator:
 				"protocol_version": "F3411.19",
 				"id_type": "Serial Number (ANSI/CTA-2063-A)",
 				"ua_type": "Helicopter (or Multirotor)",
-				"id": f"DRONE-{random.randint(100000, 999999)}",
+				"id": f"{random.randint(100000, 999999)}",
+				"MAC": "8e:3b:93:22:33:fa"
 			},
 			"Location/Vector Message": {
 				"latitude": latitude,
@@ -83,6 +85,7 @@ class DroneMessageGenerator:
 					"id_type": "Serial Number (ANSI/CTA-2063-A)",
 					"ua_type": "Helicopter (or Multirotor)",
 					"id": f"{random.randint(100000, 999999)}",
+					"MAC": "8e:3b:93:22:33:fa",
 				},
 				{
 					"protocol_version": "F3411.22",
@@ -162,7 +165,8 @@ class DroneMessageGenerator:
 						"protocol_version": "F3411.22",
 						"id_type": "Serial Number (ANSI/CTA-2063-A)",
 						"ua_type": "Helicopter (or Multirotor)",
-						"id": mac
+						"id": mac,
+						"MAC": "8e:3b:93:22:33:fa"
 					},
 					"Location/Vector Message": {
 						"op_status": "Airborne",
@@ -250,8 +254,9 @@ class DroneMessageGenerator:
 		
 		message = {
 			"Basic ID": {
-				"id": f"DRONE-{random.randint(100000, 999999)}",
+				"id": f"{random.randint(1000, 9999)}{random.choice(string.ascii_uppercase)}{random.randint(10, 99)}{random.choice(string.ascii_uppercase)}{random.choice(string.ascii_uppercase)}{random.randint(100000000000, 999999999999)}",
 				"id_type": "Serial Number (ANSI/CTA-2063-A)",
+				"MAC": "8e:3b:93:22:33:fa",
 			},
 			"Location/Vector Message": {
 				"latitude": latitude,
