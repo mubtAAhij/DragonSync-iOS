@@ -250,10 +250,7 @@ class ZMQHandler: ObservableObject {
         // Add debug logging to see all collected fields
         print("All collected fields: \(droneInfo.keys)")
 
-        var id = droneInfo["id"] as? String ?? "unknown"
-//        if !id.starts(with: "drone-") {
-//            id = "drone-\(id)"
-//        }
+        let id = droneInfo["id"] as? String ?? "unknown"
 
         // Create XML with all available fields
         return """

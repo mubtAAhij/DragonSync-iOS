@@ -63,7 +63,7 @@ struct ContentView: View {
                 }
             }
             .tabItem {
-                Label("Drones", systemImage: "airplane")
+                Label("Drones", systemImage: "airplane.circle")
             }
             .tag(0)
             
