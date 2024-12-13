@@ -211,6 +211,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         pilotLon: String(describing: system?["longitude"] ?? "0.0"),
                         description: selfId?["text"] as? String ?? "",
                         uaType: mapUAType(basicId["ua_type"] as? String),
+                        idType: basicId["id_type"] as? String ?? "Unknown",
+                        mac: basicId["MAC"] as? String ?? "",
                         rawMessage: json
                     )
                 }
@@ -255,6 +257,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     pilotLon: pilotLon,
                     description: droneDescription,
                     uaType: .helicopter,
+                    idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
+                        ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
+                    mac: "",
                     rawMessage: jsonFormat
                 )
             }
@@ -289,14 +294,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
            let id = basicID["id"] as? String {
             let droneId = "ESP32-\(id)"
             
-            if let idType = basicID["id_type"] as? String {
-                if idType == "Serial Number (ANSI/CTA-2063-A)" {
-                    droneType += "-S"
-                } else if idType == "CAA Assigned Registration ID" {
-                    droneType += "-R"
-                } else {
-                    droneType += "-U"
-                }
+            let idType = basicID["id_type"] as? String ?? "Unknown"
+            if idType == "Serial Number (ANSI/CTA-2063-A)" {
+                droneType += "-S"
+            } else if idType == "CAA Assigned Registration ID" {
+                droneType += "-R"
+            } else {
+                droneType += "-U"
             }
             
             var lat = "0.0", lon = "0.0"
@@ -306,9 +310,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 lat = String(describing: location["latitude"] ?? "0.0")
                 lon = String(describing: location["longitude"] ?? "0.0")
                 
-                // Ditch messages with zero location
-                if lat == "0.0" || lon == "0.0" {
-                    print("Discarding XML drone message with zero coordinates")
+                // Validate coordinates
+                if lat == "0.0" && lon == "0.0" {
+                    print("Discarding ESP32 message with zero coordinates")
                     return nil
                 }
                 
@@ -320,8 +324,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             
             var pilotLat = "0.0", pilotLon = "0.0"
             if let system = jsonData["System Message"] as? [String: Any] {
-                pilotLat = String(describing: system["latitude"] ?? "0.0")
-                pilotLon = String(describing: system["longitude"] ?? "0.0")
+                pilotLat = String(describing: system["operator_lat"] ?? "0.0")
+                pilotLon = String(describing: system["operator_lon"] ?? "0.0")
                 if pilotLat != "0.0" && pilotLon != "0.0" {
                     droneType += "-O"
                 }
@@ -346,12 +350,16 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 pilotLat: pilotLat,
                 pilotLon: pilotLon,
                 description: description,
-                rawMessage: rawMessage ?? [:]
+                uaType: mapUAType(basicID["ua_type"] as? Int ?? 0),
+                idType: idType,
+                mac: basicID["MAC"] as? String ?? "",
+                rawMessage: jsonData
             )
         }
         
         return nil
     }
+
     
     private func buildDroneType(_ json: [String: Any]) -> String {
         var droneType = "a-f-G-U"
@@ -393,6 +401,27 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         case "Tethered Powered Aircraft": return .tethered
         case "Ground Obstacle": return .groundObstacle
         default: return .helicopter
+        }
+    }
+    
+    private func mapUAType(_ typeInt: Int) -> DroneSignature.IdInfo.UAType {
+        switch typeInt {
+            case 0: return .none
+            case 1: return .aeroplane
+            case 2: return .helicopter
+            case 3: return .gyroplane
+            case 4: return .hybridLift
+            case 5: return .ornithopter
+            case 6: return .glider
+            case 7: return .kite
+            case 8: return .freeballoon
+            case 9: return .captive
+            case 10: return .airship
+            case 11: return .freeFall
+            case 12: return .rocket
+            case 13: return .tethered
+            case 14: return .groundObstacle
+            default: return .helicopter
         }
     }
 }

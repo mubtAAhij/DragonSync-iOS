@@ -40,9 +40,45 @@ class CoTViewModel: ObservableObject {
         var pilotLat: String
         var pilotLon: String
         var description: String
-        var uaType: DroneSignature.IdInfo.UAType = .helicopter
-        var rawMessage: [String: Any]
+        var uaType: DroneSignature.IdInfo.UAType
         
+        // Basic ID fields
+        var idType: String
+        var mac: String
+        
+        // Location extended fields
+        var timeSpeed: String?
+        var status: String?
+        var direction: String?
+        var altPressure: String?
+        var heightType: String?
+        var horizAcc: String?
+        var vertAcc: String?
+        var baroAcc: String?
+        var speedAcc: String?
+        var timestamp: String?
+
+        // System Message fields
+        var operatorAltGeo: String?
+        var areaCount: String?
+        var areaRadius: String?
+        var areaCeiling: String?
+        var areaFloor: String?
+        var classification: String?
+
+        // Self-ID fields
+        var selfIdType: String?
+        var selfIdId: String?
+        
+        // Auth Message fields
+        var authType: String?
+        var authPage: String?
+        var authLength: String?
+        var authTimestamp: String?
+        var authData: String?
+        
+        var rawMessage: [String: Any]
+
         static func == (lhs: CoTViewModel.CoTMessage, rhs: CoTViewModel.CoTMessage) -> Bool {
             return lhs.uid == rhs.uid &&
             lhs.type == rhs.type &&
@@ -55,8 +91,32 @@ class CoTViewModel: ObservableObject {
             lhs.pilotLat == rhs.pilotLat &&
             lhs.pilotLon == rhs.pilotLon &&
             lhs.description == rhs.description &&
-            lhs.uaType == rhs.uaType
-            // Note: Not comparing rawMessage since Dictionary isn't directly Equatable
+            lhs.uaType == rhs.uaType &&
+            lhs.idType == rhs.idType &&
+            lhs.mac == rhs.mac &&
+            lhs.timeSpeed == rhs.timeSpeed &&
+            lhs.status == rhs.status &&
+            lhs.direction == rhs.direction &&
+            lhs.altPressure == rhs.altPressure &&
+            lhs.heightType == rhs.heightType &&
+            lhs.horizAcc == rhs.horizAcc &&
+            lhs.vertAcc == rhs.vertAcc &&
+            lhs.baroAcc == rhs.baroAcc &&
+            lhs.speedAcc == rhs.speedAcc &&
+            lhs.timestamp == rhs.timestamp &&
+            lhs.operatorAltGeo == rhs.operatorAltGeo &&
+            lhs.areaCount == rhs.areaCount &&
+            lhs.areaRadius == rhs.areaRadius &&
+            lhs.areaCeiling == rhs.areaCeiling &&
+            lhs.areaFloor == rhs.areaFloor &&
+            lhs.classification == rhs.classification &&
+            lhs.selfIdType == rhs.selfIdType &&
+            lhs.selfIdId == rhs.selfIdId &&
+            lhs.authType == rhs.authType &&
+            lhs.authPage == rhs.authPage &&
+            lhs.authLength == rhs.authLength &&
+            lhs.authTimestamp == rhs.authTimestamp &&
+            lhs.authData == rhs.authData
         }
         
         var coordinate: CLLocationCoordinate2D? {

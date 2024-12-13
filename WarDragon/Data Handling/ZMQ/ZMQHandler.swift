@@ -155,59 +155,139 @@ class ZMQHandler: ObservableObject {
         return createStatusXML(json)
     }
     
-    private func createDroneXML(from messages: [[String: Any]]) -> String {
+    private func createDroneXML(from messages: [[String: Any]]) -> String? {
         var droneInfo: [String: Any] = [:]
         
         // Parse all message parts
         for message in messages {
-            if let basicId = message["Basic ID"] as? [String: Any],
-               let idType = basicId["id_type"] as? String {
-                if (idType == "Serial Number (ANSI/CTA-2063-A)" ||
-                    idType == "CAA Assigned Registration ID") &&
-                    droneInfo["id"] == nil {
-                    droneInfo["id"] = basicId["id"] as? String ?? "unknown"
+            // Handle BT4/5 messages
+            if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
+                if let addr = auxAdvInd["addr"] as? String {
+                    droneInfo["id"] = addr
                 }
+                // Need to check if BT messages have aa, advData, or other fields
+                // Log all fields to verify what we're getting
+                print("BT Message fields: \(auxAdvInd.keys)")
             }
             
+            // Handle Basic ID
+            if let basicId = message["Basic ID"] as? [String: Any] {
+                droneInfo["id"] = basicId["id"] as? String
+                droneInfo["id_type"] = basicId["id_type"] as? String
+                droneInfo["ua_type"] = basicId["ua_type"] as? Int
+                droneInfo["mac"] = basicId["MAC"] as? String
+                // Log to verify all Basic ID fields
+                print("Basic ID fields: \(basicId.keys)")
+            }
+            
+            // Handle Location
             if let location = message["Location/Vector Message"] as? [String: Any] {
-                droneInfo["lat"] = location["latitude"] as? Double ?? 0.0
-                droneInfo["lon"] = location["longitude"] as? Double ?? 0.0
-                droneInfo["speed"] = location["speed"] as? Double ?? 0.0
-                droneInfo["vspeed"] = location["vert_speed"] as? Double ?? 0.0
-                droneInfo["alt"] = location["geodetic_altitude"] as? Double ?? 0.0
-                droneInfo["height"] = location["height_agl"] as? Double ?? 0.0
+                let lat = location["latitude"] as? Double ?? 0.0
+                let lon = location["longitude"] as? Double ?? 0.0
+                
+                if lat == 0.0 && lon == 0.0 {
+                    print("Discarding telemetry with zero coordinates")
+                    return nil
+                }
+                
+                droneInfo["lat"] = lat
+                droneInfo["lon"] = lon
+                droneInfo["speed"] = location["speed"] as? Double
+                droneInfo["time_speed"] = location["time_speed"] as? Int
+                droneInfo["vspeed"] = location["vert_speed"] as? Double
+                droneInfo["alt"] = location["geodetic_altitude"] as? Double
+                droneInfo["height"] = location["height_agl"] as? Double
+                droneInfo["status"] = location["status"] as? Int
+                droneInfo["direction"] = location["direction"] as? Int
+                droneInfo["alt_pressure"] = location["alt_pressure"] as? Double
+                droneInfo["height_type"] = location["height_type"] as? Int
+                droneInfo["horiz_acc"] = location["horiz_acc"] as? Double
+                droneInfo["vert_acc"] = location["vert_acc"] as? Double
+                droneInfo["baro_acc"] = location["baro_acc"] as? Double
+                droneInfo["speed_acc"] = location["speed_acc"] as? Double
+                droneInfo["timestamp"] = location["timestamp"] as? Int
+                // Log to verify all Location fields
+                print("Location fields: \(location.keys)")
             }
             
+            // Handle Self-ID
             if let selfId = message["Self-ID Message"] as? [String: Any] {
-                droneInfo["description"] = selfId["text"] as? String ?? ""
+                droneInfo["description"] = selfId["description"] as? String
+                droneInfo["self_id_type"] = selfId["type"] as? Int
+                droneInfo["self_id_id"] = selfId["id"] as? String
+                droneInfo["timestamp"] = selfId["timestamp"] as? Int
+                // Log to verify all Self-ID fields
+                print("Self-ID fields: \(selfId.keys)")
             }
             
+            // Handle System Message
             if let system = message["System Message"] as? [String: Any] {
-                droneInfo["pilot_lat"] = system["latitude"] as? Double ?? 0.0
-                droneInfo["pilot_lon"] = system["longitude"] as? Double ?? 0.0
+                droneInfo["pilot_lat"] = system["operator_lat"] as? Double
+                droneInfo["pilot_lon"] = system["operator_lon"] as? Double
+                droneInfo["area_count"] = system["area_count"] as? Int
+                droneInfo["area_radius"] = system["area_radius"] as? Double
+                droneInfo["area_ceiling"] = system["area_ceiling"] as? Double
+                droneInfo["area_floor"] = system["area_floor"] as? Double
+                droneInfo["operator_alt_geo"] = system["operator_alt_geo"] as? Double
+                droneInfo["classification"] = system["classification"] as? Int
+                droneInfo["timestamp"] = system["timestamp"] as? Int
+                // Log to verify all System fields
+                print("System fields: \(system.keys)")
+            }
+            
+            // Handle Auth Message
+            if let auth = message["Auth Message"] as? [String: Any] {
+                droneInfo["auth_type"] = auth["type"] as? Int
+                droneInfo["auth_page"] = auth["page"] as? Int
+                droneInfo["auth_length"] = auth["length"] as? Int
+                droneInfo["auth_timestamp"] = auth["timestamp"] as? Int
+                droneInfo["auth_data"] = auth["data"] as? String
+                // Log to verify all Auth fields
+                print("Auth fields: \(auth.keys)")
             }
         }
-        
+
+        // Add debug logging to see all collected fields
+        print("All collected fields: \(droneInfo.keys)")
+
         var id = droneInfo["id"] as? String ?? "unknown"
         if !id.starts(with: "drone-") {
             id = "drone-\(id)"
         }
-        
+
+        // Create XML with all available fields
         return """
         <event version="2.0" uid="\(id)" type="a-f-G-U-C">
           <point lat="\(droneInfo["lat"] as? Double ?? 0.0)" lon="\(droneInfo["lon"] as? Double ?? 0.0)" hae="\(droneInfo["alt"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
           <detail>
             <contact callsign="\(id)"/>
-            <track course="0" speed="\(droneInfo["speed"] as? Double ?? 0.0)"/>
+            <track course="\(droneInfo["direction"] as? Int ?? 0)" speed="\(droneInfo["speed"] as? Double ?? 0.0)"/>
             <remarks>\(droneInfo["description"] as? String ?? "")</remarks>
             <Speed>\(droneInfo["speed"] as? Double ?? 0.0)</Speed>
             <VerticalSpeed>\(droneInfo["vspeed"] as? Double ?? 0.0)</VerticalSpeed>
             <Altitude>\(droneInfo["alt"] as? Double ?? 0.0)</Altitude>
             <height>\(droneInfo["height"] as? Double ?? 0.0)</height>
+            <status>\(droneInfo["status"] as? Int ?? 0)</status>
+            <heightType>\(droneInfo["height_type"] as? Int ?? 0)</heightType>
+            <TimeSpeed>\(droneInfo["time_speed"] as? Int ?? 0)</TimeSpeed>
+            <AltPressure>\(droneInfo["alt_pressure"] as? Double ?? 0.0)</AltPressure>
+            <HorizAcc>\(droneInfo["horiz_acc"] as? Double ?? 0.0)</HorizAcc>
+            <VertAcc>\(droneInfo["vert_acc"] as? Double ?? 0.0)</VertAcc>
+            <BaroAcc>\(droneInfo["baro_acc"] as? Double ?? 0.0)</BaroAcc>
+            <SpeedAcc>\(droneInfo["speed_acc"] as? Double ?? 0.0)</SpeedAcc>
+            <UAType>\(droneInfo["ua_type"] as? Int ?? 0)</UAType>
+            <Classification>\(droneInfo["classification"] as? Int ?? 0)</Classification>
             <PilotLocation>
               <lat>\(droneInfo["pilot_lat"] as? Double ?? 0.0)</lat>
               <lon>\(droneInfo["pilot_lon"] as? Double ?? 0.0)</lon>
+              <altGeo>\(droneInfo["operator_alt_geo"] as? Double ?? 0.0)</altGeo>
             </PilotLocation>
+            <OperationArea>
+              <count>\(droneInfo["area_count"] as? Int ?? 0)</count>
+              <radius>\(droneInfo["area_radius"] as? Double ?? 0.0)</radius>
+              <ceiling>\(droneInfo["area_ceiling"] as? Double ?? 0.0)</ceiling>
+              <floor>\(droneInfo["area_floor"] as? Double ?? 0.0)</floor>
+            </OperationArea>
           </detail>
         </event>
         """
