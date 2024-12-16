@@ -69,7 +69,44 @@ class ZMQHandler: ObservableObject {
             
             // Start polling on background queue
             pollingQueue = DispatchQueue(label: "com.wardragon.zmq.polling")
-            startPolling(onTelemetry: onTelemetry, onStatus: onStatus)
+            
+            // Initial immediate poll for any pending messages
+            pollingQueue?.async { [weak self] in
+                guard let self = self else { return }
+                do {
+                    print("Performing initial poll...")
+                    if let items = try self.poller?.poll(timeout: 0.01) {
+                        for (socket, events) in items {
+                            if events.contains(.pollIn) {
+                                if let data = try socket.recv(bufferLength: 65536),
+                                   let jsonString = String(data: data, encoding: .utf8) {
+                                    print("Initial poll received data: \(jsonString.prefix(100))...")
+                                    if socket === self.telemetrySocket {
+                                        if let xmlMessage = self.convertTelemetryToXML(jsonString) {
+                                            DispatchQueue.main.async {
+                                                onTelemetry(xmlMessage)
+                                            }
+                                        }
+                                    } else if socket === self.statusSocket {
+                                        if let xmlMessage = self.convertStatusToXML(jsonString) {
+                                            DispatchQueue.main.async {
+                                                onStatus(xmlMessage)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Start regular polling after initial poll
+                    self.startPolling(onTelemetry: onTelemetry, onStatus: onStatus)
+                    
+                } catch {
+                    print("Initial poll error: \(error)")
+                    self.startPolling(onTelemetry: onTelemetry, onStatus: onStatus)
+                }
+            }
             
             isConnected = true
             print("ZMQ: Connected successfully")
@@ -83,7 +120,7 @@ class ZMQHandler: ObservableObject {
     private func configureSocket(_ socket: SwiftyZeroMQ.Socket) throws {
         try socket.setRecvHighWaterMark(1000)
         try socket.setLinger(0)
-        try socket.setRecvTimeout(1000)
+        try socket.setRecvTimeout(100) // see if reducing to 100 from 1000 helps get all status messages
         try socket.setImmediate(true)
     }
     
@@ -93,25 +130,19 @@ class ZMQHandler: ObservableObject {
             
             while self.shouldContinueRunning {
                 do {
-                    if let items = try self.poller?.poll(timeout: 0.1) {
+                    if let items = try self.poller?.poll(timeout: 0.01) { // Reduce poll timeout
                         for (socket, events) in items {
                             if events.contains(.pollIn) {
-                                // Get raw data from socket
                                 if let data = try socket.recv(bufferLength: 65536),
                                    let jsonString = String(data: data, encoding: .utf8) {
-                                    
-                                    // Convert to XML based on socket type
+                                    // Process immediately instead of dispatching
                                     if socket === self.telemetrySocket {
                                         if let xmlMessage = self.convertTelemetryToXML(jsonString) {
-                                            DispatchQueue.main.async {
-                                                onTelemetry(xmlMessage)
-                                            }
+                                            onTelemetry(xmlMessage)
                                         }
                                     } else if socket === self.statusSocket {
                                         if let xmlMessage = self.convertStatusToXML(jsonString) {
-                                            DispatchQueue.main.async {
-                                                onStatus(xmlMessage)
-                                            }
+                                            onStatus(xmlMessage)
                                         }
                                     }
                                 }
@@ -246,12 +277,12 @@ class ZMQHandler: ObservableObject {
                 print("Auth fields: \(auth.keys)")
             }
         }
-
+        
         // Add debug logging to see all collected fields
         print("All collected fields: \(droneInfo.keys)")
-
+        
         let id = droneInfo["id"] as? String ?? "unknown"
-
+        
         // Create XML with all available fields
         return """
         <event version="2.0" uid="\(id)" type="a-f-G-U-C">
@@ -316,27 +347,27 @@ class ZMQHandler: ObservableObject {
         let diskUsed = Double(disk["used"] as? Int64 ?? 0) / (1024 * 1024)
         let diskFree = Double(disk["free"] as? Int64 ?? 0) / (1024 * 1024)
         let diskPercent = Double(disk["percent"] as? Double ?? 0.0)
-
+        
         // Exact format that parseRemarks() expects
         let remarks = "CPU Usage: \(systemStats["cpu_usage"] as? Double ?? 0.0)%, " +
-                     "Memory Total: \(String(format: "%.1f", memoryTotal)) MB, " +
-                     "Memory Available: \(String(format: "%.1f", memoryAvailable)) MB, " +
-                     "Memory Used: \(String(format: "%.1f", memoryUsed)) MB, " +
-                     "Memory Free: \(String(format: "%.1f", memoryFree)) MB, " +
-                     "Memory Active: \(String(format: "%.1f", memoryActive)) MB, " +
-                     "Memory Inactive: \(String(format: "%.1f", memoryInactive)) MB, " +
-                     "Memory Buffers: \(String(format: "%.1f", memoryBuffers)) MB, " +
-                     "Memory Shared: \(String(format: "%.1f", memoryShared)) MB, " +
-                     "Memory Cached: \(String(format: "%.1f", memoryCached)) MB, " +
-                     "Memory Slab: \(String(format: "%.1f", memorySlab)) MB, " +
-                     "Memory Percent: \(String(format: "%.1f", memoryPercent))%, " +
-                     "Disk Total: \(String(format: "%.1f", diskTotal)) MB, " +
-                     "Disk Used: \(String(format: "%.1f", diskUsed)) MB, " +
-                     "Disk Free: \(String(format: "%.1f", diskFree)) MB, " +
-                     "Disk Percent: \(String(format: "%.1f", diskPercent))%, " +
-                     "Temperature: \(systemStats["temperature"] as? Double ?? 0.0)°C, " +
-                     "Uptime: \(systemStats["uptime"] as? Double ?? 0.0) seconds"
-
+        "Memory Total: \(String(format: "%.1f", memoryTotal)) MB, " +
+        "Memory Available: \(String(format: "%.1f", memoryAvailable)) MB, " +
+        "Memory Used: \(String(format: "%.1f", memoryUsed)) MB, " +
+        "Memory Free: \(String(format: "%.1f", memoryFree)) MB, " +
+        "Memory Active: \(String(format: "%.1f", memoryActive)) MB, " +
+        "Memory Inactive: \(String(format: "%.1f", memoryInactive)) MB, " +
+        "Memory Buffers: \(String(format: "%.1f", memoryBuffers)) MB, " +
+        "Memory Shared: \(String(format: "%.1f", memoryShared)) MB, " +
+        "Memory Cached: \(String(format: "%.1f", memoryCached)) MB, " +
+        "Memory Slab: \(String(format: "%.1f", memorySlab)) MB, " +
+        "Memory Percent: \(String(format: "%.1f", memoryPercent))%, " +
+        "Disk Total: \(String(format: "%.1f", diskTotal)) MB, " +
+        "Disk Used: \(String(format: "%.1f", diskUsed)) MB, " +
+        "Disk Free: \(String(format: "%.1f", diskFree)) MB, " +
+        "Disk Percent: \(String(format: "%.1f", diskPercent))%, " +
+        "Temperature: \(systemStats["temperature"] as? Double ?? 0.0)°C, " +
+        "Uptime: \(systemStats["uptime"] as? Double ?? 0.0) seconds"
+        
         return """
         <event version="2.0" uid="\(serialNumber)" type="b-m-p-s-m">
             <point lat="\(gpsData["latitude"] as? Double ?? 0.0)" lon="\(gpsData["longitude"] as? Double ?? 0.0)" hae="\(gpsData["altitude"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
