@@ -1,36 +1,23 @@
 # DragonSync iOS
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/1c385154-5e91-48a4-a35f-f936109f3ecb">
+<p align="left">
+  <img src="https://github.com/user-attachments/assets/866fe12d-2bd7-431c-9979-0bc32e2bd2fd" >
 </p>
 
-
-> Revolutionize your airspace awareness. Stay ahead with real-time monitoring, instant alerts, and robust protocol support. Bridge the power of WarDragon with instant app connectivity.
+> *Revolutionize your airspace awareness. Bridge the power of WarDragon to your iOS device. Stay ahead with real-time monitoring, instant alerts, and robust protocol support.*
 
 ## Features
 
 - **Real-Time Airspace Monitoring**  
-  Effortlessly track the status and location of Remote ID-compliant UAVs on your iOS device, no setup required. See flightpaths, decoded RID data from the serial number to operator location and more.
+  Track the status and location of Remote ID-compliant UAVs on your iOS device. See flightpaths and comprehensive decoded data of any RID broadcast.
 
 - **Instant System Alerts**  
-  Stay informed with real-time notifications about your WarDragon system’s performance.
+  Stay informed with real-time status updates about your system’s performance. Memory, CPU, temp and more.
 
 - **Seamless WarDragon Integration**  
-  Designed to work flawlessly with the WarDragon DragonOS platform, providing a unified and user-friendly experience out of the box. 
+  Designed to work flawlessly with the WarDragon DragonOS platform & `dragonsync.py`, providing a unified and user-friendly experience out of the box. 
 
 - **Flexible Protocol Support**  
-  Supports ZMQ and Multicast configurations to receive Cursor on Target (CoT) and status messages, tailored to your operational needs.   
-
-## Functionality
-
-- View decoded OpenDroneID data from serial numbers to operator locations: 
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/aa022b5b-5ce3-4798-9004-7509b027c5bf" width="40%">
-  
-  <img src="https://github.com/user-attachments/assets/885d1451-e05a-4393-ba3f-21b34393ed69" width="50%">
-
-<img src="https://github.com/user-attachments/assets/c72413d8-37f3-4768-8a87-65554e0f2f31" width="50%">
-</p>
+  Supports ZMQ and Multicast configurations to receive CoT and status messages, tailored to your operational needs.
 
 ## Installation
 
@@ -54,20 +41,16 @@
 
 ## Usage
 
-- Once installed, launch DragonSync on your iOS device. Ensure that your device is connected to the same network as your WarDragon system.
+- Ensure that your device is connected to the same network as your WarDragon or host system.
+- Launch the app & choose Multicast or ZMQ from settings
+- Input the IP of the WarDragon or host for ZMQ. (Default multicast address is pre-configured for `dragonsync.py`, adjust if your network requires it.)
 
-  - **WarDragon**: already installed as a service. Run [dragonsync.py](https://github.com/alphafox02/DragonSync).
-  - **Other devices**: Launch the scripts from DroneID and dragonsync to start the monitor and broadcast. *(Specific commands to follow after testing is complete)*. 
-
-- The app will automatically detect and connect to the system when you select Start Listening, providing you with real-time CoT data and status updates.
+  _**Refer to [dragonsync.py](https://github.com/alphafox02/DragonSync) for detailed instructions & commands**_
 
 ## Credits
+We extend our gratitude for their contributions to the open-source community, which have been instrumental in the development of this application.
 
-Foundational: [DragonSync](https://github.com/alphafox02/DragonSync) and [DroneID](https://github.com/bkerler/DroneID). 
-
-None of this would be possible without that work. A big thanks to the devs at [Sniffle](https://github.com/nccgroup/Sniffle). And of course to [@alphafox02](https://github.com/alphafox02) for creating the WarDragon, DragonOS, the above scripts- and showing me how to make this work.
-
-DragonSync is built upon the foundational work of [cemaxecuter](cemaxecuter.com). Check out his work here on GitHub: [@alphafox02](https://github.com/alphafox02). We extend our gratitude for their contributions to the open-source community, which have been instrumental in the development of this application.
+Foundational: [DragonSync](https://github.com/alphafox02/DragonSync) and [DroneID](https://github.com/bkerler/DroneID). A big thanks to the devs at [Sniffle](https://github.com/nccgroup/Sniffle). And of course to [@alphafox02](https://github.com/alphafox02) for creating the WarDragon, DragonOS, the above scripts- and showing me how to make this work. Thanks to [@bkerler]((https://github.com/bkerler) for the work on `DroneID` and inspiring this project. 
 
 ## Disclaimer
 

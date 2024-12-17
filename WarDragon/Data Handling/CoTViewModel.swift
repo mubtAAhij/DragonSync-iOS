@@ -355,7 +355,7 @@ class CoTViewModel: ObservableObject {
             } else {
                 // Add new status message
                 self.statusViewModel.statusMessages.append(message)
-                print("Added new status message: \(message.uid)")
+                self.sendStatusNotification(for: message)
             }
         }
     }
@@ -386,6 +386,18 @@ class CoTViewModel: ObservableObject {
         let content = UNMutableNotificationContent()
         content.title = "New CoT Message"
         content.body = "From: \(message.uid)\nType: \(message.type)\nLocation: \(message.lat), \(message.lon)"
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+    
+    private func sendStatusNotification(for message: StatusViewModel.StatusMessage) {
+        let content = UNMutableNotificationContent()
+        content.title = "System Status"
+        let memAvail = message.systemStats.memory.available
+        let memTotal = message.systemStats.memory.total
+        let memoryUsed = memTotal - memAvail
+        let percentageUsed = (Double(memoryUsed) / Double(memTotal)) * 100
+        content.body = "CPU: \(String(format: "%.0f", message.systemStats.cpuUsage))%\nMemory: \(String(format: "%.0f", percentageUsed))%\nTemp: \(message.systemStats.temperature)°C"
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }

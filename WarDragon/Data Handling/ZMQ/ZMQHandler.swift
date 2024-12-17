@@ -75,7 +75,7 @@ class ZMQHandler: ObservableObject {
                 guard let self = self else { return }
                 do {
                     print("Performing initial poll...")
-                    if let items = try self.poller?.poll(timeout: 0.01) {
+                    if let items = try self.poller?.poll(timeout: 0.1) {
                         for (socket, events) in items {
                             if events.contains(.pollIn) {
                                 if let data = try socket.recv(bufferLength: 65536),
@@ -120,7 +120,7 @@ class ZMQHandler: ObservableObject {
     private func configureSocket(_ socket: SwiftyZeroMQ.Socket) throws {
         try socket.setRecvHighWaterMark(1000)
         try socket.setLinger(0)
-        try socket.setRecvTimeout(100) // see if reducing to 100 from 1000 helps get all status messages
+        try socket.setRecvTimeout(1000) // see if reducing to 100 from 1000 helps get all status messages
         try socket.setImmediate(true)
     }
     
@@ -130,7 +130,7 @@ class ZMQHandler: ObservableObject {
             
             while self.shouldContinueRunning {
                 do {
-                    if let items = try self.poller?.poll(timeout: 0.01) { // Reduce poll timeout
+                    if let items = try self.poller?.poll(timeout: 0.1) { // Reduce poll timeout
                         for (socket, events) in items {
                             if events.contains(.pollIn) {
                                 if let data = try socket.recv(bufferLength: 65536),
