@@ -122,6 +122,11 @@ class ZMQHandler: ObservableObject {
         try socket.setLinger(0)
         try socket.setRecvTimeout(1000) // see if reducing to 100 from 1000 helps get all status messages
         try socket.setImmediate(true)
+        
+        // Set TCP keep alive to detect connection issues
+        try socket.setIntegerSocketOption(ZMQ_TCP_KEEPALIVE, 1)
+        try socket.setIntegerSocketOption(ZMQ_TCP_KEEPALIVE_IDLE, 120)
+        try socket.setIntegerSocketOption(ZMQ_TCP_KEEPALIVE_INTVL, 60)
     }
     
     private func startPolling(onTelemetry: @escaping MessageHandler, onStatus: @escaping MessageHandler) {
@@ -191,6 +196,7 @@ class ZMQHandler: ObservableObject {
         
         // Parse all message parts
         for message in messages {
+            print("Raw Message:  \(message)")
             // Handle BT4/5 messages
             if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
                 if let addr = auxAdvInd["addr"] as? String {

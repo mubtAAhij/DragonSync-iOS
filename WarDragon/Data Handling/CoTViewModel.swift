@@ -295,7 +295,7 @@ class CoTViewModel: ObservableObject {
                 print("Received data: \(message)")
                 
                 // Check for Status message first (has both status code type and remarks with CPU Usage)
-                if message.contains("type=\"b-m-p-s-m\"") && message.contains("<remarks>CPU Usage:") {
+                if message.contains("<remarks>CPU Usage:") {
                     print("Processing Status XML message")
                     let parser = XMLParser(data: data)
                     let cotParserDelegate = CoTMessageParser()

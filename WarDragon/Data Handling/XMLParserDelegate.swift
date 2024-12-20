@@ -79,14 +79,17 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName: String?) {
         let parent = elementStack.dropLast().last ?? ""
         
-        if let type = eventAttributes["type"], type == "b-m-p-s-m" {
+        if elementName == "remarks", remarks.contains("CPU Usage:") {
             handleStatusMessage(elementName)
         } else {
             handleDroneMessage(elementName, parent)
         }
+    
         
+        // Clean up the element stack
         elementStack.removeLast()
     }
+
     
     // MARK: - Status Message Handler
     private func handleStatusMessage(_ elementName: String) {
@@ -188,33 +191,70 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private func handleDroneMessage(_ elementName: String, _ parent: String) {
         switch elementName {
         case "message":
-            if let jsonData = messageContent.data(using: .utf8),
-               let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-                rawMessage = json
-                if let basicId = json["Basic ID"] as? [String: Any],
-                   let id = basicId["id"] as? String {
-                    let droneType = buildDroneType(json)
-                    let location = json["Location/Vector Message"] as? [String: Any]
-                    let system = json["System Message"] as? [String: Any]
-                    let selfId = json["Self-ID Message"] as? [String: Any]
-                    
-                    cotMessage = CoTViewModel.CoTMessage(
-                        uid: id,
-                        type: droneType,
-                        lat: String(describing: location?["latitude"] ?? "0.0"),
-                        lon: String(describing: location?["longitude"] ?? "0.0"),
-                        speed: String(describing: location?["speed"] ?? "0.0"),
-                        vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
-                        alt: String(describing: location?["geodetic_altitude"] ?? "0.0"),
-                        height: String(describing: location?["height_agl"] ?? "0.0"),
-                        pilotLat: String(describing: system?["latitude"] ?? "0.0"),
-                        pilotLon: String(describing: system?["longitude"] ?? "0.0"),
-                        description: selfId?["text"] as? String ?? "",
-                        uaType: mapUAType(basicId["ua_type"] as? String),
-                        idType: basicId["id_type"] as? String ?? "Unknown",
-                        mac: basicId["MAC"] as? String ?? "",
-                        rawMessage: json
-                    )
+            if let jsonData = messageContent.data(using: .utf8) {
+                // Try array format first (BT4/5 messages)
+                if let jsonArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
+                    // Find first Basic ID message in array
+                    for messageDict in jsonArray {
+                        if let basicId = messageDict["Basic ID"] as? [String: Any],
+                           let id = basicId["id"] as? String {
+                            // Convert array to dictionary with array inside
+                            rawMessage = ["messages": jsonArray] // Store array inside dictionary
+                            let droneType = buildDroneType(messageDict)
+                            let location = messageDict["Location/Vector Message"] as? [String: Any]
+                            let system = messageDict["System Message"] as? [String: Any]
+                            let selfId = messageDict["Self-ID Message"] as? [String: Any]
+
+                            cotMessage = CoTViewModel.CoTMessage(
+                                uid: id,
+                                type: droneType,
+                                lat: String(describing: location?["latitude"] ?? "0.0"),
+                                lon: String(describing: location?["longitude"] ?? "0.0"),
+                                speed: String(describing: location?["speed"] ?? "0.0"),
+                                vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
+                                alt: String(describing: location?["geodetic_altitude"] ?? "0.0"),
+                                height: String(describing: location?["height_agl"] ?? "0.0"),
+                                pilotLat: String(describing: system?["operator_lat"] ?? "0.0"),
+                                pilotLon: String(describing: system?["operator_lon"] ?? "0.0"),
+                                description: selfId?["text"] as? String ?? "",
+                                uaType: mapUAType(basicId["ua_type"] as? String),
+                                idType: basicId["id_type"] as? String ?? "Unknown",
+                                mac: basicId["MAC"] as? String ?? "",
+                                rawMessage: ["messages": jsonArray]  // Store array inside dictionary
+                            )
+                            break // Found valid message
+                        }
+                    }
+                }
+                // Original single object parsing
+                else if let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                    // Keep all existing single-object parsing code exactly as is
+                    rawMessage = json
+                    if let basicId = json["Basic ID"] as? [String: Any],
+                       let id = basicId["id"] as? String {
+                        let droneType = buildDroneType(json)
+                        let location = json["Location/Vector Message"] as? [String: Any]
+                        let system = json["System Message"] as? [String: Any]
+                        let selfId = json["Self-ID Message"] as? [String: Any]
+                        
+                        cotMessage = CoTViewModel.CoTMessage(
+                            uid: id,
+                            type: droneType,
+                            lat: String(describing: location?["latitude"] ?? "0.0"),
+                            lon: String(describing: location?["longitude"] ?? "0.0"),
+                            speed: String(describing: location?["speed"] ?? "0.0"),
+                            vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
+                            alt: String(describing: location?["geodetic_altitude"] ?? "0.0"),
+                            height: String(describing: location?["height_agl"] ?? "0.0"),
+                            pilotLat: String(describing: system?["latitude"] ?? "0.0"),
+                            pilotLon: String(describing: system?["longitude"] ?? "0.0"),
+                            description: selfId?["text"] as? String ?? "",
+                            uaType: mapUAType(basicId["ua_type"] as? String),
+                            idType: basicId["id_type"] as? String ?? "Unknown",
+                            mac: basicId["MAC"] as? String ?? "",
+                            rawMessage: json
+                        )
+                    }
                 }
             }
         case "event":
