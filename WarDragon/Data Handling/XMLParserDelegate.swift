@@ -49,6 +49,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     
     var cotMessage: CoTViewModel.CoTMessage?
     var statusMessage: StatusViewModel.StatusMessage?
+    private var isStatusMessage = false
     
     // MARK: - XMLParserDelegate
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName: String?, attributes: [String : String] = [:]) {
@@ -79,13 +80,17 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName: String?) {
         let parent = elementStack.dropLast().last ?? ""
         
-        if elementName == "remarks", remarks.contains("CPU Usage:") {
+        if elementName == "remarks" {
+            isStatusMessage = remarks.contains("CPU Usage:")
+        }
+
+        // Route to appropriate handler based on message type
+        if isStatusMessage {
             handleStatusMessage(elementName)
         } else {
             handleDroneMessage(elementName, parent)
         }
-    
-        
+
         // Clean up the element stack
         elementStack.removeLast()
     }

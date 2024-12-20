@@ -204,7 +204,7 @@ class ZMQHandler: ObservableObject {
                 }
                 // Need to check if BT messages have aa, advData, or other fields
                 // Log all fields to verify what we're getting
-                print("BT Message fields: \(auxAdvInd.keys)")
+//                print("BT Message fields: \(auxAdvInd.keys)")
             }
             
             // Handle Basic ID
