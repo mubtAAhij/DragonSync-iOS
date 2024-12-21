@@ -363,7 +363,7 @@ class CoTViewModel: ObservableObject {
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
             // Generate/update signature from raw message
-            let signature = self.signatureGenerator.createSignature(from: message.rawMessage)
+            guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else { return }
             
             // Update signatures collection
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {

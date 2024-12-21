@@ -82,7 +82,7 @@ public final class DroneSignatureGenerator {
     public init() {}
     
     // MARK: - Public Methods
-    public func createSignature(from message: [String: Any]) -> DroneSignature {
+    public func createSignature(from message: [String: Any]) -> DroneSignature? {
         pruneCache()
         
         let now = Date().timeIntervalSince1970
@@ -167,14 +167,19 @@ public final class DroneSignatureGenerator {
     
     private func updateMatchHistory(_ id: String, _ match: SignatureMatch) {
         var info = signatureCache[id]
+        
+        // Append the match to the history
         info?.matchHistory.append(match)
         
-        if info?.matchHistory.count ?? 0 > 100 {
+        // Ensure we only try to remove the first element if the collection is not empty
+        if let history = info?.matchHistory, history.count > 100 {
             info?.matchHistory.removeFirst()
         }
         
+        // Update the signature cache with the modified info
         signatureCache[id] = info
     }
+    
     
     private func matchOperatorLocations(_ current: DroneSignature, _ candidate: DroneSignature) -> Double? {
         guard let currentOp = current.position.operatorLocation,
@@ -570,19 +575,20 @@ public final class DroneSignatureGenerator {
         info.signatures.append(signature)
         info.lastUpdate = signature.timestamp
         
-        if signature.position.coordinate.latitude != 0 &&
-            signature.position.coordinate.longitude != 0 {
+        if signature.position.coordinate.latitude != 0 && signature.position.coordinate.longitude != 0 {
             info.flightPath.append(signature.position.coordinate)
         }
         
         info.heightProfile.append(signature.heightInfo.heightAboveGround)
         
+        // Safely remove first elements if collections have more than 100 items
         if info.signatures.count > 100 {
-            info.signatures.removeFirst()
-            info.flightPath.removeFirst()
-            info.heightProfile.removeFirst()
+            if !info.signatures.isEmpty { info.signatures.removeFirst() }
+            if !info.flightPath.isEmpty { info.flightPath.removeFirst() }
+            if !info.heightProfile.isEmpty { info.heightProfile.removeFirst() }
         }
         
         signatureCache[id] = info
     }
+    
 }
