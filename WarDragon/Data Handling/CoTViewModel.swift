@@ -361,27 +361,38 @@ class CoTViewModel: ObservableObject {
     }
     
     private func updateMessage(_ message: CoTMessage) {
-        DispatchQueue.main.async {
-            // Generate/update signature from raw message
-            guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else { return }
-            
-            // Update signatures collection
-            if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
-                self.droneSignatures[index] = signature
-            } else {
-                self.droneSignatures.append(signature)
-            }
-            
-            // Update messages collection
-            if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
-                self.parsedMessages[index] = message
-            } else {
-                self.parsedMessages.append(message)
-                self.sendNotification(for: message)
-            }
-        }
-    }
-    
+       DispatchQueue.main.async {
+           // Generate signature from raw message
+           guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else { return }
+
+           // Check for existing signature match
+           let existingIndex = self.droneSignatures.firstIndex { existing in
+               let matchScore = self.signatureGenerator.matchSignatures(existing, signature)
+               print("Checking for existing match, score: \(matchScore)")
+               return matchScore > 0.42 // High confidence threshold
+           }
+
+           if let index = existingIndex {
+               // Update existing signature
+               self.droneSignatures[index] = signature
+               print("Updating existing signature")
+               
+               // Update corresponding message
+               if let msgIndex = self.parsedMessages.firstIndex(where: { $0.uid == self.droneSignatures[index].primaryId.id }) {
+                   self.parsedMessages[msgIndex] = message
+               }
+           } else {
+               // New drone detected
+               print("Added new signature")
+               self.droneSignatures.append(signature)
+               self.parsedMessages.append(message)
+               if Settings.shared.notificationsEnabled {
+                   self.sendNotification(for: message)
+               }
+           }
+       }
+   }
+
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
         let content = UNMutableNotificationContent()
         content.title = "New CoT Message"
