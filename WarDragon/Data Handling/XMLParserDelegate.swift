@@ -335,9 +335,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         print("Starting ESP32 parsing")
         var droneType = "a-f-G-U"
         
-        if let basicID = jsonData["Basic ID"] as? [String: Any],
-           let id = basicID["id"] as? String {
-            let droneId = id
+        if let basicID = jsonData["Basic ID"] as? [String: Any] {
+            let rawId = basicID["id"] as? String ?? UUID().uuidString
+            let droneId = rawId == "NONE" ? "drone-\(UUID().uuidString)" : "drone-\(rawId)"
             
             let idType = basicID["id_type"] as? String ?? "Unknown"
             if idType == "Serial Number (ANSI/CTA-2063-A)" {
@@ -354,12 +354,6 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             if let location = jsonData["Location/Vector Message"] as? [String: Any] {
                 lat = String(describing: location["latitude"] ?? "0.0")
                 lon = String(describing: location["longitude"] ?? "0.0")
-                
-                // Validate coordinates
-                if lat == "0.0" && lon == "0.0" {
-                    print("Discarding ESP32 message with zero coordinates")
-                    return nil
-                }
                 
                 speed = String(describing: location["speed"] ?? "0.0")
                 vspeed = String(describing: location["vert_speed"] ?? "0.0")
