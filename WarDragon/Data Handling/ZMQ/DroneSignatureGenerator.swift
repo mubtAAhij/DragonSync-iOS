@@ -469,6 +469,7 @@ public final class DroneSignatureGenerator {
         let type: DroneSignature.TransmissionInfo.TransmissionType
         let messageType: DroneSignature.TransmissionInfo.MessageType
         
+        // TODO: Cleanup the extra types or handle these zmq_decoder cases
         if message["AUX_ADV_IND"] != nil {
             type = .ble
             messageType = .bt45

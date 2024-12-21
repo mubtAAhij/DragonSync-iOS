@@ -13,9 +13,9 @@ from datetime import datetime, timezone, timedelta
 class Config:
 	def __init__(self):
 		self.multicast_group = '224.0.0.1'
-		self.cot_port = 6969
-		self.status_port = 6969
-		self.broadcast_mode = 'multicast'  # or 'zmq'
+		self.cot_port = 4224
+		self.status_port = 4225
+		self.broadcast_mode = 'zmq'  # or 'zmq'
 		self.zmq_host = '0.0.0.0'
 		
 class DroneMessageGenerator:

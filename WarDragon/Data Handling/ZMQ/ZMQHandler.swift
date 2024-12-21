@@ -197,7 +197,7 @@ class ZMQHandler: ObservableObject {
         var droneInfo: [String: Any] = [:]
         
         for message in messages {
-            // Process any BT4/5 data
+            // TODO: use this or lose it
             if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
                 if let addr = auxAdvInd["addr"] as? String {
                     droneInfo["id"] = "drone-\(addr)"
