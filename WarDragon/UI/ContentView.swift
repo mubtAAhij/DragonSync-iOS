@@ -49,7 +49,10 @@ struct ContentView: View {
                 .toolbarColorScheme(.dark, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: { cotViewModel.parsedMessages.removeAll() }) {
+                        Button(action: {
+                            cotViewModel.parsedMessages.removeAll()  // Remove UI messages
+                            cotViewModel.droneSignatures.removeAll() // Ditch old signatures BUGFIX #112
+                        }) {
                             Image(systemName: "trash")
                         }
                     }

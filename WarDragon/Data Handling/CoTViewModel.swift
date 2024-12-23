@@ -361,37 +361,53 @@ class CoTViewModel: ObservableObject {
     }
     
     private func updateMessage(_ message: CoTMessage) {
-       DispatchQueue.main.async {
-           // Generate signature from raw message
-           guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else { return }
+        DispatchQueue.main.async {
+            guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else { return }
 
-           // Check for existing signature match
-           let existingIndex = self.droneSignatures.firstIndex { existing in
-               let matchScore = self.signatureGenerator.matchSignatures(existing, signature)
-               print("Checking for existing match, score: \(matchScore)")
-               return matchScore > 0.42 // High confidence threshold
-           }
+            // 1. Check for exact ID match first
+            if let idIndex = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
+                // Keep existing messages and add new one
+                self.parsedMessages.append(message)
+                if let sigIndex = self.droneSignatures.firstIndex(where: { $0.primaryId.id == message.uid }) {
+                    self.droneSignatures[sigIndex] = signature
+                }
+                print("Added message for existing drone via ID: \(message.uid)")
+                return
+            }
 
-           if let index = existingIndex {
-               // Update existing signature
-               self.droneSignatures[index] = signature
-               print("Updating existing signature")
-               
-               // Update corresponding message
-               if let msgIndex = self.parsedMessages.firstIndex(where: { $0.uid == self.droneSignatures[index].primaryId.id }) {
-                   self.parsedMessages[msgIndex] = message
-               }
-           } else {
-               // New drone detected
-               print("Added new signature")
-               self.droneSignatures.append(signature)
-               self.parsedMessages.append(message)
-               if Settings.shared.notificationsEnabled {
-                   self.sendNotification(for: message)
-               }
-           }
-       }
-   }
+            // 2. Check MAC address match if available
+            if let incomingMAC = message.mac,
+               let macIndex = self.parsedMessages.firstIndex(where: { $0.mac == incomingMAC }) {
+                self.parsedMessages.append(message)
+                if let sigIndex = self.droneSignatures.firstIndex(where: { $0.primaryId.id == message.uid }) {
+                    self.droneSignatures[sigIndex] = signature
+                }
+                print("Added message for existing drone via MAC: \(incomingMAC)")
+                return
+            }
+
+            // 3. Only try signature matching if no ID or MAC match found
+            let existingIndex = self.droneSignatures.firstIndex { existing in
+                let matchScore = self.signatureGenerator.matchSignatures(existing, signature)
+                print("Checking for existing match, score: \(matchScore)")
+                return matchScore > 0.42
+            }
+
+            if let index = existingIndex {
+                self.parsedMessages.append(message)
+                self.droneSignatures[index] = signature
+                print("Added message for existing drone via signature match")
+            } else {
+                // 4. If no matches at all, add as new drone
+                print("Added new drone: \(message.uid)")
+                self.droneSignatures.append(signature)
+                self.parsedMessages.append(message)
+                if Settings.shared.notificationsEnabled {
+                    self.sendNotification(for: message)
+                }
+            }
+        }
+    }
 
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
         let content = UNMutableNotificationContent()
@@ -438,6 +454,7 @@ class CoTViewModel: ObservableObject {
     func resetListener() {
         stopListening()
         parsedMessages.removeAll()
+        droneSignatures.removeAll() // Test this line
         startListening()
     }
 }
