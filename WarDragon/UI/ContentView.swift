@@ -13,6 +13,7 @@ struct ContentView: View {
     @StateObject private var statusViewModel = StatusViewModel()
     @StateObject private var cotViewModel: CoTViewModel
     @StateObject private var settings = Settings.shared
+    @StateObject private var spectrumViewModel = SpectrumViewModel()
     @State private var showAlert = false
     @State private var latestMessage: CoTViewModel.CoTMessage?
     @State private var selectedTab: Int
@@ -92,6 +93,14 @@ struct ContentView: View {
                 Label("Settings", systemImage: "gear")
             }
             .tag(2)
+            NavigationStack {
+                SpectrumView(viewModel: spectrumViewModel)
+                    .navigationTitle("Spectrum")
+            }
+            .tabItem {
+                Label("Spectrum", systemImage: "waveform")
+            }
+            .tag(3)
         }
         .onChange(of: settings.isListening) {
             if settings.isListening {
