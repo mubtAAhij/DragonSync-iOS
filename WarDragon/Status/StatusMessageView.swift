@@ -140,7 +140,6 @@ struct MemoryDetailView: View {
             }
         }
         .padding()
-        .background(Color.black)
         .cornerRadius(12)
     }
     
@@ -279,10 +278,9 @@ struct SystemStatsView: View {
         let usedMemory = memoryStats.total - memoryStats.available
         return (Double(usedMemory) / Double(memoryStats.total)) * 100
     }
+
     
-    
-    
-    // Formatting and color helper functions
+    // MARK: - Formatting and color helper functions
     private func formatMemory(_ memory: StatusViewModel.StatusMessage.SystemStats.MemoryStats) -> String {
         let usedBytes = memory.total - memory.available
         let usedGB = Double(usedBytes) / 1_073_741_824
@@ -354,7 +352,7 @@ struct StatusMessageView: View {
                     .foregroundColor(.orange)
             }
             .padding(8)
-            .background(Color.black)
+            .background(Color.green)
             
             HStack(spacing: 16) {
                 // System Stats

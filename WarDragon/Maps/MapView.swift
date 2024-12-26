@@ -31,24 +31,5 @@ struct MapView: View {
             ))
         }
         .frame(height: 200)
-        .onTapGesture {
-            showDetail = true  // Show detail instead of opening Maps directly
-        }
-        .sheet(isPresented: $showDetail) {
-            NavigationView {
-                DroneDetailView(
-                    message: message,
-                    flightPath: []  // Single location view doesn't have flight path
-                )
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            showDetail = false
-                        }
-                    }
-                }
-            }
-            .presentationDetents([.medium, .large])
-        }
     }
 }
