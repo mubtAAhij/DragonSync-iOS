@@ -393,6 +393,7 @@ class CoTViewModel: ObservableObject {
     }
     
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
+        guard Settings.shared.notificationsEnabled else { return }
         let content = UNMutableNotificationContent()
         content.title = "New CoT Message"
         content.body = "From: \(message.uid)\nType: \(message.type)\nLocation: \(message.lat), \(message.lon)"
@@ -401,6 +402,7 @@ class CoTViewModel: ObservableObject {
     }
     
     private func sendStatusNotification(for message: StatusViewModel.StatusMessage) {
+        guard Settings.shared.notificationsEnabled else { return }
         let content = UNMutableNotificationContent()
         content.title = "System Status"
         let memAvail = message.systemStats.memory.available
