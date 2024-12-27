@@ -581,24 +581,25 @@ public final class DroneSignatureGenerator {
         let type: DroneSignature.TransmissionInfo.TransmissionType
         let messageType: DroneSignature.TransmissionInfo.MessageType
         
-        // Extract RSSI from message
-        var rssi: Double? = nil
+        // Check for RSSI in any message format
+        let signalStrength: Double?
+        if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any],
+           let rssi = auxAdvInd["rssi"] as? Double {
+            signalStrength = rssi
+        } else {
+            // Look for top-level RSSI
+            signalStrength = message["rssi"] as? Double
+        }
         
-        if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
+        if message["AUX_ADV_IND"] != nil {
             type = .ble
             messageType = .bt45
-            rssi = auxAdvInd["rssi"] as? Double
-        } else if let droneId = message["DroneID"] as? [String: Any] {
+        } else if message["DroneID"] != nil {
             type = .wifi
             messageType = .wifi
-            // Extract RSSI from first drone entry
-            if let firstDrone = droneId.values.first as? [String: Any] {
-                rssi = firstDrone["rssi"] as? Double
-            }
-        } else if let basicId = message["Basic ID"] as? [String: Any] {
+        } else if message["Basic ID"] != nil {
             type = .esp32
             messageType = .esp32
-            rssi = basicId["rssi"] as? Double  // Get RSSI from Basic ID
         } else {
             type = .unknown
             messageType = .bt45
@@ -606,7 +607,7 @@ public final class DroneSignatureGenerator {
 
         return DroneSignature.TransmissionInfo(
             transmissionType: type,
-            signalStrength: rssi,  // Pass extracted RSSI
+            signalStrength: signalStrength,
             frequency: nil,
             protocolType: .openDroneID,
             messageTypes: [messageType],
