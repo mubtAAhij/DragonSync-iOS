@@ -13,9 +13,9 @@ from datetime import datetime, timezone, timedelta
 class Config:
 	def __init__(self):
 		self.multicast_group = '224.0.0.1'
-		self.cot_port = 4224
-		self.status_port = 4225
-		self.broadcast_mode = 'zmq'  # or 'zmq'
+		self.cot_port = 6969
+		self.status_port = 6969
+		self.broadcast_mode = 'multicast'  # or 'zmq'
 		self.zmq_host = '0.0.0.0'
 		
 class DroneMessageGenerator:
@@ -26,41 +26,86 @@ class DroneMessageGenerator:
 		self.start_time = time.time()
 		
 	def generate_complete_message(self, mode="zmq"):
-		"""Generate a complete telemetry message in JSON format"""
 		now = datetime.now(timezone.utc)
 		timestamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 		
 		latitude = round(random.uniform(*self.lat_range), 6)
 		longitude = round(random.uniform(*self.lon_range), 6)
+		rssi = random.randint(-90, -40)
 		
-		message = {
-			"Basic ID": {
-				"protocol_version": "F3411.19",
-				"id_type": "Serial Number (ANSI/CTA-2063-A)",
-				"ua_type": "Helicopter (or Multirotor)",
-				"id": f"{random.randint(100000, 999999)}",
-				"MAC": "8e:3b:93:22:33:fa"
+		message = [
+			{
+				"Basic ID": {
+					"protocol_version": "F3411.19",
+					"id_type": "Serial Number (ANSI/CTA-2063-A)",
+					"ua_type": "Helicopter (or Multirotor)",
+					"id": f"{random.randint(10000000, 99999999)}{random.choice(string.ascii_uppercase)}291",
+					"MAC": "8e:3b:93:22:33:fa",
+					"rssi": rssi
+				}
 			},
-			"Location/Vector Message": {
-				"latitude": latitude,
-				"longitude": longitude,
-				"geodetic_altitude": round(random.uniform(50.0, 400.0), 2),
-				"height_agl": round(random.uniform(20.0, 200.0), 2),
-				"speed": round(random.uniform(0.0, 30.0), 1),
-				"vert_speed": round(random.uniform(-5.0, 5.0), 1),
-				"timestamp": timestamp,
+			{
+				"Basic ID": {
+					"protocol_version": "F3411.19",
+					"id_type": "CAA Assigned Registration ID",
+					"ua_type": "Helicopter (or Multirotor)",
+					"id": "HS720"
+				}
 			},
-			"Self-ID Message": {
-				"text": "Test UAV operation",
-				"text_type": "Text Description",
+			{
+				"AUX_ADV_IND": {
+					"ts": time.time(),
+					"aa": 2391391958,
+					"rssi": rssi,
+					"chan": random.randint(0, 39),
+					"phy": 2,
+					"event": 0
+				}
 			},
-		}
+			{
+				"Location/Vector Message": {
+					"latitude": latitude,
+					"longitude": longitude,
+					"geodetic_altitude": round(random.uniform(50.0, 400.0), 2),
+					"height_agl": round(random.uniform(20.0, 200.0), 2),
+					"speed": round(random.uniform(0.0, 30.0), 1),
+					"vert_speed": round(random.uniform(-5.0, 5.0), 1),
+					"timestamp": timestamp,
+				}
+			},
+			{
+				"Self-ID Message": {
+					"protocol_version": "F3411.22",
+					"text": "Test UAV operation",
+					"text_type": "Text Description"
+				}
+			},
+			{
+				"Authentication Message": {
+					"auth_type": "Message Set Signature",
+					"page_number": 0,
+					"last_page_index": 0,
+					"timestamp": "2019-01-01 00:00 UTC",
+					"timestamp_raw": 0,
+					"auth_data": "0000000000000000000000000000000000",
+					"protocol_version": "F3411.19"
+				}
+			},
+			{
+				"Operator ID Message": {
+					"protocol_version": "F3411.22",
+					"operator_id_type": "Operator ID",
+					"operator_id": "Terminator0x00"
+				}
+			}
+		]
 		
 		if mode == "zmq":
 			return json.dumps(message, indent=4)
 		elif mode == "multicast":
 			return json.dumps(message)
-		
+
+
 		def generate_bt45_message(self):
 			"""Generate BT4/5 message with complete field set"""
 		now = datetime.now(timezone.utc)
@@ -166,7 +211,8 @@ class DroneMessageGenerator:
 						"id_type": "Serial Number (ANSI/CTA-2063-A)",
 						"ua_type": "Helicopter (or Multirotor)",
 						"id": mac,
-						"MAC": "8e:3b:93:22:33:fa"
+						"MAC": "8e:3b:93:22:33:fa",
+						"rssi": random.randint(-90, -40)
 					},
 					"Location/Vector Message": {
 						"op_status": "Airborne",
@@ -211,6 +257,7 @@ class DroneMessageGenerator:
 		lat = round(random.uniform(*self.lat_range), 4)
 		lon = round(random.uniform(*self.lon_range), 4)
 		drone_id = f"DRONE{random.randint(100,103)}"  # Only use 4 possible drones
+		rssi = random.randint(-90, -40)
 		
 		# Random drone type generation
 		base_type = "a-f-G"
@@ -222,29 +269,32 @@ class DroneMessageGenerator:
 			drone_type += "-O"
 			
 		return f"""<event version="2.0" uid="drone-{drone_id}" type="{drone_type}" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
-		<point lat="{lat}" lon="{lon}" hae="100" ce="9999999" le="9999999"/>
-		<detail>
-			<BasicID>
+				<point lat="{lat}" lon="{lon}" hae="100" ce="9999999" le="9999999"/>
+				<detail>
+					<AUX_ADV_IND>
+						<rssi>{random.randint(-90, -40)}</rssi>
+					</AUX_ADV_IND>
+					<BasicID>
 						<DeviceID>{drone_id}</DeviceID>
 						<Type>Serial Number</Type>
-			</BasicID>
-			<LocationVector>
+					</BasicID>
+					<LocationVector>
 						<Speed>{round(random.uniform(0, 30), 1)}</Speed>
 						<VerticalSpeed>{round(random.uniform(-5, 5), 1)}</VerticalSpeed>
 						<Altitude>{round(random.uniform(50, 400), 1)}</Altitude>
 						<Height>{round(random.uniform(20, 200), 1)}</Height>
-			</LocationVector>
-			<SelfID>
+					</LocationVector>
+					<SelfID>
 						<Description>Test Drone {drone_id}</Description>
-			</SelfID>
-			<System>
+					</SelfID>
+					<System>
 						<PilotLocation>
-								<lat>{lat + random.uniform(-0.001, 0.001)}</lat>
-								<lon>{lon + random.uniform(-0.001, 0.001)}</lon>
+							<lat>{lat + random.uniform(-0.001, 0.001)}</lat>
+							<lon>{lon + random.uniform(-0.001, 0.001)}</lon>
 						</PilotLocation>
-			</System>
-		</detail>
-</event>"""
+					</System>
+				</detail>
+		</event>"""	
 	
 	def generate_esp32_format(self):
 		"""Generate a telemetry message in ESP32-compatible format"""
@@ -254,9 +304,10 @@ class DroneMessageGenerator:
 		
 		message = {
 			"Basic ID": {
-				"id": f"{random.randint(1000, 9999)}{random.choice(string.ascii_uppercase)}{random.randint(10, 99)}{random.choice(string.ascii_uppercase)}{random.choice(string.ascii_uppercase)}{random.randint(100000000000, 999999999999)}",
+				"id": f"{random.randint(1000, 1002)}",
 				"id_type": "Serial Number (ANSI/CTA-2063-A)",
 				"MAC": "8e:3b:93:22:33:fa",
+				"rssi": random.randint(-90, -40)
 			},
 			"Location/Vector Message": {
 				"latitude": latitude,
@@ -522,3 +573,4 @@ if __name__ == "__main__":
 		print("\n\n👋 Program terminated by user")
 	except Exception as e:
 		print(f"\n❌ An error occurred: {e}")
+		

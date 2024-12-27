@@ -73,6 +73,15 @@ public final class DroneSignatureGenerator {
         }
     }
     
+    struct SpoofDetectionResult {
+        let isSpoofed: Bool
+        let confidence: Double
+        let reasons: [String]
+        let expectedRssi: Double
+        let actualRssi: Double
+        let distance: Double
+    }
+    
     // MARK: - Properties
     private var signatureCache: [String: DroneTrackingInfo] = [:]
     private let cachePruneInterval: TimeInterval = 300
@@ -148,7 +157,110 @@ public final class DroneSignatureGenerator {
         return matchStrength
     }
     
+    func detectSpoof(_ signature: DroneSignature, fromMonitor monitorStatus: StatusViewModel.StatusMessage) -> SpoofDetectionResult? {
+        // Require RSSI data for detection
+        guard let rssi = signature.transmissionInfo.signalStrength else {
+            return nil
+        }
+
+        var reasons: [String] = []
+        var confidenceScore = 0.0
+
+        // Calculate actual distance between monitor and drone
+        let monitorPoint = CLLocation(latitude: monitorStatus.gpsData.latitude,
+                                    longitude: monitorStatus.gpsData.longitude)
+        let dronePoint = CLLocation(latitude: signature.position.coordinate.latitude,
+                                  longitude: signature.position.coordinate.longitude)
+        let distance = monitorPoint.distance(from: dronePoint)
+
+        // Calculate expected RSSI using free space path loss formula
+        // FSPL = 20 * log10(d) + 20 * log10(f) + 32.44
+        // where d is distance in kilometers and f is frequency in MHz
+        let distanceKm = distance / 1000.0
+        let frequency = signature.transmissionInfo.frequency ?? 2400.0 // Default to 2.4GHz if not specified
+        let expectedRssi = -(20 * log10(distanceKm) + 20 * log10(frequency) + 32.44)
+        
+        // Compare expected vs actual RSSI
+        let rssiDelta = abs(rssi - expectedRssi)
+        
+        // Check for significant RSSI discrepancies
+        if rssiDelta > 20 {
+            let reason = String(format: "Signal strength deviation: %.1f dB (Expected: %.1f dB, Actual: %.1f dB at %.1f meters)",
+                              rssiDelta, expectedRssi, rssi, distance)
+            reasons.append(reason)
+            confidenceScore += min(rssiDelta / 40.0, 0.5)
+        }
+
+        // Check cached history for this drone
+        if let history = signatureCache[signature.primaryId.id] {
+            // Verify speed consistency
+            let speeds = calculateSpeedsBetweenPoints(history.signatures)
+            if let maxSpeed = speeds.max(), maxSpeed > 139 { // > 500 km/h
+                reasons.append(String(format: "Impossible speed detected: %.1f m/s", maxSpeed))
+                confidenceScore += 0.3
+            }
+
+            // Check for position jumps without speed changes
+            if let lastSig = history.signatures.last,
+               distance > 1000 && // More than 1km jump
+               abs(lastSig.movement.groundSpeed - signature.movement.groundSpeed) < 5 {
+                reasons.append("Large position change without corresponding speed change")
+                confidenceScore += 0.2
+            }
+
+            // Check RSSI consistency over time
+            if let lastRssi = history.signatures.last?.transmissionInfo.signalStrength {
+                let rssiChange = abs(rssi - lastRssi)
+                let expectedChange = abs(expectedRssi - lastRssi)
+                if rssiChange > expectedChange * 2 {
+                    reasons.append("Suspicious RSSI variation pattern")
+                    confidenceScore += 0.2
+                }
+            }
+        }
+
+        // Check for unrealistic signal strength
+        if rssi > -20 && distance > 100 {
+            reasons.append("Suspiciously strong signal for distance")
+            confidenceScore += 0.3
+        }
+
+        return SpoofDetectionResult(
+            isSpoofed: confidenceScore > 0.4,
+            confidence: confidenceScore,
+            reasons: reasons,
+            expectedRssi: expectedRssi,
+            actualRssi: rssi,
+            distance: distance
+        )
+    }
+    
     // MARK: - Private Methods
+    
+    private func calculateSpeedsBetweenPoints(_ signatures: [DroneSignature]) -> [Double] {
+        var speeds: [Double] = []
+        
+        for i in 1..<signatures.count {
+            let prev = signatures[i-1]
+            let curr = signatures[i]
+            
+            let prevLocation = CLLocation(latitude: prev.position.coordinate.latitude,
+                                        longitude: prev.position.coordinate.longitude)
+            let currLocation = CLLocation(latitude: curr.position.coordinate.latitude,
+                                        longitude: curr.position.coordinate.longitude)
+            
+            let distance = prevLocation.distance(from: currLocation)
+            let timeInterval = curr.timestamp - prev.timestamp
+            
+            if timeInterval > 0 {
+                let speed = distance / timeInterval // m/s
+                speeds.append(speed)
+            }
+        }
+        
+        return speeds
+    }
+    
     private func calculateMatchConfidence(_ matchedFields: Set<SignatureMatch.MatchField>) -> Double {
         let weights: [SignatureMatch.MatchField: Double] = [
             .primaryId: 0.3,
@@ -469,24 +581,32 @@ public final class DroneSignatureGenerator {
         let type: DroneSignature.TransmissionInfo.TransmissionType
         let messageType: DroneSignature.TransmissionInfo.MessageType
         
-        // TODO: Cleanup the extra types or handle these zmq_decoder cases
-        if message["AUX_ADV_IND"] != nil {
+        // Extract RSSI from message
+        var rssi: Double? = nil
+        
+        if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
             type = .ble
             messageType = .bt45
-        } else if message["DroneID"] != nil {
+            rssi = auxAdvInd["rssi"] as? Double
+        } else if let droneId = message["DroneID"] as? [String: Any] {
             type = .wifi
             messageType = .wifi
-        } else if message["Basic ID"] != nil {
+            // Extract RSSI from first drone entry
+            if let firstDrone = droneId.values.first as? [String: Any] {
+                rssi = firstDrone["rssi"] as? Double
+            }
+        } else if let basicId = message["Basic ID"] as? [String: Any] {
             type = .esp32
             messageType = .esp32
+            rssi = basicId["rssi"] as? Double  // Get RSSI from Basic ID
         } else {
             type = .unknown
-            messageType = .bt45 // Default
+            messageType = .bt45
         }
-        
+
         return DroneSignature.TransmissionInfo(
             transmissionType: type,
-            signalStrength: message["rssi"] as? Double,
+            signalStrength: rssi,  // Pass extracted RSSI
             frequency: nil,
             protocolType: .openDroneID,
             messageTypes: [messageType],

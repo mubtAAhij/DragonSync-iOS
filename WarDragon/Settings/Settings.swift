@@ -72,6 +72,11 @@ class Settings: ObservableObject {
             objectWillChange.send()
         }
     }
+    @AppStorage("spoofDetectionEnabled") var spoofDetectionEnabled = false {
+        didSet {
+            objectWillChange.send()
+        }
+    }
     
     private init() {
         toggleListening(false)

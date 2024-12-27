@@ -97,20 +97,50 @@ struct DroneDetailView: View {
                 }
                 
                 Group {
-                    SectionHeader(title: "Accuracy")
-                    if let horizAcc = message.horizAcc {
-                        InfoRow(title: "Horizontal", value: "\(horizAcc)m")
-                    }
-                    if let vertAcc = message.vertAcc {
-                        InfoRow(title: "Vertical", value: "\(vertAcc)m")
-                    }
-                    if let baroAcc = message.baroAcc {
-                        InfoRow(title: "Barometric", value: "\(baroAcc)m")
-                    }
-                    if let speedAcc = message.speedAcc {
-                        InfoRow(title: "Speed", value: "\(speedAcc)m/s")
+                    if let auxAdvData = message.rawMessage.lazy
+                        .compactMap({ $0.value as? [String: Any] })
+                        .first(where: { $0.keys.contains("rssi") }) {
+                        
+                        SectionHeader(title: "Signal Data")
+                        
+                        if let rssi = auxAdvData["rssi"] as? Int {
+                            InfoRow(title: "RSSI", value: "\(rssi) dBm")
+                        }
+                        
+                        if let channel = auxAdvData["chan"] as? Int {
+                            InfoRow(title: "Channel", value: "\(channel)")
+                        }
+                        
+                        if let phy = auxAdvData["phy"] as? Int {
+                            InfoRow(title: "PHY", value: "\(phy)")
+                        }
+                        
+                        if let aa = auxAdvData["aa"] as? Int {
+                            InfoRow(title: "Access Address", value: String(format: "0x%08X", aa))
+                        }
                     }
                 }
+
+                
+                Group {
+                    if message.horizAcc != nil || message.vertAcc != nil || message.baroAcc != nil || message.speedAcc != nil {
+                        SectionHeader(title: "Accuracy")
+                        
+                        if let horizAcc = message.horizAcc {
+                            InfoRow(title: "Horizontal", value: "\(horizAcc)m")
+                        }
+                        if let vertAcc = message.vertAcc {
+                            InfoRow(title: "Vertical", value: "\(vertAcc)m")
+                        }
+                        if let baroAcc = message.baroAcc {
+                            InfoRow(title: "Barometric", value: "\(baroAcc)m")
+                        }
+                        if let speedAcc = message.speedAcc {
+                            InfoRow(title: "Speed", value: "\(speedAcc)m/s")
+                        }
+                    }
+                }
+
                 
                 if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
                     Group {
