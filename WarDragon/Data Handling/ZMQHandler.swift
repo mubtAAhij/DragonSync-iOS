@@ -197,12 +197,21 @@ class ZMQHandler: ObservableObject {
         var droneInfo: [String: Any] = [:]
         
         for message in messages {
-            // TODO: use this or lose it
+
             if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
-                if let addr = auxAdvInd["addr"] as? String {
-                    droneInfo["id"] = "drone-\(addr)"
-                }
-            }
+                   if let addr = auxAdvInd["addr"] as? String {
+                       droneInfo["id"] = "drone-\(addr)"
+                   }
+                   droneInfo["rssi"] = auxAdvInd["rssi"] as? Int
+                   
+                   // Extract AdvA from aext if available
+                   if let aext = message["aext"] as? [String: Any],
+                      let advA = aext["AdvA"] as? String {
+                       // Parse "XX:XX:XX:XX:XX:XX (Public)" format
+                       let macAddress = advA.components(separatedBy: " ")[0]
+                       droneInfo["mac"] = macAddress
+                   }
+               }
             
             // Process Basic ID from any source
             if let basicId = message["Basic ID"] as? [String: Any] {
@@ -347,34 +356,6 @@ class ZMQHandler: ObservableObject {
             </detail>
         </event>
         """
-    }
-    
-    func connectSpectrum(
-        host: String,
-        port: UInt16,
-        onSpectrum: @escaping (SpectrumData) -> Void
-    ) throws {
-        let spectrumSocket = try context?.socket(.subscribe)
-        try spectrumSocket?.setSubscribe("")
-        try configureSocket(spectrumSocket!)
-        try spectrumSocket?.connect("tcp://\(host):\(port)")
-        try poller?.register(socket: spectrumSocket!, flags: .pollIn)
-        
-        pollingQueue?.async { [weak self] in
-            while self?.shouldContinueRunning == true {
-                do {
-                    if let data = try spectrumSocket?.recv(bufferLength: 65536),
-                       let jsonString = String(data: data, encoding: .utf8),
-                       let jsonData = jsonString.data(using: .utf8) {
-                        let decoder = JSONDecoder()
-                        let spectrumData = try decoder.decode(SpectrumData.self, from: jsonData)
-                        onSpectrum(spectrumData)
-                    }
-                } catch {
-                    print("Spectrum data error: \(error)")
-                }
-            }
-        }
     }
     
     func disconnect() {

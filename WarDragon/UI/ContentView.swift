@@ -11,12 +11,13 @@ import UserNotifications
 
 struct ContentView: View {
     @StateObject private var statusViewModel = StatusViewModel()
+    @StateObject private var spectrumViewModel = SpectrumData.SpectrumViewModel()
     @StateObject private var cotViewModel: CoTViewModel
     @StateObject private var settings = Settings.shared
-    @StateObject private var spectrumViewModel = SpectrumViewModel()
     @State private var showAlert = false
     @State private var latestMessage: CoTViewModel.CoTMessage?
     @State private var selectedTab: Int
+    
     
     init() {
         let statusVM = StatusViewModel()
@@ -66,6 +67,7 @@ struct ContentView: View {
                     }
                 }
             }
+            
             .tabItem {
                 Label("Drones", systemImage: "airplane.circle")
             }
@@ -93,6 +95,7 @@ struct ContentView: View {
                 Label("Settings", systemImage: "gear")
             }
             .tag(2)
+            
             NavigationStack {
                 SpectrumView(viewModel: spectrumViewModel)
                     .navigationTitle("Spectrum")
@@ -102,11 +105,20 @@ struct ContentView: View {
             }
             .tag(3)
         }
+        
         .onChange(of: settings.isListening) {
             if settings.isListening {
                 cotViewModel.startListening()
             } else {
                 cotViewModel.stopListening()
+            }
+        }
+        .onChange(of: selectedTab) { oldValue, newValue in
+            if newValue != 3 { // Spectrum tab
+                spectrumViewModel.stopListening()
+            } else if settings.isListening {
+                let port = UInt16(UserDefaults.standard.integer(forKey: "spectrumPort"))
+                spectrumViewModel.startListening(port: port)
             }
         }
         .onChange(of: settings.connectionMode) {

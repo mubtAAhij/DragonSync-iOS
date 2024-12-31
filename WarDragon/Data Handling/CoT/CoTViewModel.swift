@@ -15,7 +15,7 @@ class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
     @Published var droneSignatures: [DroneSignature] = []
     private let signatureGenerator = DroneSignatureGenerator()
-    private var spectrumViewModel: SpectrumViewModel?
+    private var spectrumViewModel: SpectrumData.SpectrumViewModel?
     private var zmqHandler: ZMQHandler?
     private var cotListener: NWListener?
     private var statusListener: NWListener?
@@ -130,8 +130,7 @@ class CoTViewModel: ObservableObject {
         }
     }
     
-    init(statusViewModel: StatusViewModel, spectrumViewModel: SpectrumViewModel? = nil) {
-        self.statusViewModel = statusViewModel
+    init(statusViewModel: StatusViewModel, spectrumViewModel: SpectrumData.SpectrumViewModel? = nil) {        self.statusViewModel = statusViewModel
         self.spectrumViewModel = spectrumViewModel
         self.checkPermissions()
     }
@@ -218,16 +217,6 @@ class CoTViewModel: ObservableObject {
                 }
             }
         )
-        
-        if let spectrumViewModel = spectrumViewModel {
-            try? zmqHandler?.connectSpectrum(
-                host: Settings.shared.zmqHost,
-                port: UInt16(Settings.shared.zmqSpectrumPort),
-                onSpectrum: { [weak spectrumViewModel] data in
-                    spectrumViewModel?.updateSpectrum(data)
-                }
-            )
-        }
     }
     
     private func processIncomingMessage(_ data: Data) {
