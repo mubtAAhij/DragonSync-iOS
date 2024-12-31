@@ -12,18 +12,18 @@ struct MessageRow: View {
     let message: CoTViewModel.CoTMessage
     @ObservedObject var cotViewModel: CoTViewModel
     @State private var activeSheet: SheetType?
-
+    
     enum SheetType: Identifiable {
         case liveMap
         case detailView
-
+        
         var id: Int { hashValue }
     }
-
+    
     private var signature: DroneSignature? {
         cotViewModel.droneSignatures.first(where: { $0.primaryId.id == message.uid })
     }
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Tap Gesture for Entire Row (Excluding Button)
@@ -33,9 +33,9 @@ struct MessageRow: View {
                         .foregroundColor(.blue)
                     Text("ID: \(message.id)")
                         .font(.headline)
-
+                    
                     Spacer()
-
+                    
                     // Live Map Button
                     Button(action: {activeSheet = .liveMap}) {
                         HStack {
@@ -52,9 +52,22 @@ struct MessageRow: View {
                         .cornerRadius(8)
                     }
                 }
-
-                Text("Type: \(message.type)")
-                    .font(.subheadline)
+                
+                if let transmissionInfo = signature?.transmissionInfo {
+                    HStack(spacing: 8) {
+                        if let rssi = transmissionInfo.signalStrength {
+                            Label("\(Int(rssi))dBm", systemImage: "antenna.radiowaves.left.and.right")
+                        }
+                        if let channel = transmissionInfo.channel {
+                            Label("CH:\(channel)", systemImage: "number")
+                        }
+                        if transmissionInfo.advMode != nil {
+                            Image(systemName: "dot.radiowaves.left.and.right")
+                        }
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                }
 
                 MapView(message: message)
                     .frame(height: 150)
@@ -63,7 +76,7 @@ struct MessageRow: View {
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.gray, lineWidth: 1)
                     )
-
+                
                 Group {
                     Text("Position: \(message.lat), \(message.lon)")
                     Text("Altitude: \(message.alt)m AGL: \(message.height)m")

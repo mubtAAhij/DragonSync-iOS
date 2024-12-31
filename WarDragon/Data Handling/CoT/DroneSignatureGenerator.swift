@@ -468,11 +468,25 @@ public final class DroneSignatureGenerator {
     private func extractTransmissionInfo(_ message: [String: Any]) -> DroneSignature.TransmissionInfo {
         let type: DroneSignature.TransmissionInfo.TransmissionType
         let messageType: DroneSignature.TransmissionInfo.MessageType
-        
-        // TODO: Cleanup the extra types or handle these zmq_decoder cases
-        if message["AUX_ADV_IND"] != nil {
+        var metadata: [String: Any]? = nil
+        var channel: Int? = nil
+        var advMode: String? = nil
+        var advAddress: String? = nil
+        var did: Int? = nil
+        var sid: Int? = nil
+
+        if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
             type = .ble
             messageType = .bt45
+            metadata = auxAdvInd
+            channel = auxAdvInd["chan"] as? Int
+            
+            if let aext = message["aext"] as? [String: Any] {
+                advMode = aext["AdvMode"] as? String
+                advAddress = (aext["AdvA"] as? String)?.components(separatedBy: " ").first
+                did = (aext["AdvDataInfo"] as? [String: Any])?["did"] as? Int
+                sid = (aext["AdvDataInfo"] as? [String: Any])?["sid"] as? Int
+            }
         } else if message["DroneID"] != nil {
             type = .wifi
             messageType = .wifi
@@ -483,14 +497,20 @@ public final class DroneSignatureGenerator {
             type = .unknown
             messageType = .bt45 // Default
         }
-        
+
         return DroneSignature.TransmissionInfo(
             transmissionType: type,
-            signalStrength: message["rssi"] as? Double,
+            signalStrength: message["rssi"] as? Double ?? (metadata?["rssi"] as? Double),
             frequency: nil,
             protocolType: .openDroneID,
             messageTypes: [messageType],
-            timestamp: Date().timeIntervalSince1970
+            timestamp: Date().timeIntervalSince1970,
+            metadata: metadata,
+            channel: channel,
+            advMode: advMode,
+            advAddress: advAddress,
+            did: did,
+            sid: sid
         )
     }
     
