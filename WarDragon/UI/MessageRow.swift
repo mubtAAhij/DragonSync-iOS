@@ -53,6 +53,10 @@ struct MessageRow: View {
                     }
                 }
                 
+                Text("Type: \(message.type)")
+                    .font(.subheadline)
+                
+                
                 if let transmissionInfo = signature?.transmissionInfo {
                     HStack(spacing: 8) {
                         if let rssi = transmissionInfo.signalStrength {
@@ -90,6 +94,38 @@ struct MessageRow: View {
                 }
                 .font(.caption)
                 .foregroundColor(.secondary)
+                
+                // Spoof detection
+                if message.isSpoofed, let details = message.spoofingDetails {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.yellow)
+                            Text("Possible Spoofed Signal")
+                                .foregroundColor(.yellow)
+                            Spacer()
+                            Text(String(format: "Confidence: %.0f%%", details.confidence * 100))
+                                .foregroundColor(.yellow)
+                        }
+                        
+                        VStack(alignment: .leading) {
+                            Text(String(format: "Distance: %.1fm", details.distance))
+                            Text(String(format: "Expected RSSI: %.1f dB", details.expectedRssi))
+                            Text(String(format: "Actual RSSI: %.1f dB", details.actualRssi))
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        
+                        ForEach(details.reasons, id: \.self) { reason in
+                            Text("• \(reason)")
+                                .font(.caption)
+                                .foregroundColor(.yellow)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .background(Color.yellow.opacity(0.1))
+                    .cornerRadius(8)
+                }
             }
             .contentShape(Rectangle())
             .onTapGesture {

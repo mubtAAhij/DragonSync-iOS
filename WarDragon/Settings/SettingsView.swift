@@ -38,24 +38,6 @@ struct SettingsView: View {
                 }
                 .disabled(settings.isListening)
                 
-//                if settings.connectionMode == .both {
-//                    TextField("ZMQ Host", text: .init(
-//                        get: { settings.zmqHost },
-//                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: true) }
-//                    ))
-//                    .textContentType(.URL)
-//                    .autocapitalization(.none)
-//                    .disabled(settings.isListening)
-//                    
-//                    TextField("Multicast Host", text: .init(
-//                        get: { settings.multicastHost },
-//                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: false) }
-//                    ))
-//                    .textContentType(.URL)
-//                    .autocapitalization(.none)
-//                    .disabled(settings.isListening)
-//                } else
-                
                 if settings.connectionMode == .zmq {
                     TextField("ZMQ Host", text: .init(
                         get: { settings.zmqHost },
@@ -95,6 +77,11 @@ struct SettingsView: View {
                 Toggle("Enable Notifications", isOn: .init(
                     get: { settings.notificationsEnabled },
                     set: { settings.updatePreferences(notifications: $0, screenOn: settings.keepScreenOn) }
+                ))
+                
+                Toggle("Auto Spoof Detection", isOn: .init(
+                    get: { settings.spoofDetectionEnabled },
+                    set: { settings.spoofDetectionEnabled = $0 }
                 ))
                 
                 Toggle("Keep Screen On", isOn: .init(
