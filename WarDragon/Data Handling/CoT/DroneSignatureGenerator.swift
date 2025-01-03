@@ -158,11 +158,9 @@ public final class DroneSignatureGenerator {
     }
     
     func detectSpoof(_ signature: DroneSignature, fromMonitor monitorStatus: StatusViewModel.StatusMessage) -> SpoofDetectionResult? {
-        // Require RSSI data for detection
-        guard let rssi = signature.transmissionInfo.signalStrength else {
-            return nil
-        }
-
+        
+        let rssi = signature.transmissionInfo.signalStrength
+        var expectedRssi = 0.0
         var reasons: [String] = []
         var confidenceScore = 0.0
 
@@ -177,18 +175,26 @@ public final class DroneSignatureGenerator {
         // FSPL = 20 * log10(d) + 20 * log10(f) + 32.44
         // where d is distance in kilometers and f is frequency in MHz
         let distanceKm = distance / 1000.0
-        let frequency = signature.transmissionInfo.frequency ?? 2400.0 // Default to 2.4GHz if not specified
-        let expectedRssi = -(20 * log10(distanceKm) + 20 * log10(frequency) + 32.44)
+        let frequency = signature.transmissionInfo.frequency ?? 2400.0 // Default to 2.4GHz
         
         // Compare expected vs actual RSSI
-        let rssiDelta = abs(rssi - expectedRssi)
-        
-        // Check for significant RSSI discrepancies
-        if rssiDelta > 20 {
-            let reason = String(format: "Signal strength deviation: %.1f dB (Expected: %.1f dB, Actual: %.1f dB at %.1f meters)",
-                              rssiDelta, expectedRssi, rssi, distance)
-            reasons.append(reason)
-            confidenceScore += min(rssiDelta / 40.0, 0.5)
+        if ((rssi) != nil) {
+            expectedRssi = -(20 * log10(distanceKm) + 20 * log10(frequency) + 32.44)
+            let rssiDelta = abs(rssi! - expectedRssi)
+            
+            // Check for significant RSSI discrepancies
+            if rssiDelta > 20 {
+                let reason = String(format: "Signal strength deviation: %.1f dB (Expected: %.1f dB, Actual: %.1f dB at %.1f meters)",
+                                    rssiDelta, expectedRssi, rssi!, distance)
+                reasons.append(reason)
+                confidenceScore += min(rssiDelta / 40.0, 0.5)
+            }
+            
+            // Check for unrealistic signal strength
+            if rssi! > -20 && distance > 100 {
+                reasons.append("Suspiciously strong signal for distance")
+                confidenceScore += 0.3
+            }
         }
 
         // Check cached history for this drone
@@ -207,32 +213,18 @@ public final class DroneSignatureGenerator {
                 reasons.append("Large position change without corresponding speed change")
                 confidenceScore += 0.2
             }
-
-            // Check RSSI consistency over time
-            if let lastRssi = history.signatures.last?.transmissionInfo.signalStrength {
-                let rssiChange = abs(rssi - lastRssi)
-                let expectedChange = abs(expectedRssi - lastRssi)
-                if rssiChange > expectedChange * 2 {
-                    reasons.append("Suspicious RSSI variation pattern")
-                    confidenceScore += 0.2
-                }
-            }
         }
-
-        // Check for unrealistic signal strength
-        if rssi > -20 && distance > 100 {
-            reasons.append("Suspiciously strong signal for distance")
-            confidenceScore += 0.3
-        }
-
+        print("Spoof confidence: \(confidenceScore)")
+        
         return SpoofDetectionResult(
-            isSpoofed: confidenceScore > 0.4,
+            isSpoofed: confidenceScore >= 0.2,
             confidence: confidenceScore,
             reasons: reasons,
             expectedRssi: expectedRssi,
-            actualRssi: rssi,
+            actualRssi: rssi ?? 0.0,
             distance: distance
         )
+        
     }
     
     // MARK: - Private Methods
@@ -587,7 +579,7 @@ public final class DroneSignatureGenerator {
         var did: Int? = nil
         var sid: Int? = nil
         // Check for RSSI in any message format
-        let signalStrength: Double?
+        var signalStrength: Double?
         if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any],
            let rssi = auxAdvInd["rssi"] as? Double {
             signalStrength = rssi

@@ -96,14 +96,14 @@ struct ContentView: View {
             }
             .tag(2)
             
-            NavigationStack {
-                SpectrumView(viewModel: spectrumViewModel)
-                    .navigationTitle("Spectrum")
-            }
-            .tabItem {
-                Label("Spectrum", systemImage: "waveform")
-            }
-            .tag(3)
+//            NavigationStack {
+//                SpectrumView(viewModel: spectrumViewModel)
+//                    .navigationTitle("Spectrum")
+//            }
+//            .tabItem {
+//                Label("Spectrum", systemImage: "waveform")
+//            }
+//            .tag(3)
         }
         
         .onChange(of: settings.isListening) {

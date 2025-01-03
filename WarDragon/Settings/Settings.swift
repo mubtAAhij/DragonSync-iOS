@@ -72,7 +72,7 @@ class Settings: ObservableObject {
             objectWillChange.send()
         }
     }
-    @AppStorage("spoofDetectionEnabled") var spoofDetectionEnabled = false {
+    @AppStorage("spoofDetectionEnabled") var spoofDetectionEnabled = true {
         didSet {
             objectWillChange.send()
         }
