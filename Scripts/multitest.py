@@ -227,6 +227,7 @@ class DroneMessageGenerator:
 			<BasicID>
 						<DeviceID>{drone_id}</DeviceID>
 						<Type>Serial Number</Type>
+						<MAC>8e:3b:93:22:33:fa</MAC>
 			</BasicID>
 			<LocationVector>
 						<Speed>{round(random.uniform(0, 30), 1)}</Speed>

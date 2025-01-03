@@ -476,7 +476,7 @@ public final class DroneSignatureGenerator {
         var sid: Int? = nil
 
         if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
-            type = .ble
+            type = .ble  // use BT for WiFI too
             messageType = .bt45
             metadata = auxAdvInd
             channel = auxAdvInd["chan"] as? Int
@@ -491,11 +491,11 @@ public final class DroneSignatureGenerator {
             type = .wifi
             messageType = .wifi
         } else if message["Basic ID"] != nil {
-            type = .esp32
+            type = .esp32 // or BT
             messageType = .esp32
         } else {
             type = .unknown
-            messageType = .bt45 // Default
+            messageType = .bt45 // Fallback BT
         }
 
         return DroneSignature.TransmissionInfo(
