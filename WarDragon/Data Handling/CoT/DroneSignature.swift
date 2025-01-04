@@ -248,6 +248,12 @@ public struct DroneSignature: Hashable {
         public let protocolType: ProtocolType
         public let messageTypes: Set<MessageType>
         public let timestamp: TimeInterval
+        public let metadata: [String: Any]?
+        public let channel: Int?
+        public let advMode: String?
+        public let advAddress: String?
+        public let did: Int?
+        public let sid: Int?
         
         public enum TransmissionType: String {
             case ble = "BT4/5 DroneID"
@@ -274,16 +280,58 @@ public struct DroneSignature: Hashable {
                     frequency: Double?,
                     protocolType: ProtocolType,
                     messageTypes: Set<MessageType>,
-                    timestamp: TimeInterval) {
+                    timestamp: TimeInterval,
+                    metadata: [String: Any]? = nil,
+                    channel: Int? = nil,
+                    advMode: String? = nil,
+                    advAddress: String? = nil,
+                    did: Int? = nil,
+                    sid: Int? = nil) {
             self.transmissionType = transmissionType
             self.signalStrength = signalStrength
             self.frequency = frequency
             self.protocolType = protocolType
             self.messageTypes = messageTypes
             self.timestamp = timestamp
+            self.metadata = metadata
+            self.channel = channel
+            self.advMode = advMode
+            self.advAddress = advAddress
+            self.did = did
+            self.sid = sid
+        }
+        
+        public func hash(into hasher: inout Hasher) {
+                hasher.combine(transmissionType)
+                hasher.combine(signalStrength)
+                hasher.combine(frequency)
+                hasher.combine(protocolType)
+                hasher.combine(messageTypes)
+                hasher.combine(timestamp)
+                hasher.combine(channel)
+                hasher.combine(advMode)
+                hasher.combine(advAddress)
+                hasher.combine(did)
+                hasher.combine(sid)
+            }
+
+        public static func == (lhs: TransmissionInfo, rhs: TransmissionInfo) -> Bool {
+            return lhs.transmissionType == rhs.transmissionType &&
+                lhs.signalStrength == rhs.signalStrength &&
+                lhs.frequency == rhs.frequency &&
+                lhs.protocolType == rhs.protocolType &&
+                lhs.messageTypes == rhs.messageTypes &&
+                lhs.timestamp == rhs.timestamp &&
+                lhs.channel == rhs.channel &&
+                lhs.advMode == rhs.advMode &&
+                lhs.advAddress == rhs.advAddress &&
+                lhs.did == rhs.did &&
+                lhs.sid == rhs.sid
+                // Skip metadata in equality check since [String:Any] can't be compared
         }
     }
     
+
     public struct BroadcastPattern: Hashable {
         public let messageSequence: [TransmissionInfo.MessageType]
         public let intervalPattern: [TimeInterval]

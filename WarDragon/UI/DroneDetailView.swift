@@ -56,19 +56,45 @@ struct DroneDetailView: View {
                 .cornerRadius(12)
                 
                 Group {
-                    InfoRow(title: "Drone ID", value: message.uid)
-                    InfoRow(title: "Type", value: message.type)
+                    InfoRow(title: "ID", value: message.uid)
                     if !message.description.isEmpty {
                         InfoRow(title: "Description", value: message.description)
                     }
                     InfoRow(title: "UA Type", value: message.uaType.rawValue)
-                    if let auth = message.authData {
-                        InfoRow(title: "Authentication", value: auth)
-                    }
                     if let mac = message.mac {
                         InfoRow(title: "MAC", value: mac)
                     }
                 }
+                
+                if let aux = message.rawMessage["AUX_ADV_IND"] as? [String: Any],
+                   let aext = message.rawMessage["aext"] as? [String: Any] {
+                    Group {
+                        SectionHeader(title: "BLE Transmission")
+                        if let rssi = aux["rssi"] as? Int {
+                            InfoRow(title: "Signal", value: "\(rssi) dBm")
+                        }
+                        if let channel = aux["chan"] as? Int {
+                            InfoRow(title: "Channel", value: "\(channel)")
+                        }
+                        if let mode = aext["AdvMode"] as? String {
+                            InfoRow(title: "Mode", value: mode)
+                        }
+                        if let addr = aext["AdvA"] as? String {
+                            InfoRow(title: "Address", value: addr)
+                        }
+                        if let dataInfo = aext["AdvDataInfo"] as? [String: Any] {
+                            if let did = dataInfo["did"] as? Int {
+                                InfoRow(title: "Data ID", value: "\(did)")
+                            }
+                            if let sid = dataInfo["sid"] as? Int {
+                                InfoRow(title: "Set ID", value: "\(sid)")
+                            }
+                        }
+                    }
+                }
+                
+                // Groups for Position, Movement, etc remain exactly the same
+                // Rest of the code remains unchanged
                 
                 Group {
                     SectionHeader(title: "Position")
@@ -97,20 +123,50 @@ struct DroneDetailView: View {
                 }
                 
                 Group {
-                    SectionHeader(title: "Accuracy")
-                    if let horizAcc = message.horizAcc {
-                        InfoRow(title: "Horizontal", value: "\(horizAcc)m")
-                    }
-                    if let vertAcc = message.vertAcc {
-                        InfoRow(title: "Vertical", value: "\(vertAcc)m")
-                    }
-                    if let baroAcc = message.baroAcc {
-                        InfoRow(title: "Barometric", value: "\(baroAcc)m")
-                    }
-                    if let speedAcc = message.speedAcc {
-                        InfoRow(title: "Speed", value: "\(speedAcc)m/s")
+                    if let auxAdvData = message.rawMessage.lazy
+                        .compactMap({ $0.value as? [String: Any] })
+                        .first(where: { $0.keys.contains("rssi") }) {
+                        
+                        SectionHeader(title: "Signal Data")
+                        
+                        if let rssi = auxAdvData["rssi"] as? Int {
+                            InfoRow(title: "RSSI", value: "\(rssi) dBm")
+                        }
+                        
+                        if let channel = auxAdvData["chan"] as? Int {
+                            InfoRow(title: "Channel", value: "\(channel)")
+                        }
+                        
+                        if let phy = auxAdvData["phy"] as? Int {
+                            InfoRow(title: "PHY", value: "\(phy)")
+                        }
+                        
+                        if let aa = auxAdvData["aa"] as? Int {
+                            InfoRow(title: "Access Address", value: String(format: "0x%08X", aa))
+                        }
                     }
                 }
+
+                
+                Group {
+                    if message.horizAcc != nil || message.vertAcc != nil || message.baroAcc != nil || message.speedAcc != nil {
+                        SectionHeader(title: "Accuracy")
+                        
+                        if let horizAcc = message.horizAcc {
+                            InfoRow(title: "Horizontal", value: "\(horizAcc)m")
+                        }
+                        if let vertAcc = message.vertAcc {
+                            InfoRow(title: "Vertical", value: "\(vertAcc)m")
+                        }
+                        if let baroAcc = message.baroAcc {
+                            InfoRow(title: "Barometric", value: "\(baroAcc)m")
+                        }
+                        if let speedAcc = message.speedAcc {
+                            InfoRow(title: "Speed", value: "\(speedAcc)m/s")
+                        }
+                    }
+                }
+
                 
                 if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
                     Group {
@@ -138,7 +194,7 @@ struct DroneDetailView: View {
                         }
                     }
                 }
-
+                
                 if let status = message.status {
                     Group {
                         SectionHeader(title: "System Status")

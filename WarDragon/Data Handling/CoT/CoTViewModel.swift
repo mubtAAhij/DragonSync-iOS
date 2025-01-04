@@ -15,6 +15,7 @@ class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
     @Published var droneSignatures: [DroneSignature] = []
     private let signatureGenerator = DroneSignatureGenerator()
+    private var spectrumViewModel: SpectrumData.SpectrumViewModel?
     private var zmqHandler: ZMQHandler?
     private var cotListener: NWListener?
     private var statusListener: NWListener?
@@ -25,7 +26,6 @@ class CoTViewModel: ObservableObject {
     private let listenerQueue = DispatchQueue(label: "CoTListenerQueue")
     private var statusViewModel = StatusViewModel()
     public var isListeningCot = false
-    
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
@@ -77,6 +77,14 @@ class CoTViewModel: ObservableObject {
         var authTimestamp: String?
         var authData: String?
         
+        // Spoof detection
+        var isSpoofed: Bool = false
+        var spoofingDetails: DroneSignatureGenerator.SpoofDetectionResult?
+        var rssi: Int?
+        var channel: Int?
+        var phy: Int?
+        var accessAddress: Int?
+        
         var rawMessage: [String: Any]
         
         static func == (lhs: CoTViewModel.CoTMessage, rhs: CoTViewModel.CoTMessage) -> Bool {
@@ -116,7 +124,14 @@ class CoTViewModel: ObservableObject {
             lhs.authPage == rhs.authPage &&
             lhs.authLength == rhs.authLength &&
             lhs.authTimestamp == rhs.authTimestamp &&
-            lhs.authData == rhs.authData
+            lhs.authData == rhs.authData &&
+            lhs.isSpoofed == rhs.isSpoofed &&
+            lhs.spoofingDetails?.isSpoofed == rhs.spoofingDetails?.isSpoofed &&
+            lhs.spoofingDetails?.confidence == rhs.spoofingDetails?.confidence &&
+            lhs.rssi == rhs.rssi &&
+            lhs.channel == rhs.channel &&
+            lhs.phy == rhs.phy &&
+            lhs.accessAddress == rhs.accessAddress
         }
         
         var coordinate: CLLocationCoordinate2D? {
@@ -129,8 +144,8 @@ class CoTViewModel: ObservableObject {
         }
     }
     
-    init(statusViewModel: StatusViewModel) {
-        self.statusViewModel = statusViewModel
+    init(statusViewModel: StatusViewModel, spectrumViewModel: SpectrumData.SpectrumViewModel? = nil) {        self.statusViewModel = statusViewModel
+        self.spectrumViewModel = spectrumViewModel
         self.checkPermissions()
     }
     
@@ -371,7 +386,7 @@ class CoTViewModel: ObservableObject {
                 print("Checking for existing match, score: \(matchScore)")
                 return matchScore > 0.42 // High confidence threshold
             }
-
+            
             // Update signatures collection
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
                 self.droneSignatures[index] = signature
@@ -381,13 +396,21 @@ class CoTViewModel: ObservableObject {
                 self.droneSignatures.append(signature)
             }
             
+            // Check for spoofing if enabled
+            var updatedMessage = message
+            if Settings.shared.spoofDetectionEnabled,
+               let monitorStatus = self.statusViewModel.statusMessages.last,
+               let spoofResult = self.signatureGenerator.detectSpoof(signature, fromMonitor: monitorStatus) {
+                updatedMessage.isSpoofed = spoofResult.isSpoofed
+                updatedMessage.spoofingDetails = spoofResult
+            }
             
             // Update messages collection
             if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
-                self.parsedMessages[index] = message
+                self.parsedMessages[index] = updatedMessage
             } else {
-                self.parsedMessages.append(message)
-                self.sendNotification(for: message)
+                self.parsedMessages.append(updatedMessage)
+                self.sendNotification(for: updatedMessage)
             }
         }
     }
@@ -400,7 +423,7 @@ class CoTViewModel: ObservableObject {
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
-    
+
     private func sendStatusNotification(for message: StatusViewModel.StatusMessage) {
         guard Settings.shared.notificationsEnabled else { return }
         let content = UNMutableNotificationContent()

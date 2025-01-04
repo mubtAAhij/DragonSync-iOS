@@ -72,6 +72,16 @@ class Settings: ObservableObject {
             objectWillChange.send()
         }
     }
+    @AppStorage("spoofDetectionEnabled") var spoofDetectionEnabled = true {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+    @AppStorage("zmqSpectrumPort") var zmqSpectrumPort: Int = 4226 {
+        didSet {
+            objectWillChange.send()
+        }
+    }
     
     private init() {
         toggleListening(false)
