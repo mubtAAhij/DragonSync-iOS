@@ -5,44 +5,44 @@
 //  Created by Luke on 12/26/24.
 //
 
-
 import Foundation
 import Network
 
 struct SpectrumData: Codable, Identifiable {
+    static let SUSCAN_REMOTE_FRAGMENT_HEADER_MAGIC: UInt32 = 0xABCD0123
+    static let SUSCAN_ANALYZER_SUPERFRAME_TYPE_PSD: UInt8 = 0x02
+    
+    struct RemoteHeader {
+        let magic: UInt32     // 0xABCD0123
+        let sfType: UInt8     // Type 0x02 for PSD
+        let size: UInt16      // Fragment size
+        let sfId: UInt8       // Fragment ID
+        let sfSize: UInt32    // Total data size
+        let sfOffset: UInt32  // Offset in data
+        
+        init(data: Data) {
+            var offset = 0
+            magic = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
+            offset += MemoryLayout<UInt32>.size
+            sfType = data[offset]; offset += 1
+            size = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt16.self) }
+            offset += MemoryLayout<UInt16>.size
+            sfId = data[offset]; offset += 1
+            sfSize = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
+            offset += MemoryLayout<UInt32>.size
+            sfOffset = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
+        }
+        
+        static var headerSize: Int {
+            return MemoryLayout<UInt32>.size + 1 + MemoryLayout<UInt16>.size + 1 + MemoryLayout<UInt32>.size * 2
+        }
+    }
+    
     var id: UUID
-    let type: String
-    let fc: Int
-    let inspector_id: Int
-    let timestamp: Double
-    let rt_time: Double
-    let looped: Bool
-    let samp_rate: Double
-    let measured_samp_rate: Int
-    let psd_size: Int
-    let local_timestamp: Double
-    var data: [Float]
-    
-    private enum CodingKeys: String, CodingKey {
-        case type, fc, inspector_id, timestamp, rt_time, looped, samp_rate
-        case measured_samp_rate, psd_size, local_timestamp
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = UUID()
-        type = try container.decode(String.self, forKey: .type)
-        fc = try container.decode(Int.self, forKey: .fc)
-        inspector_id = try container.decode(Int.self, forKey: .inspector_id)
-        timestamp = try container.decode(Double.self, forKey: .timestamp)
-        rt_time = try container.decode(Double.self, forKey: .rt_time)
-        looped = try container.decode(Bool.self, forKey: .looped)
-        samp_rate = try container.decode(Double.self, forKey: .samp_rate)
-        measured_samp_rate = try container.decode(Int.self, forKey: .measured_samp_rate)
-        psd_size = try container.decode(Int.self, forKey: .psd_size)
-        local_timestamp = try container.decode(Double.self, forKey: .local_timestamp)
-        data = []
-    }
+    var fc: Int              // Center frequency
+    var timestamp: Double
+    var sampleRate: Float    // Sample rate in Hz
+    var data: [Float]        // FFT data points
     
     @MainActor
     class SpectrumViewModel: ObservableObject {
@@ -52,6 +52,7 @@ struct SpectrumData: Codable, Identifiable {
         
         private var connection: NWConnection?
         private let queue = DispatchQueue(label: "com.wardragon.spectrum")
+        private var fragmentBuffer: [UInt8: (timestamp: Double, data: Data)] = [:]
         
         func startListening(port: UInt16) {
             guard !isListening else { return }
@@ -92,7 +93,7 @@ struct SpectrumData: Codable, Identifiable {
         }
         
         private func receiveData() async {
-            connection?.receiveMessage { [weak self] content, _, isComplete, error in
+            connection?.receiveMessage { [weak self] content, _, _, error in
                 guard let self = self else { return }
                 
                 if let error = error {
@@ -104,7 +105,7 @@ struct SpectrumData: Codable, Identifiable {
                 
                 if let data = content {
                     Task { @MainActor in
-                        await self.processSpectrumData(data)
+                        await self.processFragment(data)
                     }
                 }
                 
@@ -116,25 +117,45 @@ struct SpectrumData: Codable, Identifiable {
             }
         }
         
-        private func processSpectrumData(_ data: Data) async {
-            guard let splitIndex = data.firstIndex(of: UInt8(ascii: "}")) else { return }
+        private func processFragment(_ data: Data) async {
+            guard data.count >= RemoteHeader.headerSize else { return }
             
-            let jsonData = data[...splitIndex]
-            let binaryData = data[(splitIndex + 1)...]
+            let header = RemoteHeader(data: data)
+            guard header.magic == SpectrumData.SUSCAN_REMOTE_FRAGMENT_HEADER_MAGIC else { return }
+            guard header.sfType == SpectrumData.SUSCAN_ANALYZER_SUPERFRAME_TYPE_PSD else { return }
             
-            do {
-                var spectrum = try JSONDecoder().decode(SpectrumData.self, from: Data(jsonData))
-                spectrum.data = binaryData.withUnsafeBytes { ptr in
-                    Array(ptr.bindMemory(to: Float.self))
+            let payload = data.dropFirst(RemoteHeader.headerSize)
+            let now = Date().timeIntervalSince1970
+            
+            // Store fragment
+            if fragmentBuffer[header.sfId] == nil {
+                fragmentBuffer[header.sfId] = (timestamp: now, data: Data())
+            }
+            fragmentBuffer[header.sfId]?.data.append(payload)
+            
+            // Check if fragment is complete
+            if let fragment = fragmentBuffer[header.sfId], fragment.data.count >= header.sfSize {
+                let spectralData = fragment.data.withUnsafeBytes { ptr -> [Float] in
+                    Array(UnsafeBufferPointer(
+                        start: ptr.baseAddress?.assumingMemoryBound(to: Float.self),
+                        count: fragment.data.count / MemoryLayout<Float>.size))
                 }
+                
+                // First float is center freq, second is sample rate, rest is FFT data
+                let spectrum = SpectrumData(
+                    id: UUID(),
+                    fc: Int(spectralData[0]),
+                    timestamp: fragment.timestamp,
+                    sampleRate: spectralData[1],
+                    data: Array(spectralData.dropFirst(2))
+                )
                 
                 self.spectrumData.append(spectrum)
                 if self.spectrumData.count > 100 {
                     self.spectrumData.removeFirst()
                 }
-                self.connectionError = nil
-            } catch {
-                self.connectionError = "Decode error: \(error.localizedDescription)"
+                
+                fragmentBuffer[header.sfId] = nil
             }
         }
         
@@ -143,7 +164,7 @@ struct SpectrumData: Codable, Identifiable {
             connection = nil
             isListening = false
             connectionError = nil
+            fragmentBuffer.removeAll()
         }
-        
     }
 }

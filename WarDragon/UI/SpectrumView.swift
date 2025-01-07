@@ -32,8 +32,8 @@ struct SpectrumView: View {
                 if let latest = viewModel.spectrumData.last {
                     VStack(alignment: .leading) {
                         Text("Center: \(formatFrequency(Double(latest.fc)))")
-                        Text("Sample Rate: \(formatFrequency(latest.samp_rate))")
-                        Text("FFT Size: \(latest.psd_size)")
+                        Text("Sample Rate: \(formatFrequency(Double(latest.sampleRate)))")
+                        Text("FFT Size: \(latest.data.count)")
                     }
                     .font(.system(.caption, design: .monospaced))
                 }
@@ -144,7 +144,7 @@ struct SpectrumGraphView: View {
     var body: some View {
         GeometryReader { geometry in
             Path { path in
-                let step = geometry.size.width / CGFloat(data.psd_size)
+                let step = geometry.size.width / CGFloat(data.data.count)
                 let values = data.data
                 let minValue = values.min() ?? 0
                 let maxValue = values.max() ?? 1
@@ -155,7 +155,7 @@ struct SpectrumGraphView: View {
                     y: geometry.size.height - CGFloat(values[0] - minValue) * scale
                 ))
                 
-                for i in 1..<data.psd_size {
+                for i in 1..<data.data.count {
                     let point = CGPoint(
                         x: CGFloat(i) * step,
                         y: geometry.size.height - CGFloat(values[i] - minValue) * scale
@@ -168,7 +168,7 @@ struct SpectrumGraphView: View {
             let freqSteps = 5
             ForEach(0..<freqSteps, id: \.self) { i in
                 let x = geometry.size.width * CGFloat(i) / CGFloat(freqSteps - 1)
-                let freqOffset = data.samp_rate * (Double(i)/Double(freqSteps-1) - 0.5)
+                let freqOffset = Double(data.sampleRate) * (Double(i)/Double(freqSteps-1) - 0.5)
                 let freq = Double(data.fc) + freqOffset
                 
                 Text(formatFrequency(freq))
@@ -202,7 +202,7 @@ struct WaterfallView: View {
                 guard !data.isEmpty else { return }
                 
                 let rowHeight = size.height / CGFloat(data.count)
-                let colWidth = size.width / CGFloat(data[0].psd_size)
+                let colWidth = size.width / CGFloat(data[0].data.count)
                 
                 for (rowIndex, spectrum) in data.enumerated() {
                     let y = size.height - CGFloat(rowIndex + 1) * rowHeight
