@@ -168,40 +168,78 @@ class ZMQHandler: ObservableObject {
     }
     
     func convertTelemetryToXML(_ message: String) -> String? {
-        guard let data = message.data(using: .utf8),
-              let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-            return nil
-        }
+        guard let data = message.data(using: .utf8) else { return nil }
         
-        // Extract Basic ID with MAC and valid ID
-        var basicID: [String: Any]?
-        for message in jsonArray {
-            if let bid = message["Basic ID"] as? [String: Any],
-               let id = bid["id"] as? String,
-               !id.isEmpty,
-               bid["id_type"] as? String == "Serial Number (ANSI/CTA-2063-A)" {
-                basicID = bid
-                break
+        // Try parsing as array first
+        if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            return createDroneXML(from: jsonArray)
+        }
+        // Try parsing as single object
+        else if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            // Check for different format identifiers
+            if json["serial_number"] != nil || json["drone_lat"] != nil {
+                // DJI format
+                return convertDJITelemetryToXML(json)
+            } else if json["Basic ID"] != nil {
+                // Standard ZMQ decoder format
+                return createDroneXML(from: [json])
             }
         }
         
-        guard let basicID = basicID,
-              let id = basicID["id"] as? String,
-              let mac = basicID["MAC"] as? String else {
-            return nil
+        return nil
+    }
+
+    private func getFieldValue(_ json: [String: Any], keys: [String], defaultValue: Any) -> Any {
+        for key in keys {
+            if let value = json[key], !(value is NSNull) {
+                return value
+            }
         }
-        
+        return defaultValue
+    }
+
+    func convertDJITelemetryToXML(_ json: [String: Any]) -> String? {
         let now = ISO8601DateFormatter().string(from: Date())
         let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(60))
+        
+        // Handle field name variations
+        let droneLat = getFieldValue(json, keys: ["drone_lat", "latitude", "lat"], defaultValue: 0.0) as! Double
+        let droneLon = getFieldValue(json, keys: ["drone_lon", "longitude", "lon"], defaultValue: 0.0) as! Double
+        let pilotLat = getFieldValue(json, keys: ["app_lat", "pilot_lat", "operator_lat"], defaultValue: 0.0) as! Double
+        let pilotLon = getFieldValue(json, keys: ["app_lon", "pilot_lon", "operator_lon"], defaultValue: 0.0) as! Double
+        let speed = getFieldValue(json, keys: ["horizontal_speed", "speed"], defaultValue: 0.0) as! Double
+        let vertSpeed = getFieldValue(json, keys: ["vertical_speed", "vert_speed"], defaultValue: 0.0) as! Double
+        let height = getFieldValue(json, keys: ["height_agl", "height"], defaultValue: 0.0) as! Double
+        let altitude = getFieldValue(json, keys: ["geodetic_altitude", "altitude"], defaultValue: 0.0) as! Double
+        let serialNumber = getFieldValue(json, keys: ["serial_number", "id"], defaultValue: "unknown") as! String
+        let deviceType = getFieldValue(json, keys: ["device_type", "description"], defaultValue: "DJI Drone") as! String
+        let rssi = getFieldValue(json, keys: ["rssi", "signal_strength"], defaultValue: 0) as! Int
 
         return """
-        <event version="2.0" uid="drone-\(id)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
-          <point lat="0.0" lon="0.0" hae="0.0" ce="35.0" le="999999"/>
+        <event version="2.0" uid="drone-\(serialNumber)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
+          <point lat="\(droneLat)" lon="\(droneLon)" hae="\(altitude)" ce="9999999" le="999999"/>
           <detail>
-            <contact endpoint="" phone="" callsign="drone-\(id)"/>
-            <MAC>\(mac)</MAC>
-            <precisionlocation geopointsrc="gps" altsrc="gps"/>
-            <remarks>Description: Drones ID test flight, Speed: 0.0 m/s, VSpeed: 0.0 m/s, Altitude: 0.0 m, Height: 0.0 m, Pilot Lat: 0.0, Pilot Lon: 0.0</remarks>
+            <BasicID>
+              <DeviceID>\(serialNumber)</DeviceID>
+              <Type>DJI</Type>
+              <UAType>2</UAType>
+            </BasicID>
+            <LocationVector>
+              <Speed>\(speed)</Speed>
+              <VerticalSpeed>\(vertSpeed)</VerticalSpeed>
+              <Altitude>\(altitude)</Altitude>
+              <Height>\(height)</Height>
+              <RSSI>\(rssi)</RSSI>
+            </LocationVector>
+            <System>
+              <PilotLocation>
+                <lat>\(pilotLat)</lat>
+                <lon>\(pilotLon)</lon>
+              </PilotLocation>
+            </System>
+            <SelfID>
+              <Description>\(deviceType)</Description>
+            </SelfID>
             <color argb="-256"/>
             <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
           </detail>
@@ -222,16 +260,15 @@ class ZMQHandler: ObservableObject {
         
         for message in messages {
             
+            // Get the RSSI and MAC
             if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
                 if let addr = auxAdvInd["addr"] as? String {
-                    droneInfo["id"] = "drone-\(addr)"
+                    droneInfo["id"] = "\(addr)"
                 }
-                droneInfo["rssi"] = auxAdvInd["rssi"] as? Int
-                
-                // Extract AdvA from aext if available
+                droneInfo["rssi"] = getFieldValue(auxAdvInd, keys: ["rssi", "signal_strength"], defaultValue: 0)
+                // Extract AdvA from aext if available for MAC
                 if let aext = message["aext"] as? [String: Any],
                    let advA = aext["AdvA"] as? String {
-                    // Parse "XX:XX:XX:XX:XX:XX (Public)" format from ZMQ
                     let macAddress = advA.components(separatedBy: " ")[0]
                     droneInfo["mac"] = macAddress
                 }
@@ -240,22 +277,22 @@ class ZMQHandler: ObservableObject {
             // Process Basic ID from any source
             if let basicId = message["Basic ID"] as? [String: Any] {
                 if droneInfo["id"] == nil {
-                    let rawId = basicId["id"] as? String ?? UUID().uuidString
-                    droneInfo["id"] = "drone-\(rawId == "NONE" ? UUID().uuidString : rawId)"
+                    let rawId = getFieldValue(basicId, keys: ["id", "serial_number"], defaultValue: UUID().uuidString) as! String
+                    droneInfo["id"] = "\(rawId == "NONE" ? UUID().uuidString : rawId)"
                 }
-                droneInfo["id_type"] = basicId["id_type"] as? String
-                droneInfo["ua_type"] = basicId["ua_type"] as? Int
-                droneInfo["MAC"] = basicId["MAC"] as? String
+                droneInfo["id_type"] = basicId["id_type"]
+                droneInfo["ua_type"] = basicId["ua_type"]
+                droneInfo["MAC"] = basicId["MAC"]
             }
             
             // Process Location data from any source
             if let location = message["Location/Vector Message"] as? [String: Any] {
-                droneInfo["lat"] = location["latitude"] as? Double ?? 0.0
-                droneInfo["lon"] = location["longitude"] as? Double ?? 0.0
-                droneInfo["speed"] = location["speed"] as? Double ?? 0.0
-                droneInfo["vspeed"] = location["vert_speed"] as? Double ?? 0.0
-                droneInfo["alt"] = location["geodetic_altitude"] as? Double ?? 0.0
-                droneInfo["height"] = location["height_agl"] as? Double ?? 0.0
+                droneInfo["lat"] = getFieldValue(location, keys: ["latitude", "lat", "drone_lat"], defaultValue: 0.0)
+                droneInfo["lon"] = getFieldValue(location, keys: ["longitude", "lon", "drone_lon"], defaultValue: 0.0)
+                droneInfo["speed"] = getFieldValue(location, keys: ["speed", "horizontal_speed"], defaultValue: 0.0)
+                droneInfo["vspeed"] = getFieldValue(location, keys: ["vert_speed", "vertical_speed"], defaultValue: 0.0)
+                droneInfo["alt"] = getFieldValue(location, keys: ["geodetic_altitude", "altitude"], defaultValue: 0.0)
+                droneInfo["height"] = getFieldValue(location, keys: ["height_agl", "height"], defaultValue: 0.0)
                 droneInfo["status"] = location["status"] as? Int ?? 0
                 droneInfo["direction"] = location["direction"] as? Int ?? 0
                 droneInfo["alt_pressure"] = location["alt_pressure"] as? Double ?? 0.0
@@ -273,8 +310,8 @@ class ZMQHandler: ObservableObject {
             
             // Process System data from any source
             if let system = message["System Message"] as? [String: Any] {
-                droneInfo["pilot_lat"] = system["operator_lat"] as? Double ?? system["latitude"] as? Double ?? 0.0
-                droneInfo["pilot_lon"] = system["operator_lon"] as? Double ?? system["longitude"] as? Double ?? 0.0
+                droneInfo["pilot_lat"] = getFieldValue(system, keys: ["operator_lat", "pilot_lat", "app_lat", "latitude"], defaultValue: 0.0)
+                droneInfo["pilot_lon"] = getFieldValue(system, keys: ["operator_lon", "pilot_lon", "app_lon", "longitude"], defaultValue: 0.0)
                 droneInfo["area_count"] = system["area_count"] as? Int ?? 0
                 droneInfo["area_radius"] = system["area_radius"] as? Double ?? 0.0
                 droneInfo["area_ceiling"] = system["area_ceiling"] as? Double ?? 0.0

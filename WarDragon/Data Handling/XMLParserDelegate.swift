@@ -223,7 +223,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             }
                         }
                         
-                        // Extract core info as before
+                        // Define what to grab
                         var droneId: String?
                         var droneMAC: String?
                         var description = ""
@@ -274,7 +274,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         droneType += "-F"
 
                         if let droneId = droneId {
-                            // Create complete message with all available data
+                            // Create message with all available data
                             cotMessage = CoTViewModel.CoTMessage(
                                 uid: droneId,
                                 type: droneType,

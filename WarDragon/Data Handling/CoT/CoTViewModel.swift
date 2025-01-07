@@ -248,7 +248,7 @@ class CoTViewModel: ObservableObject {
             } else if let jsonData = message.data(using: .utf8),
                       let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
                       parsedJson["Basic ID"] != nil {
-                // ESP32 Drone JSON
+                // Drone JSON
                 guard let droneXML = self.zmqHandler?.convertTelemetryToXML(message),
                       let convertedData = droneXML.data(using: String.Encoding.utf8) else { return }
                 xmlData = convertedData
@@ -324,7 +324,7 @@ class CoTViewModel: ObservableObject {
                     return
                 }
                 
-                // If not a status message, check for ESP32 JSON
+                // If not a status message, check for JSON
                 if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "{"),
                    let jsonData = message.data(using: .utf8),
                    let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
@@ -423,7 +423,7 @@ class CoTViewModel: ObservableObject {
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
-
+    
     private func sendStatusNotification(for message: StatusViewModel.StatusMessage) {
         guard Settings.shared.notificationsEnabled else { return }
         let content = UNMutableNotificationContent()
@@ -459,10 +459,4 @@ class CoTViewModel: ObservableObject {
         print("All listeners stopped and connections cleaned up.")
     }
     
-    func resetListener() {
-        stopListening()
-        parsedMessages.removeAll()
-        droneSignatures.removeAll() // Test this line
-        startListening()
-    }
 }
