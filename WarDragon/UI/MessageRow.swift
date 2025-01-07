@@ -102,7 +102,7 @@ struct MessageRow: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.yellow)
                             Text("Possible Spoofed Signal")
-                                .foregroundColor(.yellow)
+                                .foregroundColor(.primary)
                             Spacer()
                             Text(String(format: "Confidence: %.0f%%", details.confidence * 100))
                                 .foregroundColor(.yellow)
@@ -119,7 +119,7 @@ struct MessageRow: View {
                         ForEach(details.reasons, id: \.self) { reason in
                             Text("• \(reason)")
                                 .font(.caption)
-                                .foregroundColor(.yellow)
+                                .foregroundColor(.primary)
                         }
                     }
                     .padding(.vertical, 4)
@@ -132,6 +132,7 @@ struct MessageRow: View {
                 activeSheet = .detailView
             }
         }
+        .cornerRadius(8)
         .padding(.vertical, 8)
         .sheet(item: $activeSheet) { sheetType in
             switch sheetType {
