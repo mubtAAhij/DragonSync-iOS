@@ -244,6 +244,8 @@ public struct DroneSignature: Hashable {
     public struct TransmissionInfo: Hashable {
         public let transmissionType: TransmissionType
         public let signalStrength: Double?
+        public let expectedSignalStrength: Double?
+        public let macAddress: String?
         public let frequency: Double?
         public let protocolType: ProtocolType
         public let messageTypes: Set<MessageType>
@@ -277,6 +279,8 @@ public struct DroneSignature: Hashable {
         
         public init(transmissionType: TransmissionType,
                     signalStrength: Double?,
+                    expectedSignalStrength: Double?,
+                    macAddress incomingMacAddress: String? = nil,
                     frequency: Double?,
                     protocolType: ProtocolType,
                     messageTypes: Set<MessageType>,
@@ -289,6 +293,8 @@ public struct DroneSignature: Hashable {
                     sid: Int? = nil) {
             self.transmissionType = transmissionType
             self.signalStrength = signalStrength
+            self.expectedSignalStrength = expectedSignalStrength
+            self.macAddress = incomingMacAddress
             self.frequency = frequency
             self.protocolType = protocolType
             self.messageTypes = messageTypes
@@ -302,8 +308,10 @@ public struct DroneSignature: Hashable {
         }
         
         public func hash(into hasher: inout Hasher) {
-                hasher.combine(transmissionType)
+            hasher.combine(transmissionType)
                 hasher.combine(signalStrength)
+                hasher.combine(expectedSignalStrength)
+                hasher.combine(macAddress)
                 hasher.combine(frequency)
                 hasher.combine(protocolType)
                 hasher.combine(messageTypes)
@@ -318,6 +326,8 @@ public struct DroneSignature: Hashable {
         public static func == (lhs: TransmissionInfo, rhs: TransmissionInfo) -> Bool {
             return lhs.transmissionType == rhs.transmissionType &&
                 lhs.signalStrength == rhs.signalStrength &&
+                lhs.expectedSignalStrength == rhs.expectedSignalStrength &&
+                lhs.macAddress == rhs.macAddress &&
                 lhs.frequency == rhs.frequency &&
                 lhs.protocolType == rhs.protocolType &&
                 lhs.messageTypes == rhs.messageTypes &&

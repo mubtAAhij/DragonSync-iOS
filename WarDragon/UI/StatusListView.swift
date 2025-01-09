@@ -29,6 +29,7 @@ struct StatusListView: View {
                 }
             }
         }
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .navigationTitle("System Status")
     }
 }

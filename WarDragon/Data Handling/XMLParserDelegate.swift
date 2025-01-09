@@ -30,7 +30,6 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private var auxAdvInd: [String: Any]?
     private var adType: [String: Any]?
     private var aext: [String: Any]?
-
     
     private var memoryTotal: Double = 0.0
     private var memoryAvailable: Double = 0.0
@@ -153,11 +152,32 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
     }
     
+    private func parseDroneRemarks(_ remarks: String) -> (String?, Int?, String?) {
+        var mac: String?
+        var rssi: Int?
+        var description: String?
+        
+        let components = remarks.components(separatedBy: ", ")
+        for component in components {
+            let trimmed = component.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("MAC:") {
+                mac = trimmed.replacingOccurrences(of: "MAC: ", with: "")
+            } else if trimmed.hasPrefix("RSSI:") {
+                let rssiString = trimmed.replacingOccurrences(of: "RSSI: ", with: "")
+                                      .replacingOccurrences(of: "dBm", with: "")
+                rssi = Int(rssiString)
+            } else if trimmed.hasPrefix("Self-ID:") {
+                description = trimmed.replacingOccurrences(of: "Self-ID: ", with: "")
+            }
+        }
+        
+        return (mac, rssi, description)
+    }
+    
     private func parseRemarks(_ remarks: String) {
         let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-        
         for component in components {
-            print("Processing component: \(component)")
+//            print("Processing component: \(component)")
             if component.hasPrefix("CPU Usage:") {
                 cpuUsage = Double(component.replacingOccurrences(of: "CPU Usage: ", with: "").replacingOccurrences(of: "%", with: "")) ?? 0.0
             } else if component.hasPrefix("Memory Total:") {
@@ -199,107 +219,140 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     
     // MARK: - Message Handler
     private func handleDroneMessage(_ elementName: String, _ parent: String) {
-            switch elementName {
-            case "message":
-                if let jsonData = messageContent.data(using: .utf8) {
-                    // Try to parse as array first
-                    if let jsonArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
-                        // Store complete array for signature generation
-                        rawMessage = ["messages": jsonArray]
-                        
-                        // Store BLE data if present
-                        if let firstMessage = jsonArray.first {
-                            if let aux = firstMessage["AUX_ADV_IND"] as? [String: Any] {
-                                auxAdvInd = aux
-                                rawMessage?["AUX_ADV_IND"] = aux
-                            }
-                            if let adtype = firstMessage["adtype"] as? [String: Any] {
-                                adType = adtype
-                                rawMessage?["adtype"] = adtype
-                            }
-                            if let aextData = firstMessage["aext"] as? [String: Any] {
-                                aext = aextData
-                                rawMessage?["aext"] = aextData
-                            }
+        switch elementName {
+        case "remarks":
+            let (mac, rssi, desc) = parseDroneRemarks(remarks)
+            
+//            print("DEBUG - Parsing Remarks: MAC = \(mac ?? "nil"), RSSI = \(rssi != nil ? "\(rssi!)" : "nil"), Description = \(desc ?? "nil")")
+            
+            if cotMessage == nil {
+                cotMessage = CoTViewModel.CoTMessage(
+                    uid: eventAttributes["uid"] ?? "",
+                    type: eventAttributes["type"] ?? "",
+                    lat: pointAttributes["lat"] ?? "0.0",
+                    lon: pointAttributes["lon"] ?? "0.0",
+                    speed: speed,
+                    vspeed: vspeed,
+                    alt: alt,
+                    height: height,
+                    pilotLat: pilotLat,
+                    pilotLon: pilotLon,
+                    description: desc ?? "",
+                    uaType: .helicopter,
+                    idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
+                        ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
+                    mac: mac,
+                    rssi: rssi,
+                    rawMessage: [
+                        "mac": mac ?? "",
+                        "rssi": rssi ?? 0
+                    ]
+                )
+            } else {
+                cotMessage?.mac = mac
+                cotMessage?.rssi = rssi
+                cotMessage?.description = desc ?? cotMessage?.description ?? ""
+            }
+        case "message":
+            if let jsonData = messageContent.data(using: .utf8) {
+                // Try to parse as array first
+                if let jsonArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
+                    // Store complete array for signature generation
+                    rawMessage = ["messages": jsonArray]
+                    
+                    // Store BLE data if present
+                    if let firstMessage = jsonArray.first {
+                        if let aux = firstMessage["AUX_ADV_IND"] as? [String: Any] {
+                            auxAdvInd = aux
+                            rawMessage?["AUX_ADV_IND"] = aux
                         }
-                        
-                        // Define what to grab
-                        var droneId: String?
-                        var droneMAC: String?
-                        var description = ""
-                        var location: [String: Any]?
-                        var system: [String: Any]?
-                        var droneType = "a-f-G-U"
-                        var idType = "Unknown"
-                        var uaType: DroneSignature.IdInfo.UAType = .helicopter
-                        
-                        // First pass - collect Basic ID info
-                        for message in jsonArray {
-                            if let basicId = message["Basic ID"] as? [String: Any],
-                               let id = basicId["id"] as? String,
-                               !id.isEmpty {
-                                droneId = id
-                                droneMAC = basicId["MAC"] as? String ??
-                                          (aext?["AdvA"] as? String)?.components(separatedBy: " ").first
-                                idType = basicId["id_type"] as? String ?? "Unknown"
-                                if let uaTypeStr = basicId["ua_type"] as? String {
-                                    uaType = mapUAType(uaTypeStr)
-                                }
-                                
-                                if idType == "Serial Number (ANSI/CTA-2063-A)" {
-                                    droneType += "-S"
-                                } else if idType == "CAA Registration ID" {
-                                    droneType += "-R"
-                                } else {
-                                    droneType += "-U"
-                                }
-                                break
-                            }
+                        if let adtype = firstMessage["adtype"] as? [String: Any] {
+                            adType = adtype
+                            rawMessage?["adtype"] = adtype
                         }
-
-                        // Second pass - collect additional data
-                        for message in jsonArray {
-                            if let locMsg = message["Location/Vector Message"] as? [String: Any] {
-                                location = locMsg
-                            } else if let sysMsg = message["System Message"] as? [String: Any] {
-                                system = sysMsg
-                                if system?["operator_lat"] != nil || system?["operator_lon"] != nil {
-                                    droneType += "-O"
-                                }
-                            } else if let selfId = message["Self-ID Message"] as? [String: Any] {
-                                description = selfId["text"] as? String ?? ""
-                            }
-                        }
-
-                        droneType += "-F"
-
-                        if let droneId = droneId {
-                            // Create message with all available data
-                            cotMessage = CoTViewModel.CoTMessage(
-                                uid: droneId,
-                                type: droneType,
-                                lat: String(describing: location?["latitude"] ?? "0.0"),
-                                lon: String(describing: location?["longitude"] ?? "0.0"),
-                                speed: String(describing: location?["speed"] ?? "0.0"),
-                                vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
-                                alt: String(describing: location?["geodetic_altitude"] ?? "0.0"),
-                                height: String(describing: location?["height_agl"] ?? "0.0"),
-                                pilotLat: String(describing: system?["operator_lat"] ?? "0.0"),
-                                pilotLon: String(describing: system?["operator_lon"] ?? "0.0"),
-                                description: description,
-                                uaType: uaType,
-                                idType: idType,
-                                mac: droneMAC ?? "",
-                                // Include all BLE/transmission data
-                                rawMessage: [
-                                    "messages": jsonArray,
-                                    "AUX_ADV_IND": auxAdvInd as Any,
-                                    "adtype": adType as Any,
-                                    "aext": aext as Any
-                                ]
-                            )
+                        if let aextData = firstMessage["aext"] as? [String: Any] {
+                            aext = aextData
+                            rawMessage?["aext"] = aextData
                         }
                     }
+                    
+                    // Define what to grab
+                    var droneId: String?
+                    var droneMAC: String?
+                    var description = ""
+                    var location: [String: Any]?
+                    var system: [String: Any]?
+                    var droneType = "a-f-G-U"
+                    var idType = "Unknown"
+                    var uaType: DroneSignature.IdInfo.UAType = .helicopter
+                    
+                    // First pass - collect Basic ID info
+                    for message in jsonArray {
+                        if let basicId = message["Basic ID"] as? [String: Any],
+                           let id = basicId["id"] as? String,
+                           !id.isEmpty {
+                            droneId = id
+                            droneMAC = basicId["MAC"] as? String ??
+                            (aext?["AdvA"] as? String)?.components(separatedBy: " ").first
+                            idType = basicId["id_type"] as? String ?? "Unknown"
+                            if let uaTypeStr = basicId["ua_type"] as? String {
+                                uaType = mapUAType(uaTypeStr)
+                            }
+                            
+                            if idType == "Serial Number (ANSI/CTA-2063-A)" {
+                                droneType += "-S"
+                            } else if idType == "CAA Registration ID" {
+                                droneType += "-R"
+                            } else {
+                                droneType += "-U"
+                            }
+                            break
+                        }
+                    }
+                    
+                    // Second pass - collect additional data
+                    for message in jsonArray {
+                        if let locMsg = message["Location/Vector Message"] as? [String: Any] {
+                            location = locMsg
+                        } else if let sysMsg = message["System Message"] as? [String: Any] {
+                            system = sysMsg
+                            if system?["operator_lat"] != nil || system?["operator_lon"] != nil {
+                                droneType += "-O"
+                            }
+                        } else if let selfId = message["Self-ID Message"] as? [String: Any] {
+                            description = selfId["text"] as? String ?? ""
+                        }
+                    }
+                    
+                    droneType += "-F"
+                    
+                    if let droneId = droneId {
+                        // Create message with all available data
+                        cotMessage = CoTViewModel.CoTMessage(
+                            uid: droneId,
+                            type: droneType,
+                            lat: String(describing: location?["latitude"] ?? "0.0"),
+                            lon: String(describing: location?["longitude"] ?? "0.0"),
+                            speed: String(describing: location?["speed"] ?? "0.0"),
+                            vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
+                            alt: String(describing: location?["geodetic_altitude"] ?? "0.0"),
+                            height: String(describing: location?["height_agl"] ?? "0.0"),
+                            pilotLat: String(describing: system?["operator_lat"] ?? "0.0"),
+                            pilotLon: String(describing: system?["operator_lon"] ?? "0.0"),
+                            description: description,
+                            uaType: uaType,
+                            idType: idType,
+                            mac: droneMAC ?? "",
+                            // Include all BLE/transmission data
+                            rawMessage: [
+                                "messages": jsonArray,
+                                "AUX_ADV_IND": auxAdvInd as Any,
+                                "adtype": adType as Any,
+                                "aext": aext as Any
+                            ]
+                        )
+                    }
+                }
                 // Single object parsing
                 else if let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
                     rawMessage = json
@@ -326,6 +379,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             uaType: mapUAType(basicId["ua_type"] as? String),
                             idType: basicId["id_type"] as? String ?? "Unknown",
                             mac: basicId["MAC"] as? String ?? "",
+                            rssi: basicId["RSSI"] as? Int ?? 0,
                             rawMessage: json
                         )
                     }
@@ -336,7 +390,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 let jsonFormat: [String: Any] = [
                     "Basic ID": [
                         "id": eventAttributes["uid"] ?? "",
-                        "MAC": eventAttributes["MAC"] ?? "",
+                        "mac": eventAttributes["MAC"] ?? "",
+                        "rssi": eventAttributes["RSSI"] ?? "",
                         "id_type": ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
                             ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
                         "ua_type": "Helicopter (or Multirotor)"
@@ -357,8 +412,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         "text": droneDescription
                     ],
                     "AUX_ADV_IND": auxAdvInd ?? [:],
-                        "adtype": adType ?? [:],
-                        "aext": aext ?? [:]
+                    "adtype": adType ?? [:],
+                    "aext": aext ?? [:]
                     
                 ]
                 rawMessage = jsonFormat
@@ -378,12 +433,11 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     uaType: .helicopter,
                     idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
                         ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
-                    mac: "",
+                    mac: eventAttributes["MAC"] ?? "",
+                    rssi: Int(eventAttributes["RSSI"] ?? "") ?? 0,
                     rawMessage: jsonFormat
                 )
             }
-        case "MAC":
-            cotMessage?.mac = currentValue
         case "Speed":
             speed = currentValue
         case "VerticalSpeed":
@@ -457,8 +511,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         
         if let basicID = jsonData["Basic ID"] as? [String: Any] {
             let rawId = basicID["id"] as? String ?? UUID().uuidString
-            let droneId = rawId == "NONE" ? "drone-\(UUID().uuidString)" : "drone-\(rawId)"
-            
+            let droneId = rawId == "NONE" ? "\(UUID().uuidString)" : "\(rawId)"
+            let mac = basicID["MAC"] as? String ?? ""
+            let rssi = basicID["rssi"] as? Int ?? 0
             let idType = basicID["id_type"] as? String ?? "Unknown"
             if idType == "Serial Number (ANSI/CTA-2063-A)" {
                 droneType += "-S"
@@ -511,7 +566,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 description: description,
                 uaType: mapUAType(basicID["ua_type"] as? Int ?? 0),
                 idType: idType,
-                mac: basicID["MAC"] as? String ?? "",
+                mac: mac,
+                rssi: rssi,
                 rawMessage: jsonData
             )
         }

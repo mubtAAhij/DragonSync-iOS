@@ -10,6 +10,8 @@ import CoreLocation
 
 public final class DroneSignatureGenerator {
     // MARK: - Types
+    
+    
     private struct Thresholds {
         static let horizontalPositionMeters: Double = 10.0
         static let verticalPositionMeters: Double = 5.0
@@ -73,7 +75,7 @@ public final class DroneSignatureGenerator {
         }
     }
     
-    struct SpoofDetectionResult {
+    public struct SpoofDetectionResult {
         let isSpoofed: Bool
         let confidence: Double
         let reasons: [String]
@@ -82,10 +84,19 @@ public final class DroneSignatureGenerator {
         let distance: Double
     }
     
+    private var monitorLocation: CLLocation?
+    
+    public func updateMonitorLocation(_ location: CLLocation) {
+        monitorLocation = location
+    }
+    
     // MARK: - Properties
     private var signatureCache: [String: DroneTrackingInfo] = [:]
     private let cachePruneInterval: TimeInterval = 300
     private var lastPruneTime: TimeInterval = 0
+    
+    public var expectedSignal = 0.0
+    public var trueSignal = 0.0
     
     // MARK: - Initialization
     public init() {}
@@ -160,17 +171,18 @@ public final class DroneSignatureGenerator {
     func detectSpoof(_ signature: DroneSignature, fromMonitor monitorStatus: StatusViewModel.StatusMessage) -> SpoofDetectionResult? {
         
         let rssi = signature.transmissionInfo.signalStrength
-        var expectedRssi = 0.0
+        var expectedRssi = signature.transmissionInfo.expectedSignalStrength
+        
         var reasons: [String] = []
         var confidenceScore = 0.0
-
+        
         // Calculate actual distance between monitor and drone
         let monitorPoint = CLLocation(latitude: monitorStatus.gpsData.latitude,
-                                    longitude: monitorStatus.gpsData.longitude)
+                                      longitude: monitorStatus.gpsData.longitude)
         let dronePoint = CLLocation(latitude: signature.position.coordinate.latitude,
-                                  longitude: signature.position.coordinate.longitude)
+                                    longitude: signature.position.coordinate.longitude)
         let distance = monitorPoint.distance(from: dronePoint)
-
+        
         // Calculate expected RSSI using free space path loss formula
         // FSPL = 20 * log10(d) + 20 * log10(f) + 32.44
         // where d is distance in kilometers and f is frequency in MHz
@@ -180,12 +192,12 @@ public final class DroneSignatureGenerator {
         // Compare expected vs actual RSSI
         if ((rssi) != nil) {
             expectedRssi = -(20 * log10(distanceKm) + 20 * log10(frequency) + 32.44)
-            let rssiDelta = abs(rssi! - expectedRssi)
+            let rssiDelta = abs(rssi! - (expectedRssi ?? 0.0))
             
             // Check for significant RSSI discrepancies
             if rssiDelta > 20 {
                 let reason = String(format: "Signal strength deviation: %.1f dB (Expected: %.1f dB, Actual: %.1f dB at %.1f meters)",
-                                    rssiDelta, expectedRssi, rssi!, distance)
+                                    rssiDelta, expectedRssi ?? 0.0, rssi!, distance)
                 reasons.append(reason)
                 confidenceScore += min(rssiDelta / 40.0, 0.5)
             }
@@ -196,7 +208,7 @@ public final class DroneSignatureGenerator {
                 confidenceScore += 0.3
             }
         }
-
+        
         // Check cached history for this drone
         if let history = signatureCache[signature.primaryId.id] {
             // Verify speed consistency
@@ -205,11 +217,11 @@ public final class DroneSignatureGenerator {
                 reasons.append(String(format: "Impossible speed detected: %.1f m/s", maxSpeed))
                 confidenceScore += 0.3
             }
-
+            
             // Check for position jumps without speed changes
             if let lastSig = history.signatures.last,
                distance > 1000 && // More than 1km jump
-               abs(lastSig.movement.groundSpeed - signature.movement.groundSpeed) < 5 {
+                abs(lastSig.movement.groundSpeed - signature.movement.groundSpeed) < 5 {
                 reasons.append("Large position change without corresponding speed change")
                 confidenceScore += 0.2
             }
@@ -220,7 +232,7 @@ public final class DroneSignatureGenerator {
             isSpoofed: confidenceScore >= 0.2,
             confidence: confidenceScore,
             reasons: reasons,
-            expectedRssi: expectedRssi,
+            expectedRssi: expectedRssi ?? 0.0,
             actualRssi: rssi ?? 0.0,
             distance: distance
         )
@@ -237,9 +249,9 @@ public final class DroneSignatureGenerator {
             let curr = signatures[i]
             
             let prevLocation = CLLocation(latitude: prev.position.coordinate.latitude,
-                                        longitude: prev.position.coordinate.longitude)
+                                          longitude: prev.position.coordinate.longitude)
             let currLocation = CLLocation(latitude: curr.position.coordinate.latitude,
-                                        longitude: curr.position.coordinate.longitude)
+                                          longitude: curr.position.coordinate.longitude)
             
             let distance = prevLocation.distance(from: currLocation)
             let timeInterval = curr.timestamp - prev.timestamp
@@ -435,7 +447,6 @@ public final class DroneSignatureGenerator {
                 uaType = .helicopter  // Default if we can't parse UA type
             }
             
-            
             return DroneSignature.IdInfo(
                 id: "ID: \(basicId["id"] as? String ?? UUID().uuidString)",
                 type: .utmAssigned,
@@ -569,7 +580,7 @@ public final class DroneSignatureGenerator {
         )
     }
     
-    private func extractTransmissionInfo(_ message: [String: Any]) -> DroneSignature.TransmissionInfo {
+    public func extractTransmissionInfo(_ message: [String: Any]) -> DroneSignature.TransmissionInfo {
         let type: DroneSignature.TransmissionInfo.TransmissionType
         let messageType: DroneSignature.TransmissionInfo.MessageType
         var metadata: [String: Any]? = nil
@@ -578,13 +589,47 @@ public final class DroneSignatureGenerator {
         var advAddress: String? = nil
         var did: Int? = nil
         var sid: Int? = nil
-        // Check for RSSI in any message format
         var signalStrength: Double?
+        var expectedSignalStrength: Double?
+        
+        if let remarks = (message["detail"] as? [String: Any])?["remarks"] as? String {
+            // Extract RSSI value using a cleaner regex
+            if let rssiRange = remarks.range(of: "-\\d+(?=dBm)", options: .regularExpression) {
+                let rssiString = String(remarks[rssiRange])
+                signalStrength = Double(rssiString)
+            }
+        }
+        
+        // Calculate expected signal strength for both formats
+        if let location = message["Location/Vector Message"] as? [String: Any],
+           let lat = location["latitude"] as? Double,
+           let lon = location["longitude"] as? Double,
+           let monitorLoc = monitorLocation {
+            let droneLocation = CLLocation(latitude: lat, longitude: lon)
+            let distance = droneLocation.distance(from: monitorLoc)
+            expectedSignalStrength = calculateExpectedRSSI(distance: distance)
+        } else if let point = message["point"] as? [String: Any],
+                  let lat = Double(point["lat"] as? String ?? "0.0"),
+                  let lon = Double(point["lon"] as? String ?? "0.0"),
+                  let monitorLoc = monitorLocation {
+            let droneLocation = CLLocation(latitude: lat, longitude: lon)
+            let distance = droneLocation.distance(from: monitorLoc)
+            expectedSignalStrength = calculateExpectedRSSI(distance: distance)
+        }
+        
+        // Check multiple sources for RSSI
         if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any],
            let rssi = auxAdvInd["rssi"] as? Double {
             signalStrength = rssi
-        } else {
-            // Look for top-level RSSI
+        } else if let basicId = message["Basic ID"] as? [String: Any],
+                  let rssi = basicId["RSSI"] as? Double {
+            signalStrength = rssi
+        } else if let basicId = message["Basic ID"] as? [String: Any],
+                  let rssi = basicId["rssi"] as? Double {
+            signalStrength = rssi
+        } else if let locationVector = message["Location/Vector Message"] as? [String: Any],
+                  let rssi = locationVector["rssi"] as? Double {
+            signalStrength = rssi
         }
         
         if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
@@ -609,10 +654,30 @@ public final class DroneSignatureGenerator {
             type = .unknown
             messageType = .bt45
         }
-
+        
+        // Calculate expected signal strength if possible
+        if let location = message["Location/Vector Message"] as? [String: Any],
+           let lat = location["latitude"] as? Double,
+           let lon = location["longitude"] as? Double {
+            let droneLocation = CLLocation(latitude: lat, longitude: lon)
+            let monitorLocation = CLLocation(latitude: 0, longitude: 0) // Need to get actual monitor location
+            let distance = droneLocation.distance(from: monitorLocation)
+            expectedSignalStrength = calculateExpectedRSSI(distance: distance)
+        } else if let point = message["point"] as? [String: Any],
+                  let lat = point["lat"] as? String,
+                  let lon = point["lon"] as? String,
+                  let latDouble = Double(lat),
+                  let lonDouble = Double(lon) {
+            // Handle XML point format
+            let distanceFromOrigin = sqrt(latDouble * latDouble + lonDouble * lonDouble) * 111000
+            expectedSignalStrength = calculateExpectedRSSI(distance: distanceFromOrigin)
+        }
+        
         return DroneSignature.TransmissionInfo(
             transmissionType: type,
             signalStrength: signalStrength,
+            expectedSignalStrength: expectedSignalStrength,
+            macAddress: ((message["Basic ID"] as? [String: Any])?["MAC"]) as? String,
             frequency: nil,
             protocolType: .openDroneID,
             messageTypes: [messageType],
@@ -624,6 +689,17 @@ public final class DroneSignatureGenerator {
             did: did,
             sid: sid
         )
+        
+    }
+    
+    private func calculateExpectedRSSI(distance: Double) -> Double? {
+        guard distance > 0 else { return nil }
+        
+        let distanceKm = distance / 1000.0
+        let frequency = 2400.0 // 2.4GHz for BLE
+        
+        // Free Space Path Loss (FSPL) formula
+        return -(20 * log10(distanceKm) + 20 * log10(frequency) + 32.44)
     }
     
     private func extractBroadcastPattern(_ message: [String: Any], droneId: String, timestamp: TimeInterval) -> DroneSignature.BroadcastPattern {

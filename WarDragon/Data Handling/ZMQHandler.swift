@@ -216,7 +216,7 @@ class ZMQHandler: ObservableObject {
         let rssi = getFieldValue(json, keys: ["rssi", "signal_strength"], defaultValue: 0) as! Int
 
         return """
-        <event version="2.0" uid="drone-\(serialNumber)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
+        <event version="2.0" uid="\(serialNumber)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
           <point lat="\(droneLat)" lon="\(droneLon)" hae="\(altitude)" ce="9999999" le="999999"/>
           <detail>
             <BasicID>
@@ -282,7 +282,8 @@ class ZMQHandler: ObservableObject {
                 }
                 droneInfo["id_type"] = basicId["id_type"]
                 droneInfo["ua_type"] = basicId["ua_type"]
-                droneInfo["MAC"] = basicId["MAC"]
+                droneInfo["mac"] = basicId["MAC"]
+                droneInfo["rssi"] = basicId["RSSI"]
             }
             
             // Process Location data from any source
@@ -332,7 +333,8 @@ class ZMQHandler: ObservableObject {
                 <precisionlocation geopointsrc="gps" altsrc="gps"/>
                 <BasicID>
                     <DeviceID>\(id)</DeviceID>
-                    <MAC>\(droneInfo["MAC"] as? String ?? droneInfo["mac"] as? String ?? "")</MAC>
+                    <MAC>\(droneInfo["mac"] as? String ?? droneInfo["mac"] as? String ?? "")</MAC>
+                    <RSSI>\(droneInfo["rssi"] as? String ?? droneInfo["rssi"] as? String ?? "")</RSSI>
                     <Type>\(droneInfo["id_type"] as? String ?? "Unknown")</Type>
                     <UAType>\(droneInfo["ua_type"] as? Int ?? 0)</UAType>
                 </BasicID>

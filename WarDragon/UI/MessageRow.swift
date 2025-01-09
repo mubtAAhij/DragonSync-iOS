@@ -24,6 +24,25 @@ struct MessageRow: View {
         cotViewModel.droneSignatures.first(where: { $0.primaryId.id == message.uid })
     }
     
+    
+    private func rssiColor(_ rssi: Double) -> Color {
+        switch rssi {
+        case ..<(-75): return .red
+        case -75..<(-60): return .yellow
+        default: return .green
+        }
+    }
+    
+    private func getRSSI() -> Double {
+        if let rssiValue = (message.rawMessage["Basic ID"] as? [String: Any])?["RSSI"] as? Double ??
+            (message.rawMessage["Basic ID"] as? [String: Any])?["rssi"] as? Double ??
+            (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["rssi"] as? Double ??
+            message.rssi.map(Double.init){
+            return rssiValue
+        }
+        return 0
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Tap Gesture for Entire Row (Excluding Button)
@@ -56,23 +75,15 @@ struct MessageRow: View {
                 Text("Type: \(message.type)")
                     .font(.subheadline)
                 
-                
-                if let transmissionInfo = signature?.transmissionInfo {
+                if (getRSSI() != 0.0) {
+                    let mRSSI = getRSSI()
                     HStack(spacing: 8) {
-                        if let rssi = transmissionInfo.signalStrength {
-                            Label("\(Int(rssi))dBm", systemImage: "antenna.radiowaves.left.and.right")
-                        }
-                        if let channel = transmissionInfo.channel {
-                            Label("CH:\(channel)", systemImage: "number")
-                        }
-                        if transmissionInfo.advMode != nil {
-                            Image(systemName: "dot.radiowaves.left.and.right")
-                        }
+                        Label("\(Int(mRSSI))dBm", systemImage: "antenna.radiowaves.left.and.right")
+                            .font(.caption2)
+                            .foregroundColor(rssiColor(mRSSI))
                     }
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
                 }
-
+                
                 MapView(message: message)
                     .frame(height: 150)
                     .cornerRadius(10)
@@ -105,13 +116,18 @@ struct MessageRow: View {
                                 .foregroundColor(.primary)
                             Spacer()
                             Text(String(format: "Confidence: %.0f%%", details.confidence * 100))
-                                .foregroundColor(.yellow)
+                                .foregroundColor(.primary)
                         }
                         
                         VStack(alignment: .leading) {
+                            // Directly use raw message for RSSI retrieval
+                            let rssiValue = getRSSI()
+                            
+                            let expectedRssi = details.expectedRssi
+                            
                             Text(String(format: "Distance: %.1fm", details.distance))
-                            Text(String(format: "Expected RSSI: %.1f dB", details.expectedRssi))
-                            Text(String(format: "Actual RSSI: %.1f dB", details.actualRssi))
+                            Text(String(format: "Expected RSSI: %.1f dB", expectedRssi))
+                            Text(String(format: "Actual RSSI: %.1f dB", rssiValue))
                         }
                         .font(.caption)
                         .foregroundColor(.secondary)

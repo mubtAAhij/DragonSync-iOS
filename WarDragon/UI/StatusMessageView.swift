@@ -382,6 +382,7 @@ struct StatusMessageView: View {
                     .strokeBorder(Color.green, lineWidth: 1)
             )
         }
+        .background(Color.black)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)

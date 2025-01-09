@@ -45,6 +45,7 @@ class CoTViewModel: ObservableObject {
         // Basic ID fields
         var idType: String
         var mac: String?
+        var rssi: Int?
         
         // Location extended fields
         var timeSpeed: String?
@@ -80,7 +81,6 @@ class CoTViewModel: ObservableObject {
         // Spoof detection
         var isSpoofed: Bool = false
         var spoofingDetails: DroneSignatureGenerator.SpoofDetectionResult?
-        var rssi: Int?
         var channel: Int?
         var phy: Int?
         var accessAddress: Int?
@@ -341,7 +341,7 @@ class CoTViewModel: ObservableObject {
                 
                 // Finally check for regular XML drone message
                 if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
-                    print("Processing XML Drone message")
+                    print("Processing XML Drone message: \(message)")
                     let parser = XMLParser(data: data)
                     let cotParserDelegate = CoTMessageParser()
                     parser.delegate = cotParserDelegate
@@ -378,7 +378,19 @@ class CoTViewModel: ObservableObject {
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
             // Generate/update signature from raw message
-            guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else { return }
+            guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else {
+                print("Failed to create signature from message")
+                return
+            }
+            
+            // Update monitor location if we have a status update
+            if let status = self.statusViewModel.statusMessages.last {
+                let monitorLoc = CLLocation(
+                    latitude: status.gpsData.latitude,
+                    longitude: status.gpsData.longitude
+                )
+                self.signatureGenerator.updateMonitorLocation(monitorLoc)
+            }
             
             // DEBUG - Check for existing signature match
             _ = self.droneSignatures.firstIndex { existing in

@@ -61,15 +61,26 @@ struct DroneDetailView: View {
                         InfoRow(title: "Description", value: message.description)
                     }
                     InfoRow(title: "UA Type", value: message.uaType.rawValue)
-                    if let mac = message.mac {
+                    
+                    // MAC from multiple sources
+                    if let mac = message.mac ??
+                        (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String ??
+                        (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String {
                         InfoRow(title: "MAC", value: mac)
+                    }
+                    
+                    // RSSI from multiple sources
+                    if let rssi = message.rssi ??
+                        (message.rawMessage["Basic ID"] as? [String: Any])?["RSSI"] as? Int ??
+                        (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["rssi"] as? Int {
+                        InfoRow(title: "RSSI", value: "\(rssi) dBm")
                     }
                 }
                 
                 if let aux = message.rawMessage["AUX_ADV_IND"] as? [String: Any],
                    let aext = message.rawMessage["aext"] as? [String: Any] {
                     Group {
-                        SectionHeader(title: "BLE Transmission")
+                        SectionHeader(title: "Transmission Data")
                         if let rssi = aux["rssi"] as? Int {
                             InfoRow(title: "Signal", value: "\(rssi) dBm")
                         }
@@ -146,7 +157,7 @@ struct DroneDetailView: View {
                         }
                     }
                 }
-
+                
                 
                 Group {
                     if message.horizAcc != nil || message.vertAcc != nil || message.baroAcc != nil || message.speedAcc != nil {
@@ -166,7 +177,7 @@ struct DroneDetailView: View {
                         }
                     }
                 }
-
+                
                 
                 if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
                     Group {
