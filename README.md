@@ -11,9 +11,14 @@
   <img src="https://github.com/user-attachments/assets/1f7ea78b-37f7-4ef1-939b-a1291d6216b4">
 </p>
 
-
 - **Real-Time Airspace Monitoring**  
   Track the status and location of Remote ID-compliant UAVs on your iOS device. See flightpaths and comprehensive decoded data of any RID broadcast.
+
+- **Spoof Detection**
+  Uses advanced algorithms to identify anomalies in flight data, providing a confidence score and detailed insights when spoofing is detected.
+
+  ![image](https://github.com/user-attachments/assets/b06547b7-4f04-4e80-a562-232b96cc8a5b)
+
 
 - **Instant System Alerts**  
   Stay informed with real-time status updates about your system’s performance. Memory, CPU, temp and more.
