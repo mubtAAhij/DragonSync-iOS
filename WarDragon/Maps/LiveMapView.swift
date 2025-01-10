@@ -12,6 +12,9 @@ struct LiveMapView: View {
     @ObservedObject var cotViewModel: CoTViewModel
     @State private var mapCameraPosition: MapCameraPosition
     @State private var showDroneList = false
+    @State private var showDroneDetail = false
+    @State private var selectedDrone: CoTViewModel.CoTMessage?
+    @State private var selectedFlightPath: [CLLocationCoordinate2D] = []
     @State private var flightPaths: [String: [(coordinate: CLLocationCoordinate2D, timestamp: Date)]] = [:]
     @State private var lastProcessedDrones: [String: CoTViewModel.CoTMessage] = [:] // Track last processed drones
     @State private var shouldUpdateMapView: Bool = false
@@ -40,7 +43,10 @@ struct LiveMapView: View {
     private var uniqueDrones: [CoTViewModel.CoTMessage] {
         var latestDronePositions: [String: CoTViewModel.CoTMessage] = [:]
         for message in cotViewModel.parsedMessages {
-            latestDronePositions[message.uid] = message
+            // Only include valid messages with coordinates
+            if let _ = message.coordinate {
+                latestDronePositions[message.uid] = message
+            }
         }
         return Array(latestDronePositions.values)
     }
@@ -109,18 +115,20 @@ struct LiveMapView: View {
         .sheet(isPresented: $showDroneList) {
             NavigationView {
                 List(uniqueDrones) { message in
-                    VStack(alignment: .leading) {
-                        Text(message.uid)
-                            .font(.headline)
-                        Text("Position: \(message.lat), \(message.lon)")
-                            .font(.caption)
-                        if !message.description.isEmpty {
-                            Text("Description: \(message.description)")
+                    NavigationLink(destination: DroneDetailView(message: message, flightPath: flightPaths[message.uid]?.map { $0.coordinate } ?? [])) {
+                        VStack(alignment: .leading) {
+                            Text(message.uid)
+                                .font(.headline)
+                            Text("Position: \(message.lat), \(message.lon)")
                                 .font(.caption)
-                        }
-                        if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
-                            Text("Pilot: \(message.pilotLat), \(message.pilotLon)")
-                                .font(.caption)
+                            if !message.description.isEmpty {
+                                Text("Description: \(message.description)")
+                                    .font(.caption)
+                            }
+                            if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
+                                Text("Pilot: \(message.pilotLat), \(message.pilotLon)")
+                                    .font(.caption)
+                            }
                         }
                     }
                 }
@@ -135,6 +143,20 @@ struct LiveMapView: View {
                 }
             }
             .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showDroneDetail) {
+            if let drone = selectedDrone {
+                NavigationView {
+                    DroneDetailView(message: drone, flightPath: selectedFlightPath)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Done") {
+                                    showDroneDetail = false
+                                }
+                            }
+                        }
+                }
+            }
         }
         .onReceive(timer) { _ in
             updateFlightPathsIfNewData()
