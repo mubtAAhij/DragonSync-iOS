@@ -111,13 +111,14 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             // Ensure uid has "wardragon-" prefix
             let fullUid = uid.hasPrefix("wardragon-") ? uid : "wardragon-" + uid
             let serialNumber = eventAttributes["uid"] ?? "unknown"
+            let fullSerialNumber = serialNumber.hasPrefix("wardragon-") ? serialNumber: "wardragon-" + serialNumber
             let lat = Double(pointAttributes["lat"] ?? "0.0") ?? 0.0
             let lon = Double(pointAttributes["lon"] ?? "0.0") ?? 0.0
             let altitude = Double(pointAttributes["hae"] ?? "0.0") ?? 0.0
             
             statusMessage = StatusViewModel.StatusMessage(
                 uid: fullUid,
-                serialNumber: serialNumber,
+                serialNumber: fullSerialNumber,
                 timestamp: uptime,
                 gpsData: .init(
                     latitude: lat,
