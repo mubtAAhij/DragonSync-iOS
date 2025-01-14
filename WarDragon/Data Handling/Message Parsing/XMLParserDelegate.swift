@@ -161,6 +161,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         var rssi: Int?
         var description: String?
         
+        
         // The remarks string should contain drone details; split it by commas or other delimiters
         let components = remarks.components(separatedBy: ", ")
         
@@ -169,10 +170,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             
             // Check for MAC address
             if trimmed.contains("MAC:") {
-                if let startRange = trimmed.range(of: "MAC:"),
-                   let endRange = trimmed.range(of: "RSSI:") {
-                    mac = String(trimmed[startRange.upperBound..<endRange.lowerBound]).trimmingCharacters(in: .whitespaces)
-                }
+                mac = trimmed.replacingOccurrences(of: "MAC:", with: "")
+                            .trimmingCharacters(in: .whitespaces)
+                            .components(separatedBy: " ")[0]
             }
             
             // Check for RSSI
@@ -187,7 +187,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 description = trimmed.replacingOccurrences(of: "Self-ID: ", with: "")
             }
         }
-        
+        print("DEBUG: Remarks are mac \(String(describing: mac)) rssi \(String(describing: rssi)) and desc \(String(describing: description))")
         return (mac, rssi, description)
     }
     
@@ -272,10 +272,6 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         "rssi": rssi ?? 0
                     ]
                 )
-            } else {
-                cotMessage?.mac = mac
-                cotMessage?.rssi = rssi
-                cotMessage?.description = desc ?? cotMessage?.description ?? ""
             }
         case "message":
             if let jsonData = messageContent.data(using: .utf8) {
@@ -588,7 +584,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     uaType: .helicopter,
                     idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
                         ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
-                    mac: "",
+                    mac: eventAttributes["MAC"],
                     rssi: 0,
                     rawMessage: [:]
                 )

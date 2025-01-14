@@ -13,6 +13,7 @@ struct SettingsView: View {
     @ObservedObject var cotHandler : CoTViewModel
     @StateObject private var settings = Settings.shared
     
+    
     var body: some View {
         Form {
             Section("Connection") {
@@ -160,6 +161,7 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .font(.appHeadline)
     }
     
     private var connectionStatusSymbol: String {

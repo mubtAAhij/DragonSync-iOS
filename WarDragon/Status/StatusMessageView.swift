@@ -345,11 +345,11 @@ struct StatusMessageView: View {
                 }
                 Spacer()
                 Text(message.serialNumber)
-                    .font(.system(.headline, design: .monospaced))
+                    .font(.appHeadline)
                 Spacer()
                 Text(formatUptime(message.systemStats.uptime))
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(.orange)
+                    .foregroundColor(.primary)
             }
             .padding(8)
             .background(Color.green)

@@ -177,18 +177,6 @@ class ZMQHandler: ObservableObject {
         // Try parsing as array first (typical for BT/OpenDroneID)
         if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
             var droneInfo: [String: Any] = [:]
-            
-            // Skip if message contains CAA Registration ID
-            if jsonArray.contains(where: { item in
-                guard let basicId = item["Basic ID"] as? [String: Any],
-                      let idType = basicId["id_type"] as? String else {
-                    return false
-                }
-                return idType == "CAA Assigned Registration ID"
-            }) {
-                print("Skipping CAA Registration ID message")
-                return nil
-            }
 
             // Process each message in array
             for message in jsonArray {

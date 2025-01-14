@@ -14,10 +14,11 @@ public struct DroneSignature: Hashable {
         public let type: IdType
         public let protocolVersion: String
         public let uaType: UAType
+        public let macAddress: String?
         
         public enum IdType: String, Hashable {
             case serialNumber = "Serial Number (ANSI/CTA-2063-A)"
-            case caaRegistration = "CAA Registration ID"
+            case caaRegistration = "CAA Assigned Registration ID"
             case utmAssigned = "UTM (USS) Assigned ID"
             case sessionId = "Specific Session ID"
             case unknown = "Unknown"
@@ -46,14 +47,14 @@ public struct DroneSignature: Hashable {
                 switch self {
                 case .none: return "airplane" // Fallback
                 case .aeroplane: return "airplane"
-                case .helicopter: return "airplane" // No specific helicopter symbol available
+                case .helicopter: return "airplane"
                 case .gyroplane: return "airplane.circle"
                 case .hybridLift: return "airplane.circle"
                 case .ornithopter: return "bird"
                 case .glider: return "paperplane"
                 case .kite: return "wind"
-                case .freeballoon: return "balloon" // 'balloon' is available in SF Symbols 3 and later
-                case .captive: return "balloon.fill" // 'balloon.fill' is available in SF Symbols 3 and later
+                case .freeballoon: return "balloon"
+                case .captive: return "balloon.fill"
                 case .airship: return "airplane.circle"
                 case .freeFall: return "arrow.down.circle"
                 case .rocket: return "rocket"
@@ -64,11 +65,12 @@ public struct DroneSignature: Hashable {
             }
         }
         
-        public init(id: String, type: IdType, protocolVersion: String, uaType: UAType) {
+        public init(id: String, type: IdType, protocolVersion: String, uaType: UAType, macAddress: String? = nil) {
             self.id = id
             self.type = type
             self.protocolVersion = protocolVersion
             self.uaType = uaType
+            self.macAddress = macAddress
         }
     }
     

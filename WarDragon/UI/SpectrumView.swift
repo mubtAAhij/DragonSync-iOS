@@ -51,7 +51,7 @@ struct SpectrumView: View {
             if let error = viewModel.connectionError {
                 Text(error)
                     .foregroundColor(.red)
-                    .font(.caption)
+                    .font(.appCaption)
             }
             
             if let latest = viewModel.spectrumData.last {
@@ -172,7 +172,7 @@ struct SpectrumGraphView: View {
                 let freq = Double(data.fc) + freqOffset
                 
                 Text(formatFrequency(freq))
-                    .font(.caption)
+                    .font(.appCaption)
                     .foregroundColor(.gray)
                     .position(x: x, y: geometry.size.height - 10)
             }

@@ -7,6 +7,14 @@
 
 import SwiftUI
 
+extension Font {
+    static let appDefault = Font.system(.body, design: .monospaced)
+    static let appHeadline = Font.system(.headline, design: .monospaced)
+    static let appSubheadline = Font.system(.subheadline, design: .monospaced)
+    static let appCaption = Font.system(.caption, design: .monospaced)
+}
+
+
 @main
 struct WarDragonApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate

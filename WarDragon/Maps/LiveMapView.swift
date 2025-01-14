@@ -118,16 +118,16 @@ struct LiveMapView: View {
                     NavigationLink(destination: DroneDetailView(message: message, flightPath: flightPaths[message.uid]?.map { $0.coordinate } ?? [])) {
                         VStack(alignment: .leading) {
                             Text(message.uid)
-                                .font(.headline)
+                                .font(.appHeadline)
                             Text("Position: \(message.lat), \(message.lon)")
-                                .font(.caption)
+                                .font(.appCaption)
                             if !message.description.isEmpty {
                                 Text("Description: \(message.description)")
-                                    .font(.caption)
+                                    .font(.appCaption)
                             }
                             if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
                                 Text("Pilot: \(message.pilotLat), \(message.pilotLon)")
-                                    .font(.caption)
+                                    .font(.appCaption)
                             }
                         }
                     }

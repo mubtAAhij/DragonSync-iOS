@@ -185,7 +185,7 @@ class CoTViewModel: ObservableObject {
         let parameters = NWParameters.udp
         parameters.allowLocalEndpointReuse = true
         parameters.prohibitedInterfaceTypes = [.cellular]
-        parameters.requiredInterfaceType = .wifi
+//        parameters.requiredInterfaceType = .wifi
         
         do {
             cotListener = try NWListener(using: parameters, on: NWEndpoint.Port(integerLiteral: cotPortMC))
@@ -395,7 +395,7 @@ class CoTViewModel: ObservableObject {
             // DEBUG - Check for existing signature match
             _ = self.droneSignatures.firstIndex { existing in
                 let matchScore = self.signatureGenerator.matchSignatures(existing, signature)
-                print("Checking for existing match, score: \(matchScore)")
+//                print("Checking for existing match, score: \(matchScore)")
                 return matchScore > 0.42 // High confidence threshold
             }
             

@@ -33,14 +33,63 @@ struct MessageRow: View {
         }
     }
     
-    private func getRSSI() -> Double {
+    private func getRSSI() -> Double? {
+        // Get RSSI from transmission info or raw message
+        if let signature = signature,
+           let rssi = signature.transmissionInfo.signalStrength {
+            return rssi
+        }
+        
+        // Fallback to raw message parsing
         if let rssiValue = (message.rawMessage["Basic ID"] as? [String: Any])?["RSSI"] as? Double ??
             (message.rawMessage["Basic ID"] as? [String: Any])?["rssi"] as? Double ??
             (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["rssi"] as? Double ??
-            message.rssi.map(Double.init){
+            message.rssi.map(Double.init) {
             return rssiValue
         }
-        return 0
+        
+        // Check remarks field for RSSI
+        if let details = message.rawMessage["detail"] as? [String: Any],
+           let remarks = details["remarks"] as? String,
+           let match = remarks.firstMatch(of: /RSSI[: ]*(-?\d+)/) {
+            return Double(match.1)
+        }
+        return nil
+    }
+    
+    private func getMAC() -> String? {
+        // Check signature for MAC
+        if let signature = signature,
+           let mac = signature.transmissionInfo.macAddress {
+            return mac
+        }
+        
+        // Fallback to raw message parsing
+        if let macValue = (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String ??
+            (message.rawMessage["Basic ID"] as? [String: Any])?["mac"] as? String ??
+            (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["mac"] as? String {
+            return macValue
+        }
+        
+        // Check remarks field for MAC address
+        if let details = message.rawMessage["detail"] as? [String: Any],
+           let remarks = details["remarks"] as? String,
+           let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/) {
+            return String(match.1) // Convert Substring to String
+        }
+        print("Signature MAC: \(signature?.transmissionInfo.macAddress ?? "nil")")
+        print("Raw Message MACs: \(message.rawMessage)")
+        
+        if let details = message.rawMessage["detail"] as? [String: Any],
+           let remarks = details["remarks"] as? String {
+            print("Remarks: \(remarks)")
+            if let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/) {
+                print("Regex Match: \(match.1)")
+                return String(match.1)
+            }
+        }
+        
+        return nil
     }
     
     var body: some View {
@@ -51,7 +100,7 @@ struct MessageRow: View {
                     Image(systemName: signature?.primaryId.uaType.icon ?? "airplane")
                         .foregroundColor(.blue)
                     Text("ID: \(message.id)")
-                        .font(.headline)
+                        .font(.appHeadline)
                     
                     Spacer()
                     
@@ -73,14 +122,14 @@ struct MessageRow: View {
                 }
                 
                 Text("Type: \(message.type)")
-                    .font(.subheadline)
+                    .font(.appSubheadline)
                 
                 if (getRSSI() != 0.0) {
                     let mRSSI = getRSSI()
                     HStack(spacing: 8) {
-                        Label("\(Int(mRSSI))dBm", systemImage: "antenna.radiowaves.left.and.right")
-                            .font(.caption2)
-                            .foregroundColor(rssiColor(mRSSI))
+                        Label("\(Int(mRSSI ?? 0.0))dBm", systemImage: "antenna.radiowaves.left.and.right")
+                            .font(.appCaption)
+                            .foregroundColor(rssiColor(mRSSI ?? 0.0))
                     }
                 }
                 
@@ -93,18 +142,20 @@ struct MessageRow: View {
                     )
                 
                 Group {
-                    Text("Position: \(message.lat), \(message.lon)")
-                    Text("Altitude: \(message.alt)m AGL: \(message.height)m")
-                    Text("Speed: \(message.speed)m/s Vertical: \(message.vspeed)m/s")
-                    if !message.pilotLat.isEmpty {
+                    if message.lat != "0.0" {
+                        Text("Position: \(message.lat), \(message.lon)")
+                        Text("Altitude: \(message.alt)m AGL: \(message.height)m")
+                        Text("Speed: \(message.speed)m/s Vertical: \(message.vspeed)m/s")
+                    }
+                    if message.pilotLat != "0.0" {
                         Text("Pilot Location: \(message.pilotLat), \(message.pilotLon)")
                     }
-                    if !message.description.isEmpty {
-                        Text("Description: \(message.description)")
+                    if (message.mac != nil) {
+                        Text("MAC: \(message.mac ?? "")")
                     }
                 }
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.appCaption)
+                .foregroundColor(.primary)
                 
                 // Spoof detection
                 if message.isSpoofed, let details = message.spoofingDetails {
@@ -120,21 +171,19 @@ struct MessageRow: View {
                         }
                         
                         VStack(alignment: .leading) {
-                            // Directly use raw message for RSSI retrieval
-                            let rssiValue = getRSSI()
                             
                             let expectedRssi = details.expectedRssi
                             
                             Text(String(format: "Distance: %.1fm", details.distance))
                             Text(String(format: "Expected RSSI: %.1f dB", expectedRssi))
-                            Text(String(format: "Actual RSSI: %.1f dB", rssiValue))
+                            Text(String(format: "Actual RSSI: %.1f dB", getRSSI() ?? 0.0))
                         }
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundColor(.secondary)
                         
                         ForEach(details.reasons, id: \.self) { reason in
                             Text("• \(reason)")
-                                .font(.caption)
+                                .font(.appCaption)
                                 .foregroundColor(.primary)
                         }
                     }
@@ -150,6 +199,11 @@ struct MessageRow: View {
         }
         .cornerRadius(8)
         .padding(.vertical, 8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.primary, lineWidth: 3)
+                .padding(-8)
+        )
         .sheet(item: $activeSheet) { sheetType in
             switch sheetType {
             case .liveMap:

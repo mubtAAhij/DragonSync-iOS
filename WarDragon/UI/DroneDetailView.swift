@@ -54,7 +54,7 @@ struct DroneDetailView: View {
                 }
                 .frame(height: 300)
                 .cornerRadius(12)
-                
+                .font(.appDefault)
                 Group {
                     InfoRow(title: "ID", value: message.uid)
                     if !message.description.isEmpty {
@@ -103,9 +103,6 @@ struct DroneDetailView: View {
                         }
                     }
                 }
-                
-                // Groups for Position, Movement, etc remain exactly the same
-                // Rest of the code remains unchanged
                 
                 Group {
                     SectionHeader(title: "Position")
@@ -219,6 +216,7 @@ struct DroneDetailView: View {
             .padding()
         }
         .navigationTitle("Drone Details")
+        .font(.appSubheadline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
@@ -256,7 +254,7 @@ struct SectionHeader: View {
     
     var body: some View {
         Text(title)
-            .font(.headline)
+            .font(.appHeadline)
             .padding(.top, 8)
     }
 }

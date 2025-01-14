@@ -128,7 +128,24 @@ public final class DroneSignatureGenerator {
         return signature
     }
     
-    public func matchSignatures(_ current: DroneSignature, _ candidate: DroneSignature) -> Double {
+    func matchSignatures(_ current: DroneSignature, _ candidate: DroneSignature) -> Double {
+        // Extract MAC addresses from all possible sources
+        let currentMac = current.transmissionInfo.macAddress ??
+            (current.transmissionInfo.metadata?["Basic ID"] as? [String: Any])?["MAC"] as? String ??
+            (current.transmissionInfo.metadata?["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
+            
+        let candidateMac = candidate.transmissionInfo.macAddress ??
+            (candidate.transmissionInfo.metadata?["Basic ID"] as? [String: Any])?["MAC"] as? String ??
+            (candidate.transmissionInfo.metadata?["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
+        
+        // If we have valid MACs and they match, it's the same drone
+        if let currentMac = currentMac,
+           let candidateMac = candidateMac,
+           !currentMac.isEmpty && !candidateMac.isEmpty &&
+           currentMac == candidateMac {
+            return 1.0 // Perfect match
+        }
+        
         var matchStrength = 0.0
         var matchedFields = Set<SignatureMatch.MatchField>()
         
@@ -218,15 +235,15 @@ public final class DroneSignatureGenerator {
                 confidenceScore += 0.3
             }
             
-            // Check for position jumps without speed changes
-            if let lastSig = history.signatures.last,
-               distance > 1000 && // More than 1km jump
-                abs(lastSig.movement.groundSpeed - signature.movement.groundSpeed) < 5 {
-                reasons.append("Large position change without corresponding speed change")
-                confidenceScore += 0.2
-            }
+//            // Check for position jumps without speed changes
+//            if let lastSig = history.signatures.last,
+//               distanceKm > 10 &&
+//                abs(lastSig.movement.groundSpeed - signature.movement.groundSpeed) < 5 {
+//                reasons.append("Large position change without corresponding speed change: \(distanceKm)")
+//                confidenceScore += 0.2
+//            }
         }
-        print("Spoof confidence: \(confidenceScore)")
+//        print("DEGUG - Spoof confidence: \(confidenceScore)")
         
         return SpoofDetectionResult(
             isSpoofed: confidenceScore >= 0.2,
@@ -448,13 +465,13 @@ public final class DroneSignatureGenerator {
             }
             
             return DroneSignature.IdInfo(
-                id: "ID: \(basicId["id"] as? String ?? UUID().uuidString)",
+                id: basicId["id"] as? String ?? "Unknown",
                 type: .utmAssigned,
                 protocolVersion: "1.0",
                 uaType: uaType
             )
         } else if message["AUX_ADV_IND"] != nil {
-            let addr = (message["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String ?? UUID().uuidString
+            let addr = (message["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String ?? "Unknown"
             return DroneSignature.IdInfo(
                 id: "ID: \(addr)",
                 type: .serialNumber,
@@ -462,7 +479,7 @@ public final class DroneSignatureGenerator {
                 uaType: .none // Default until we parse BT UA type
             )
         } else if let droneId = message["DroneID"] as? [String: Any] {
-            let mac = droneId.keys.first ?? generateFingerprint(from: droneId)
+            let mac = droneId.keys.first ?? "Unknown"
             return DroneSignature.IdInfo(
                 id: "ID: \(mac)",
                 type: .unknown,
@@ -472,7 +489,7 @@ public final class DroneSignatureGenerator {
         }
         
         return DroneSignature.IdInfo(
-            id: UUID().uuidString,
+            id: "Unknown",
             type: .unknown,
             protocolVersion: "1.0",
             uaType: .helicopter
