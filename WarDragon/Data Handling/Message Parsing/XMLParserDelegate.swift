@@ -11,6 +11,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     // MARK: - Properties
     private var rawMessage: [String: Any]?
     private var currentElement = ""
+    private var currentIdType: String = "Unknown"
     private var parentElement = ""
     private var elementStack: [String] = []
     private var eventAttributes: [String: String] = [:]
@@ -107,13 +108,15 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             parseRemarks(remarks)
         case "event":
             let uid = eventAttributes["uid"] ?? "unknown"
+            // Ensure uid has "wardragon-" prefix
+            let fullUid = uid.hasPrefix("wardragon-") ? uid : "wardragon-" + uid
             let serialNumber = eventAttributes["uid"] ?? "unknown"
             let lat = Double(pointAttributes["lat"] ?? "0.0") ?? 0.0
             let lon = Double(pointAttributes["lon"] ?? "0.0") ?? 0.0
             let altitude = Double(pointAttributes["hae"] ?? "0.0") ?? 0.0
             
             statusMessage = StatusViewModel.StatusMessage(
-                uid: uid,
+                uid: fullUid,
                 serialNumber: serialNumber,
                 timestamp: uptime,
                 gpsData: .init(
@@ -157,16 +160,29 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         var rssi: Int?
         var description: String?
         
+        // The remarks string should contain drone details; split it by commas or other delimiters
         let components = remarks.components(separatedBy: ", ")
+        
         for component in components {
             let trimmed = component.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("MAC:") {
-                mac = trimmed.replacingOccurrences(of: "MAC: ", with: "")
-            } else if trimmed.hasPrefix("RSSI:") {
+            
+            // Check for MAC address
+            if trimmed.contains("MAC:") {
+                if let startRange = trimmed.range(of: "MAC:"),
+                   let endRange = trimmed.range(of: "RSSI:") {
+                    mac = String(trimmed[startRange.upperBound..<endRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+                }
+            }
+            
+            // Check for RSSI
+            if trimmed.contains("RSSI:") {
                 let rssiString = trimmed.replacingOccurrences(of: "RSSI: ", with: "")
-                                      .replacingOccurrences(of: "dBm", with: "")
+                    .replacingOccurrences(of: "dBm", with: "")
                 rssi = Int(rssiString)
-            } else if trimmed.hasPrefix("Self-ID:") {
+            }
+            
+            // Check for description (Self-ID)
+            if trimmed.contains("Self-ID:") {
                 description = trimmed.replacingOccurrences(of: "Self-ID: ", with: "")
             }
         }
@@ -174,10 +190,11 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         return (mac, rssi, description)
     }
     
+    
     private func parseRemarks(_ remarks: String) {
         let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         for component in components {
-//            print("Processing component: \(component)")
+            //            print("Processing component: \(component)")
             if component.hasPrefix("CPU Usage:") {
                 cpuUsage = Double(component.replacingOccurrences(of: "CPU Usage: ", with: "").replacingOccurrences(of: "%", with: "")) ?? 0.0
             } else if component.hasPrefix("Memory Total:") {
@@ -223,7 +240,14 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         case "remarks":
             let (mac, rssi, desc) = parseDroneRemarks(remarks)
             
-//            print("DEBUG - Parsing Remarks: MAC = \(mac ?? "nil"), RSSI = \(rssi != nil ? "\(rssi!)" : "nil"), Description = \(desc ?? "nil")")
+            let idType = ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
+            ((eventAttributes["type"]?.contains("-R")) != nil) ? "'CAA Assigned Registration ID" : "None"
+            
+            if idType == "CAA Registration ID" {
+                print("Skipping XML CAA Registration ID message")
+                cotMessage = nil
+                return
+            }
             
             if cotMessage == nil {
                 cotMessage = CoTViewModel.CoTMessage(
@@ -239,8 +263,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     pilotLon: pilotLon,
                     description: desc ?? "",
                     uaType: .helicopter,
-                    idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
-                        ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
+                    idType: idType,
                     mac: mac,
                     rssi: rssi,
                     rawMessage: [
@@ -257,6 +280,18 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             if let jsonData = messageContent.data(using: .utf8) {
                 // Try to parse as array first
                 if let jsonArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
+                    // Check for CAA Registration ID first
+                    if jsonArray.contains(where: { item in
+                        if let basicId = item["Basic ID"] as? [String: Any],
+                           let idType = basicId["id_type"] as? String {
+                            return idType == "CAA Assigned Registration ID"
+                        }
+                        return false
+                    }) {
+                        print("Skipping message with CAA Registration ID")
+                        cotMessage = nil  // Explicitly clear any partial message
+                        return
+                    }
                     // Store complete array for signature generation
                     rawMessage = ["messages": jsonArray]
                     
@@ -279,6 +314,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     // Define what to grab
                     var droneId: String?
                     var droneMAC: String?
+                    var droneRSSI: Int?
                     var description = ""
                     var location: [String: Any]?
                     var system: [String: Any]?
@@ -291,6 +327,14 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         if let basicId = message["Basic ID"] as? [String: Any],
                            let id = basicId["id"] as? String,
                            !id.isEmpty {
+                            idType = basicId["id_type"] as? String ?? "Unknown"
+                            
+                            // Skip if CAA Registration ID
+                            guard idType != "CAA Assigned Registration ID" && idType != "None" else {
+                                print("Skipping message with ID type: \(idType)")
+                                return
+                            }
+                            
                             droneId = id
                             droneMAC = basicId["MAC"] as? String ??
                             (aext?["AdvA"] as? String)?.components(separatedBy: " ").first
@@ -298,6 +342,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             if let uaTypeStr = basicId["ua_type"] as? String {
                                 uaType = mapUAType(uaTypeStr)
                             }
+                            droneRSSI = basicId["RSSI"] as? Int
                             
                             if idType == "Serial Number (ANSI/CTA-2063-A)" {
                                 droneType += "-S"
@@ -316,6 +361,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             location = locMsg
                         } else if let sysMsg = message["System Message"] as? [String: Any] {
                             system = sysMsg
+                            if let pilotLocation = system?["PilotLocation"] as? [String: Any] {
+                                let pilotLat = pilotLocation["lat"] as? Double ?? 0.0
+                                let pilotLon = pilotLocation["lon"] as? Double ?? 0.0
+                                // Add pilot location to the message
+                                cotMessage?.pilotLat = String(pilotLat)
+                                cotMessage?.pilotLon = String(pilotLon)
+                            }
                             if system?["operator_lat"] != nil || system?["operator_lon"] != nil {
                                 droneType += "-O"
                             }
@@ -343,6 +395,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             uaType: uaType,
                             idType: idType,
                             mac: droneMAC ?? "",
+                            rssi: droneRSSI,
                             // Include all BLE/transmission data
                             rawMessage: [
                                 "messages": jsonArray,
@@ -357,12 +410,23 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 else if let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
                     rawMessage = json
                     print("Found single objects.. \(String(describing: rawMessage))")
+                    
                     if let basicId = json["Basic ID"] as? [String: Any],
                        let id = basicId["id"] as? String {
+                        let idType = basicId["id_type"] as? String ?? "Unknown"
                         let droneType = buildDroneType(json)
                         let location = json["Location/Vector Message"] as? [String: Any]
                         let system = json["System Message"] as? [String: Any]
+                        let pilotLocation = system?["PilotLocation"] as? [String: Any]
                         let selfId = json["Self-ID Message"] as? [String: Any]
+                        let pilotLat = String(describing: pilotLocation?["lat"] ?? "Unknown")
+                        let pilotLon = String(describing: pilotLocation?["lon"] ?? "Unknown")
+                        
+                        // Skip if CAA Registration ID
+                        guard idType != "CAA Assigned Registration ID" && idType != "None" else {
+                            print("Skipping message with ID type: \(idType)")
+                            return
+                        }
                         
                         cotMessage = CoTViewModel.CoTMessage(
                             uid: id,
@@ -373,8 +437,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
                             alt: String(describing: location?["geodetic_altitude"] ?? "0.0"),
                             height: String(describing: location?["height_agl"] ?? "0.0"),
-                            pilotLat: String(describing: system?["latitude"] ?? "0.0"),
-                            pilotLon: String(describing: system?["longitude"] ?? "0.0"),
+                            pilotLat: pilotLat,
+                            pilotLon: pilotLon,
                             description: selfId?["text"] as? String ?? "",
                             uaType: mapUAType(basicId["ua_type"] as? String),
                             idType: basicId["id_type"] as? String ?? "Unknown",
@@ -449,12 +513,18 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         case "Description":
             droneDescription = currentValue
         case "lat":
-            if parent == "PilotLocation" {
+            switch parent {
+            case "PilotLocation":
                 pilotLat = currentValue
+            default:
+                break
             }
         case "lon":
-            if parent == "PilotLocation" {
+            switch parent {
+            case "PilotLocation":
                 pilotLon = currentValue
+            default:
+                break
             }
         case "TimeSpeed":
             cotMessage?.timeSpeed = currentValue
@@ -500,6 +570,48 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             cotMessage?.authTimestamp = currentValue
         case "authData":
             cotMessage?.authData = currentValue
+        case "DeviceID":
+            if cotMessage == nil {
+                cotMessage = CoTViewModel.CoTMessage(
+                    uid: currentValue,
+                    type: eventAttributes["type"] ?? "",
+                    lat: pointAttributes["lat"] ?? "0.0",
+                    lon: pointAttributes["lon"] ?? "0.0",
+                    speed: speed,
+                    vspeed: vspeed,
+                    alt: alt,
+                    height: height,
+                    pilotLat: pilotLat,
+                    pilotLon: pilotLon,
+                    description: droneDescription,
+                    uaType: .helicopter,
+                    idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
+                        ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
+                    mac: "",
+                    rssi: 0,
+                    rawMessage: [:]
+                )
+            } else {
+                cotMessage?.uid = currentValue
+            }
+            
+        case "MAC":
+            if parent == "BasicID" {
+                cotMessage?.mac = currentValue
+                if var rawMessage = cotMessage?.rawMessage {
+                    rawMessage["MAC"] = currentValue
+                    cotMessage?.rawMessage = rawMessage
+                }
+            }
+            
+        case "RSSI":
+            if parent == "BasicID" {
+                cotMessage?.rssi = Int(currentValue)
+                if var rawMessage = cotMessage?.rawMessage {
+                    rawMessage["RSSI"] = currentValue
+                    cotMessage?.rawMessage = rawMessage
+                }
+            }
         default:
             break
         }
@@ -508,6 +620,12 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     func parseESP32Message(_ jsonData: [String: Any]) -> CoTViewModel.CoTMessage? {
         print("Starting ESP32 parsing")
         var droneType = "a-f-G-U"
+        
+        if let basicId = jsonData["Basic ID"] as? [String: Any],
+           let idType = basicId["id_type"] as? String,
+           idType == "CAA Assigned Registration ID" {
+            return nil
+        }
         
         if let basicID = jsonData["Basic ID"] as? [String: Any] {
             let rawId = basicID["id"] as? String ?? UUID().uuidString
