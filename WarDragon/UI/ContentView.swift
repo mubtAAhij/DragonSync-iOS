@@ -35,8 +35,19 @@ struct ContentView: View {
                             MessageRow(message: item, cotViewModel: cotViewModel)
                         }
                         .listStyle(.inset)
-                        .onChange(of: cotViewModel.parsedMessages) {
-                            if let latest = cotViewModel.parsedMessages.last {
+                        .onChange(of: cotViewModel.parsedMessages) { oldMessages, newMessages in
+                            // Find the last message
+                            if let changedMessage = newMessages.last(where: { newMsg in
+                                oldMessages.first(where: { $0.id == newMsg.id && $0 != newMsg }) != nil
+                            }) {
+                                latestMessage = changedMessage
+                                showAlert = false
+                                withAnimation {
+                                    proxy.scrollTo(changedMessage.id, anchor: .bottom)
+                                }
+                            }
+                            // Scroll to new one
+                            else if let latest = newMessages.last, oldMessages.count != newMessages.count {
                                 latestMessage = latest
                                 showAlert = false
                                 withAnimation {
@@ -47,8 +58,6 @@ struct ContentView: View {
                     }
                 }
                 .navigationTitle("DragonSync")
-                .navigationBarTitleDisplayMode(.large)
-                .toolbarColorScheme(.dark, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(action: {
