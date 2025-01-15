@@ -26,6 +26,8 @@ class CoTViewModel: ObservableObject {
     private let listenerQueue = DispatchQueue(label: "CoTListenerQueue")
     private var statusViewModel = StatusViewModel()
     public var isListeningCot = false
+    public var lastMAC = ""
+    public var lastID = ""
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
@@ -84,6 +86,20 @@ class CoTViewModel: ObservableObject {
         var channel: Int?
         var phy: Int?
         var accessAddress: Int?
+        
+        var formattedAltitude: String {
+            if let altValue = Double(alt), altValue != 0 {
+                return String(format: "%.1f m MSL", altValue)
+            }
+            return "N/A"
+        }
+            
+        var formattedHeight: String {
+            if let heightValue = Double(height), heightValue != 0 {
+                return String(format: "%.1f m AGL", heightValue)
+            }
+            return "N/A"
+        }
         
         var rawMessage: [String: Any]
         
@@ -185,7 +201,7 @@ class CoTViewModel: ObservableObject {
         let parameters = NWParameters.udp
         parameters.allowLocalEndpointReuse = true
         parameters.prohibitedInterfaceTypes = [.cellular]
-//        parameters.requiredInterfaceType = .wifi
+        parameters.requiredInterfaceType = .wifi
         
         do {
             cotListener = try NWListener(using: parameters, on: NWEndpoint.Port(integerLiteral: cotPortMC))
@@ -307,7 +323,7 @@ class CoTViewModel: ObservableObject {
             }
             
             if let message = String(data: data, encoding: .utf8) {
-                //                print("Received data: \(message)")
+                 print("Received data: \(message)")
                 
                 // Check for Status message first (has both status code type and remarks with CPU Usage)
                 if message.contains("<remarks>CPU Usage:") {
@@ -329,7 +345,7 @@ class CoTViewModel: ObservableObject {
                    let jsonData = message.data(using: .utf8),
                    let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
                    parsedJson["Basic ID"] != nil {
-                    print("Processing ESP32 Drone message")
+                    print("Processing json message")
                     let parser = CoTMessageParser()
                     if let parsedMessage = parser.parseESP32Message(parsedJson) {
                         DispatchQueue.main.async {
@@ -377,6 +393,20 @@ class CoTViewModel: ObservableObject {
     
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
+        
+            
+            if (self.lastMAC == message.mac){
+                // RuKo sends two messages, decide if it needs update
+                if (self.lastID != message.id) {
+                    print("DEBUG- SAME MAC, DIFFERENT ID WITH ID \(message.id)")
+                    return
+                }
+                
+            }
+            
+            self.lastID = message.id
+            self.lastMAC = message.mac ?? ""
+            
             // Generate/update signature from raw message
             guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else {
                 print("Failed to create signature from message")
@@ -395,7 +425,7 @@ class CoTViewModel: ObservableObject {
             // DEBUG - Check for existing signature match
             _ = self.droneSignatures.firstIndex { existing in
                 let matchScore = self.signatureGenerator.matchSignatures(existing, signature)
-//                print("Checking for existing match, score: \(matchScore)")
+                print("Checking for existing match, score: \(matchScore)")
                 return matchScore > 0.42 // High confidence threshold
             }
             

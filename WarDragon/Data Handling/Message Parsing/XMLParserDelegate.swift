@@ -157,11 +157,10 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     }
     
     private func parseDroneRemarks(_ remarks: String) -> (String?, Int?, String?) {
+        print("DEBUG- Parsing drone remarks: \(remarks)")
         var mac: String?
         var rssi: Int?
         var description: String?
-        
-        
         // The remarks string should contain drone details; split it by commas or other delimiters
         let components = remarks.components(separatedBy: ", ")
         
@@ -187,7 +186,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 description = trimmed.replacingOccurrences(of: "Self-ID: ", with: "")
             }
         }
-        print("DEBUG: Remarks are mac \(String(describing: mac)) rssi \(String(describing: rssi)) and desc \(String(describing: description))")
+        print("DEBUG: Parsed Remarks are mac \(String(describing: mac)) rssi \(String(describing: rssi)) and desc \(String(describing: description))")
         return (mac, rssi, description)
     }
     

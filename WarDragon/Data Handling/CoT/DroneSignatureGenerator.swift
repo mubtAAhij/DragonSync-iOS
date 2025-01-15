@@ -131,18 +131,18 @@ public final class DroneSignatureGenerator {
     func matchSignatures(_ current: DroneSignature, _ candidate: DroneSignature) -> Double {
         // Extract MAC addresses from all possible sources
         let currentMac = current.transmissionInfo.macAddress ??
-            (current.transmissionInfo.metadata?["Basic ID"] as? [String: Any])?["MAC"] as? String ??
-            (current.transmissionInfo.metadata?["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
-            
+        (current.transmissionInfo.metadata?["Basic ID"] as? [String: Any])?["MAC"] as? String ??
+        (current.transmissionInfo.metadata?["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
+        
         let candidateMac = candidate.transmissionInfo.macAddress ??
-            (candidate.transmissionInfo.metadata?["Basic ID"] as? [String: Any])?["MAC"] as? String ??
-            (candidate.transmissionInfo.metadata?["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
+        (candidate.transmissionInfo.metadata?["Basic ID"] as? [String: Any])?["MAC"] as? String ??
+        (candidate.transmissionInfo.metadata?["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
         
         // If we have valid MACs and they match, it's the same drone
         if let currentMac = currentMac,
            let candidateMac = candidateMac,
            !currentMac.isEmpty && !candidateMac.isEmpty &&
-           currentMac == candidateMac {
+            currentMac == candidateMac {
             return 1.0 // Perfect match
         }
         
@@ -235,15 +235,15 @@ public final class DroneSignatureGenerator {
                 confidenceScore += 0.3
             }
             
-//            // Check for position jumps without speed changes
-//            if let lastSig = history.signatures.last,
-//               distanceKm > 10 &&
-//                abs(lastSig.movement.groundSpeed - signature.movement.groundSpeed) < 5 {
-//                reasons.append("Large position change without corresponding speed change: \(distanceKm)")
-//                confidenceScore += 0.2
-//            }
+            //            // Check for position jumps without speed changes
+            //            if let lastSig = history.signatures.last,
+            //               distanceKm > 10 &&
+            //                abs(lastSig.movement.groundSpeed - signature.movement.groundSpeed) < 5 {
+            //                reasons.append("Large position change without corresponding speed change: \(distanceKm)")
+            //                confidenceScore += 0.2
+            //            }
         }
-//        print("DEGUG - Spoof confidence: \(confidenceScore)")
+        //        print("DEGUG - Spoof confidence: \(confidenceScore)")
         
         return SpoofDetectionResult(
             isSpoofed: confidenceScore >= 0.2,
@@ -675,10 +675,10 @@ public final class DroneSignatureGenerator {
         // Calculate expected signal strength if possible
         if let location = message["Location/Vector Message"] as? [String: Any],
            let lat = location["latitude"] as? Double,
-           let lon = location["longitude"] as? Double {
+           let lon = location["longitude"] as? Double,
+           let monitorLoc = monitorLocation {
             let droneLocation = CLLocation(latitude: lat, longitude: lon)
-            let monitorLocation = CLLocation(latitude: 0, longitude: 0) // Need to get actual monitor location
-            let distance = droneLocation.distance(from: monitorLocation)
+            let distance = droneLocation.distance(from: monitorLoc)
             expectedSignalStrength = calculateExpectedRSSI(distance: distance)
         } else if let point = message["point"] as? [String: Any],
                   let lat = point["lat"] as? String,
