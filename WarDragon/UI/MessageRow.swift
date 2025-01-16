@@ -77,8 +77,8 @@ struct MessageRow: View {
            let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/) {
             return String(match.1) // Convert Substring to String
         }
-        print("Signature MAC: \(signature?.transmissionInfo.macAddress ?? "nil")")
-        print("Raw Message MACs: \(message.rawMessage)")
+//        print("Signature MAC: \(signature?.transmissionInfo.macAddress ?? "nil")")
+//        print("Raw Message MACs: \(message.rawMessage)")
         
         if let details = message.rawMessage["detail"] as? [String: Any],
            let remarks = details["remarks"] as? String {
@@ -144,7 +144,11 @@ struct MessageRow: View {
                 Group {
                     if message.lat != "0.0" {
                         Text("Position: \(message.lat), \(message.lon)")
-                        Text("Altitude: \(message.alt)m AGL: \(message.height)m")
+                    }
+                    if message.alt != "0.0" {
+                        Text("Altitude: \(message.alt)m Speed: \(message.speed)m/s")
+                    }
+                    if message.speed != "0.0" {
                         Text("Speed: \(message.speed)m/s Vertical: \(message.vspeed)m/s")
                     }
                     if message.pilotLat != "0.0" {

@@ -26,6 +26,11 @@ struct ContentView: View {
         _selectedTab = State(initialValue: Settings.shared.isListening ? 0 : 2)
     }
     
+    func clearID() {
+        cotViewModel.lastID = ""
+        cotViewModel.lastMAC = ""
+    }
+    
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
@@ -63,6 +68,7 @@ struct ContentView: View {
                         Button(action: {
                             cotViewModel.parsedMessages.removeAll()  // Remove UI messages
                             cotViewModel.droneSignatures.removeAll() // Ditch old signatures BUGFIX #112
+                            clearID()
                         }) {
                             Image(systemName: "trash")
                         }
