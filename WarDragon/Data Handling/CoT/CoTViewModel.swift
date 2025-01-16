@@ -26,8 +26,8 @@ class CoTViewModel: ObservableObject {
     private let listenerQueue = DispatchQueue(label: "CoTListenerQueue")
     private var statusViewModel = StatusViewModel()
     public var isListeningCot = false
-    public var lastMAC = ""
-    public var lastID = ""
+    public var macIdHistory: [String: Set<String>] = [:]
+    public var macProcessing: [String: Bool] = [:]
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
@@ -93,7 +93,7 @@ class CoTViewModel: ObservableObject {
             }
             return "N/A"
         }
-            
+        
         var formattedHeight: String {
             if let heightValue = Double(height), heightValue != 0 {
                 return String(format: "%.1f m AGL", heightValue)
@@ -323,7 +323,7 @@ class CoTViewModel: ObservableObject {
             }
             
             if let message = String(data: data, encoding: .utf8) {
-                 print("Received data: \(message)")
+                print("Received data: \(message)")
                 
                 // Check for Status message first (has both status code type and remarks with CPU Usage)
                 if message.contains("<remarks>CPU Usage:") {
@@ -393,25 +393,62 @@ class CoTViewModel: ObservableObject {
     
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
-        
-            
-            if (self.lastMAC == message.mac){
-                // RuKo sends two messages, decide if it needs update
-                if (self.lastID != message.id) {
-                    print("DEBUG- SAME MAC, DIFFERENT ID WITH ID \(message.id)")
-                    return
-                }
-                
-            }
-            
-            self.lastID = message.id
-            self.lastMAC = message.mac ?? ""
-            
             // Generate/update signature from raw message
             guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else {
                 print("Failed to create signature from message")
                 return
             }
+            
+            print("MESSAGE TYPE ID: \(message.idType)")
+            
+            if message.idType == "CAA Assigned Registration ID" {
+                print("skipping CAA message id")
+                return
+            }
+            
+            guard let mac = message.mac else {
+                print("DEBUG - Message has no MAC address")
+                return
+            }
+
+            // Mark this MAC as being processed
+            self.macProcessing[mac] = true
+
+            // Check if the MAC and ID combination is already processed
+            if self.macIdHistory[mac]?.contains(message.id) == true {
+                // DEBUG - Duplicate message for MAC \(mac) with ID \(message.id), already processed.
+                self.macProcessing[mac] = false // Reset the processing flag before returning
+                return
+            }
+
+            // Add the message ID to the history to prevent future duplicates
+            self.macIdHistory[mac, default: Set<String>()].insert(message.id)
+
+            // Process the message
+//            print("DEBUG - Processing new message for MAC \(mac) with ID \(message.id)")
+
+            // Check for existing message with the same MAC
+            if let mac = message.mac, !mac.isEmpty {
+                if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
+                    // Check if the IDs match before updating
+                    if self.parsedMessages[existingIndex].id == message.id {
+                        // Update existing message with the same MAC and same ID
+                        self.parsedMessages[existingIndex] = message
+//                        print("Updated existing message with MAC: \(mac) and ID: \(message.id)")
+                    } else {
+                        print("Skipped updating message for MAC: \(mac) due to ID mismatch.")
+                    }
+                    return
+                }
+            }
+
+            // If no existing message, add the new message
+            self.parsedMessages.append(message)
+            print("Added new message for MAC: \(mac) with ID: \(message.id)")
+
+            // Reset the processing flag
+            self.macProcessing[mac] = false
+
             
             // Update monitor location if we have a status update
             if let status = self.statusViewModel.statusMessages.last {
@@ -425,16 +462,16 @@ class CoTViewModel: ObservableObject {
             // DEBUG - Check for existing signature match
             _ = self.droneSignatures.firstIndex { existing in
                 let matchScore = self.signatureGenerator.matchSignatures(existing, signature)
-                print("Checking for existing match, score: \(matchScore)")
+                //                print("Checking for existing match, score: \(matchScore)")
                 return matchScore > 0.42 // High confidence threshold
             }
             
             // Update signatures collection
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
                 self.droneSignatures[index] = signature
-                print("Updating existing CoT")
+                print("Updating existing drone")
             } else {
-                print("Added new CoT")
+                print("Added new drone")
                 self.droneSignatures.append(signature)
             }
             
@@ -447,7 +484,7 @@ class CoTViewModel: ObservableObject {
                 updatedMessage.spoofingDetails = spoofResult
             }
             
-            // Update messages collection
+            // Update messages collection if no MAC match was found earlier
             if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
                 self.parsedMessages[index] = updatedMessage
             } else {
