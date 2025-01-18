@@ -526,7 +526,14 @@ public final class DroneSignatureGenerator {
         var lon = 0.0
         var alt = 0.0
         
-        if let location = message["Location/Vector Message"] as? [String: Any] {
+        // Handle multicast point format
+        if let point = message["point_attributes"] as? [String: Any] {
+            lat = Double(point["lat"] as? String ?? "0.0") ?? 0.0
+            lon = Double(point["lon"] as? String ?? "0.0") ?? 0.0
+            alt = Double(point["hae"] as? String ?? "0.0") ?? 0.0
+        }
+        // Handle JSON format
+        else if let location = message["Location/Vector Message"] as? [String: Any] {
             lat = location["latitude"] as? Double ?? 0.0
             lon = location["longitude"] as? Double ?? 0.0
             alt = location["geodetic_altitude"] as? Double ?? 0.0
@@ -535,10 +542,12 @@ public final class DroneSignatureGenerator {
         let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
         let operatorLocation: CLLocationCoordinate2D?
         
-        if let system = message["System Message"] as? [String: Any],
-           let opLat = system["latitude"] as? Double,
-           let opLon = system["longitude"] as? Double {
-            operatorLocation = CLLocationCoordinate2D(latitude: opLat, longitude: opLon)
+        // Handle multicast pilot location
+        if let system = message["System"] as? [String: Any],
+           let pilotLoc = system["PilotLocation"] as? [String: Any],
+           let pilotLat = Double(pilotLoc["lat"] as? String ?? "0.0"),
+           let pilotLon = Double(pilotLoc["lon"] as? String ?? "0.0") {
+            operatorLocation = CLLocationCoordinate2D(latitude: pilotLat, longitude: pilotLon)
         } else {
             operatorLocation = nil
         }

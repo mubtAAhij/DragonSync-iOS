@@ -86,6 +86,7 @@ class ZMQHandler: ObservableObject {
                                     if socket === self.telemetrySocket {
                                         if let xmlMessage = self.convertTelemetryToXML(jsonString) {
                                             DispatchQueue.main.async {
+                                                print("Converting to xml: \(jsonString)")
                                                 onTelemetry(xmlMessage)
                                             }
                                         }
@@ -122,7 +123,7 @@ class ZMQHandler: ObservableObject {
     private func configureSocket(_ socket: SwiftyZeroMQ.Socket) throws {
         try socket.setRecvHighWaterMark(1000)
         try socket.setLinger(0)
-        try socket.setRecvTimeout(100) // see if reducing to 100 from 1000 helps get all status messages
+        try socket.setRecvTimeout(250) // longer timeout
         try socket.setImmediate(true)
         
         // Set TCP keep alive to detect connection issues
@@ -145,6 +146,7 @@ class ZMQHandler: ObservableObject {
                                     // Process immediately instead of dispatching
                                     if socket === self.telemetrySocket {
                                         if let xmlMessage = self.convertTelemetryToXML(jsonString) {
+                                            print("Converting to xml: \(xmlMessage)")
                                             onTelemetry(xmlMessage)
                                         }
                                     } else if socket === self.statusSocket {
@@ -171,200 +173,99 @@ class ZMQHandler: ObservableObject {
     
     //MARK: - Message Parsing & Conversion
     
-    func convertTelemetryToXML(_ message: String) -> String? {
-        guard let data = message.data(using: .utf8) else { return nil }
+    func convertTelemetryToXML(_ jsonString: String) -> String? {
+        guard let data = jsonString.data(using: .utf8) else { return nil }
+        print("Raw Message: ", jsonString)
         
-        // Try parsing as array first (typical for BT/OpenDroneID)
+        // Try to parse as array first
         if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-            var droneInfo: [String: Any] = [:]
+            // Find the relevant messages in the array
+            let basicId = jsonArray.first { $0["Basic ID"] != nil }?["Basic ID"] as? [String: Any]
+            let location = jsonArray.first { $0["Location/Vector Message"] != nil }?["Location/Vector Message"] as? [String: Any]
+            let operatorId = jsonArray.first { $0["Operator ID Message"] != nil }?["Operator ID Message"] as? [String: Any]
             
-            // Process each message in array
-            for message in jsonArray {
+            if let basicId = basicId {
+                let idType = basicId["id_type"] as? String ?? ""
+                if idType.contains("CAA") {
+                    print("SKIPPING THE CAA IN XML CONVERSION")
+                    return nil
+                }
+                let droneId = basicId["id"] as? String ?? UUID().uuidString
+                let mac = basicId["MAC"] as? String ?? ""
+                let rssi = basicId["RSSI"] as? Int ?? 0
+               
                 
-                // Basic ID Processing
-                if let basicId = message["Basic ID"] as? [String: Any] {
-                    if droneInfo["id"] == nil {
-                        if let rawId = basicId["id"] as? String {
-                            droneInfo["id"] = rawId.hasPrefix("drone-") ? rawId : "drone-\(rawId)"
-                        }
-                        droneInfo["id_type"] = basicId["id_type"]
-                        droneInfo["ua_type"] = basicId["ua_type"]
-                        droneInfo["mac"] = basicId["MAC"]
-                        droneInfo["rssi"] = basicId["RSSI"]
-                        droneInfo["protocol"] = basicId["protocol_version"]
+                // Parse location data, handling both string and numeric formats
+                var lat = 0.0
+                var lon = 0.0
+                var alt = 0.0
+                var speed = 0.0
+                var vspeed = 0.0
+                var height = 0.0
+                
+                if let location = location {
+                    // Handle latitude
+                    if let latStr = location["latitude"] as? String {
+                        lat = Double(latStr) ?? 0.0
+                    } else if let latNum = location["latitude"] as? Double {
+                        lat = latNum
+                    }
+                    
+                    // Handle longitude
+                    if let lonStr = location["longitude"] as? String {
+                        lon = Double(lonStr) ?? 0.0
+                    } else if let lonNum = location["longitude"] as? Double {
+                        lon = lonNum
+                    }
+                    
+                    // Handle altitude
+                    if let altStr = location["geodetic_altitude"] as? String {
+                        alt = Double(altStr.replacingOccurrences(of: " m", with: "")) ?? 0.0
+                    } else if let altNum = location["geodetic_altitude"] as? Double {
+                        alt = altNum
+                    }
+                    
+                    // Handle speed
+                    if let speedStr = location["speed"] as? String {
+                        speed = Double(speedStr.replacingOccurrences(of: " m/s", with: "")) ?? 0.0
+                    } else if let speedNum = location["speed"] as? Double {
+                        speed = speedNum
+                    }
+                    
+                    // Handle vertical speed
+                    if let vspeedStr = location["vert_speed"] as? String {
+                        vspeed = Double(vspeedStr.replacingOccurrences(of: " m/s", with: "")) ?? 0.0
+                    } else if let vspeedNum = location["vert_speed"] as? Double {
+                        vspeed = vspeedNum
+                    }
+                    
+                    // Handle height
+                    if let heightStr = location["height_agl"] as? String {
+                        height = Double(heightStr.replacingOccurrences(of: " m", with: "")) ?? 0.0
+                    } else if let heightNum = location["height_agl"] as? Double {
+                        height = heightNum
                     }
                 }
                 
-                // Location Data
-                if let location = message["Location/Vector Message"] as? [String: Any] {
-                    droneInfo["lat"] = location["latitude"]
-                    droneInfo["lon"] = location["longitude"]
-                    droneInfo["speed"] = location["speed"]
-                    droneInfo["vspeed"] = location["vert_speed"]
-                    droneInfo["alt"] = location["geodetic_altitude"]
-                    droneInfo["height"] = location["height_agl"]
-                    droneInfo["vertical_accuracy"] = location["vertical_accuracy"]
-                    droneInfo["horizantal_accuracy"] = location["horizantal_accuracy"]
-                    droneInfo["baro_accuracy"] = location["baro_accuracy"]
-                    droneInfo["speed_accuracy"] = location["speed_accuracy"]
-                    droneInfo["timestamp_accuracy"] = location["timestamp_accuracy"]
-                    droneInfo["alt_pressure"] = location["alt_pressure"]
-                    droneInfo["baro_acc"] = location["baro_acc"]
-                    droneInfo["direction"] = location["direction"]
-                    droneInfo["height_type"] = location["height_type"]
-                    droneInfo["horiz_acc"] = location["horiz_acc"]
-                    droneInfo["speed_acc"] = location["speed_acc"]
-                    droneInfo["vert_acc"] = location["vert_acc"]
-                    droneInfo["timestamp"] = location["timestamp"]
-                    droneInfo["op_status"] = location["op_status"]
-                    droneInfo["ew_dir_segment"] = location["ew_dir_segment"]
-                    droneInfo["direction"] = location["direction"]
-                    droneInfo["speed_multiplier"] = location["speed_multiplier"]
-                }
+                let now = ISO8601DateFormatter().string(from: Date())
+                let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
                 
-                // Auth Message
-                if let auth = message["Authentication Message"] as? [String: Any] {
-                    droneInfo["auth_type"] = auth["auth_type"]
-                    droneInfo["auth_data"] = auth["auth_data"]
-                    droneInfo["auth_timestamp"] = auth["timestamp"]
-                    droneInfo["auth_page"] = auth["page"]
-                    droneInfo["auth_length"] = auth["length"]
-                }
-                
-                // Self ID
-                if let selfId = message["Self-ID Message"] as? [String: Any] {
-                    droneInfo["text"] = selfId["text"]
-                }
-                
-                // System Message
-                if let system = message["System Message"] as? [String: Any] {
-                    droneInfo["pilot_lon"] = system["longitude"]
-                    droneInfo["pilot_lat"] = system["latitude"]
-                    droneInfo["operator_location_type"] = system["operator_location_type"]
-                    droneInfo["classification_type"] = system["classification_type"]
-                    droneInfo["area_count"] = system["area_count"]
-                    droneInfo["area_radius"] = system["area_radius"]
-                    droneInfo["area_ceiling"] = system["area_ceiling"]
-                    droneInfo["area_floor"] = system["area_floor"]
-                    droneInfo["classification"] = system["classification"]
-                    droneInfo["operator_alt_geo"] = system["operator_alt_geo"]
-                    droneInfo["ua_classification_category_type"] = system["ua_classification_category_type"]
-                    droneInfo["ua_classification_category_class"] = system["ua_classification_category_class"]
-                    droneInfo["geodetic_altitude"] = system["geodetic_altitude"]
-                    droneInfo["timestamp"] = system["timestamp"]
-                }
-                
-                // Operator ID
-                if let opId = message["Operator ID Message"] as? [String: Any] {
-                    droneInfo["operator_id"] = opId["operator_id"]
-                }
-                
-                // ZMQ Transmission specific data
-                if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
-                    if droneInfo["rssi"] == nil {
-                        droneInfo["rssi"] = auxAdvInd["rssi"]
-                    }
-                    droneInfo["channel"] = auxAdvInd["chan"]
-                    droneInfo["phy"] = auxAdvInd["phy"]
-                    if let aext = message["aext"] as? [String: Any] {
-                        if droneInfo["mac"] == nil {
-                            droneInfo["mac"] = (aext["AdvA"] as? String)?.components(separatedBy: " ")[0]
-                        }
-                        droneInfo["adv_mode"] = aext["AdvMode"]
-                        if let dataInfo = aext["AdvDataInfo"] as? [String: Any] {
-                            droneInfo["did"] = dataInfo["did"]
-                            droneInfo["sid"] = dataInfo["sid"]
-                        }
-                    }
-                }
+                return """
+                <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
+                    <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
+                    <detail>
+                        <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Location/Vector: [Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height) m], Height Type: \(location?["height_type"] as? String ?? ""), Direction: \(location?["direction"] as? Int ?? 0), Timestamp: \(location?["timestamp"] as? String ?? "")]</remarks>
+                        <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
+                        <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
+                        <color argb="-256"/>
+                        <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
+                    </detail>
+                </event>
+                """
             }
-            
-            // Build drone type string
-            var droneType = "a-f-G-U"
-            if let idType = droneInfo["id_type"] as? String {
-                if idType == "Serial Number (ANSI/CTA-2063-A)" {
-                    droneType += "-S"
-                }
-            }
-            if let pilotLat = droneInfo["pilot_lat"] as? Double,
-               let pilotLon = droneInfo["pilot_lon"] as? Double,
-               pilotLat != 0 || pilotLon != 0 {
-                droneType += "-O"
-            }
-            droneType += "-F"
-            
-            let now = ISO8601DateFormatter().string(from: Date())
-            let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
-            
-            // Create XML with all available data
-            return """
-            <event version="2.0" uid="drone-\(droneInfo["id"] as? String ?? UUID().uuidString)" type="\(droneType)" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
-                <point lat="\(droneInfo["lat"] as? Double ?? 0.0)" lon="\(droneInfo["lon"] as? Double ?? 0.0)" hae="\(droneInfo["alt"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
-                <detail>
-                    <BasicID>
-                        <DeviceID>drone-\((droneInfo["id"] as? String)?.replacingOccurrences(of: "^drone-", with: "", options: .regularExpression) ?? "")</DeviceID>
-                        <MAC>\(droneInfo["mac"] as? String ?? "")</MAC>
-                        <RSSI>\(droneInfo["rssi"] as? Int ?? 0)</RSSI>
-                        <Type>\(droneInfo["id_type"] as? String ?? "Unknown")</Type>
-                        <UAType>\(droneInfo["ua_type"] as? String ?? "Helicopter (or Multirotor)")</UAType>
-                    </BasicID>
-                    <LocationVector>
-                        <Speed>\(droneInfo["speed"] as? Double ?? 0.0)</Speed>
-                        <VerticalSpeed>\(droneInfo["vspeed"] as? Double ?? 0.0)</VerticalSpeed>
-                        <Altitude>\(droneInfo["alt"] as? Double ?? 0.0)</Altitude>
-                        <Height>\(droneInfo["height"] as? Double ?? 0.0)</Height>
-                        <TimeSpeed>\(droneInfo["timestamp"] as? String ?? "")</TimeSpeed>
-                        <Direction>\(droneInfo["direction"] as? Int ?? 0)</Direction>
-                        <AltPressure>\(droneInfo["alt_pressure"] as? Double ?? 0.0)</AltPressure>
-                        <HeightType>\(droneInfo["height_type"] as? Int ?? 0)</HeightType>
-                        <HorizAcc>\(droneInfo["horiz_acc"] as? Double ?? 0.0)</HorizAcc>
-                        <VertAcc>\(droneInfo["vert_acc"] as? Double ?? 0.0)</VertAcc>
-                        <SpeedAcc>\(droneInfo["speed_acc"] as? Double ?? 0.0)</SpeedAcc>
-                        <BaroAcc>\(droneInfo["baro_acc"] as? Double ?? 0.0)</BaroAcc>
-                    </LocationVector>
-                    <System>
-                        <PilotLocation>
-                            <lat>\(droneInfo["pilot_lat"] as? Double ?? 0.0)</lat>
-                            <lon>\(droneInfo["pilot_lon"] as? Double ?? 0.0)</lon>
-                        </PilotLocation>
-                        <OperatorAltGeo>\(droneInfo["operator_alt_geo"] as? Double ?? 0.0)</OperatorAltGeo>
-                        <AreaCount>\(droneInfo["area_count"] as? Int ?? 0)</AreaCount>
-                        <AreaRadius>\(droneInfo["area_radius"] as? Double ?? 0.0)</AreaRadius>
-                        <AreaCeiling>\(droneInfo["area_ceiling"] as? Double ?? 0.0)</AreaCeiling>
-                        <AreaFloor>\(droneInfo["area_floor"] as? Double ?? 0.0)</AreaFloor>
-                        <Classification>\(droneInfo["classification"] as? Int ?? 0)</Classification>
-                    </System>
-                    <SelfID>
-                        <Description>\(droneInfo["description"] as? String ?? "")</Description>
-                        <DescriptionType>\(droneInfo["description_type"] as? Int ?? 0)</DescriptionType>
-                    </SelfID>
-                    <Authentication>
-                        <AuthType>\(droneInfo["auth_type"] as? Int ?? 0)</AuthType>
-                        <AuthData>\(droneInfo["auth_data"] as? String ?? "")</AuthData>
-                        <AuthTimestamp>\(droneInfo["auth_timestamp"] as? String ?? "")</AuthTimestamp>
-                        <AuthPage>\(droneInfo["auth_page"] as? Int ?? 0)</AuthPage>
-                        <AuthLength>\(droneInfo["auth_length"] as? Int ?? 0)</AuthLength>
-                    </Authentication>
-                    <TransmissionData>
-                        <Channel>\(droneInfo["channel"] as? Int ?? 0)</Channel>
-                        <PHY>\(droneInfo["phy"] as? Int ?? 0)</PHY>
-                        <AdvMode>\(droneInfo["adv_mode"] as? String ?? "")</AdvMode>
-                        <DID>\(droneInfo["did"] as? Int ?? 0)</DID>
-                        <SID>\(droneInfo["sid"] as? Int ?? 0)</SID>
-                    </TransmissionData>
-                    <color argb="-256"/>
-                    <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
-                </detail>
-            </event>
-            """
         }
         
-        // Handle single object messages
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            // Wrap single message in array and reuse array processing
-            return createDroneXML(from: [json])
-        }
-        
+        print("Failed to parse message")
         return nil
     }
     
@@ -378,74 +279,74 @@ class ZMQHandler: ObservableObject {
     }
     
     func convertDJITelemetryToXML(_ json: [String: Any]) -> String? {
-        let now = ISO8601DateFormatter().string(from: Date())
-        let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(60))
-        
-        // Handle field name variations
-        let pilotLat: Double
-        let pilotLon: Double
-        if let system = json["System"] as? [String: Any],
-           let pilotLocation = system["Pilot Location"] as? [String: Any] {
-            pilotLat = getFieldValue(pilotLocation, keys: ["lat", "latitude"], defaultValue: 0.0) as! Double
-            pilotLon = getFieldValue(pilotLocation, keys: ["lon", "longitude"], defaultValue: 0.0) as! Double
-        } else {
-            // Fallback to flat structure
-            pilotLat = getFieldValue(json, keys: ["app_lat", "pilot_lat", "operator_lat"], defaultValue: 0.0) as! Double
-            pilotLon = getFieldValue(json, keys: ["app_lon", "pilot_lon", "operator_lon"], defaultValue: 0.0) as! Double
+            let now = ISO8601DateFormatter().string(from: Date())
+            let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(60))
+            
+            // Handle field name variations
+            let pilotLat: Double
+            let pilotLon: Double
+            if let system = json["System"] as? [String: Any],
+               let pilotLocation = system["Pilot Location"] as? [String: Any] {
+                pilotLat = getFieldValue(pilotLocation, keys: ["lat", "latitude"], defaultValue: 0.0) as! Double
+                pilotLon = getFieldValue(pilotLocation, keys: ["lon", "longitude"], defaultValue: 0.0) as! Double
+            } else {
+                // Fallback to flat structure
+                pilotLat = getFieldValue(json, keys: ["app_lat", "pilot_lat", "operator_lat"], defaultValue: 0.0) as! Double
+                pilotLon = getFieldValue(json, keys: ["app_lon", "pilot_lon", "operator_lon"], defaultValue: 0.0) as! Double
+            }
+            let droneLat = getFieldValue(json, keys: ["drone_lat", "latitude", "lat"], defaultValue: 0.0) as! Double
+            let droneLon = getFieldValue(json, keys: ["drone_lon", "longitude", "lon"], defaultValue: 0.0) as! Double
+            let speed = getFieldValue(json, keys: ["horizontal_speed", "speed"], defaultValue: 0.0) as! Double
+            let vertSpeed = getFieldValue(json, keys: ["vertical_speed", "vert_speed"], defaultValue: 0.0) as! Double
+            let height = getFieldValue(json, keys: ["height_agl", "height"], defaultValue: 0.0) as! Double
+            let altitude = getFieldValue(json, keys: ["geodetic_altitude", "altitude"], defaultValue: 0.0) as! Double
+            let serialNumber = getFieldValue(json, keys: ["serial_number", "id"], defaultValue: "unknown") as! String
+            let deviceType = getFieldValue(json, keys: ["device_type", "description"], defaultValue: "DJI Drone") as! String
+            let rssi = getFieldValue(json, keys: ["rssi", "RSSI", "signal_strength"], defaultValue: 0) as! Int
+            let mac = getFieldValue(json, keys: ["mac", "MAC"], defaultValue: "") as! String
+            
+            // UAType handling for both string and int formats
+            let uaType: String
+            if let typeInt = json["ua_type"] as? Int {
+                uaType = String(typeInt)
+            } else if let typeStr = json["ua_type"] as? String {
+                uaType = typeStr == "Helicopter (or Multirotor)" ? "2" : "0"
+            } else {
+                uaType = "2"  // Default to helicopter
+            }
+            
+            return """
+            <event version="2.0" uid="drone-\(serialNumber)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
+                <point lat="\(droneLat)" lon="\(droneLon)" hae="\(altitude)" ce="9999999" le="999999"/>
+                <detail>
+                    <BasicID>
+                        <DeviceID>drone-\((serialNumber.replacingOccurrences(of: "^drone-", with: "", options: .regularExpression)))</DeviceID>
+                        <MAC>\(mac)</MAC>
+                        <RSSI>\(rssi)</RSSI>
+                        <Type>DJI</Type>
+                        <UAType>\(uaType)</UAType>
+                    </BasicID>
+                    <LocationVector>
+                        <Speed>\(speed)</Speed>
+                        <VerticalSpeed>\(vertSpeed)</VerticalSpeed>
+                        <Altitude>\(altitude)</Altitude>
+                        <Height>\(height)</Height>
+                    </LocationVector>
+                    <System>
+                        <Pilot Location>
+                            <lat>\(pilotLat)</lat>
+                            <lon>\(pilotLon)</lon>
+                        </Pilot Location>
+                    </System>
+                    <SelfID>
+                        <Description>\(deviceType)</Description>
+                    </SelfID>
+                    <color argb="-256"/>
+                    <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
+                </detail>
+            </event>
+            """
         }
-        let droneLat = getFieldValue(json, keys: ["drone_lat", "latitude", "lat"], defaultValue: 0.0) as! Double
-        let droneLon = getFieldValue(json, keys: ["drone_lon", "longitude", "lon"], defaultValue: 0.0) as! Double
-        let speed = getFieldValue(json, keys: ["horizontal_speed", "speed"], defaultValue: 0.0) as! Double
-        let vertSpeed = getFieldValue(json, keys: ["vertical_speed", "vert_speed"], defaultValue: 0.0) as! Double
-        let height = getFieldValue(json, keys: ["height_agl", "height"], defaultValue: 0.0) as! Double
-        let altitude = getFieldValue(json, keys: ["geodetic_altitude", "altitude"], defaultValue: 0.0) as! Double
-        let serialNumber = getFieldValue(json, keys: ["serial_number", "id"], defaultValue: "unknown") as! String
-        let deviceType = getFieldValue(json, keys: ["device_type", "description"], defaultValue: "DJI Drone") as! String
-        let rssi = getFieldValue(json, keys: ["rssi", "RSSI", "signal_strength"], defaultValue: 0) as! Int
-        let mac = getFieldValue(json, keys: ["mac", "MAC"], defaultValue: "") as! String
-        
-        // UAType handling for both string and int formats
-        let uaType: String
-        if let typeInt = json["ua_type"] as? Int {
-            uaType = String(typeInt)
-        } else if let typeStr = json["ua_type"] as? String {
-            uaType = typeStr == "Helicopter (or Multirotor)" ? "2" : "0"
-        } else {
-            uaType = "2"  // Default to helicopter
-        }
-        
-        return """
-        <event version="2.0" uid="drone-\(serialNumber)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
-            <point lat="\(droneLat)" lon="\(droneLon)" hae="\(altitude)" ce="9999999" le="999999"/>
-            <detail>
-                <BasicID>
-                    <DeviceID>drone-\((serialNumber.replacingOccurrences(of: "^drone-", with: "", options: .regularExpression)))</DeviceID>
-                    <MAC>\(mac)</MAC>
-                    <RSSI>\(rssi)</RSSI>
-                    <Type>DJI</Type>
-                    <UAType>\(uaType)</UAType>
-                </BasicID>
-                <LocationVector>
-                    <Speed>\(speed)</Speed>
-                    <VerticalSpeed>\(vertSpeed)</VerticalSpeed>
-                    <Altitude>\(altitude)</Altitude>
-                    <Height>\(height)</Height>
-                </LocationVector>
-                <System>
-                    <Pilot Location>
-                        <lat>\(pilotLat)</lat>
-                        <lon>\(pilotLon)</lon>
-                    </Pilot Location>
-                </System>
-                <SelfID>
-                    <Description>\(deviceType)</Description>
-                </SelfID>
-                <color argb="-256"/>
-                <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
-            </detail>
-        </event>
-        """
-    }
     
     func convertStatusToXML(_ jsonString: String) -> String? {
         guard let jsonData = jsonString.data(using: .utf8),
@@ -455,152 +356,6 @@ class ZMQHandler: ObservableObject {
         return createStatusXML(json)
     }
     
-    private func createDroneXML(from messages: [[String: Any]]) -> String {
-        var droneInfo: [String: Any] = [:]
-        
-        for message in messages {
-            // Process Basic ID from any source (keep original field name)
-            if let basicId = message["Basic ID"] as? [String: Any] {
-                if droneInfo["id"] == nil {
-                    let rawId = getFieldValue(basicId, keys: ["id", "serial_number"], defaultValue: UUID().uuidString) as! String
-                    droneInfo["id"] = "\(rawId == "NONE" ? UUID().uuidString : rawId)"
-                }
-                droneInfo["id_type"] = basicId["id_type"]
-                droneInfo["ua_type"] = basicId["ua_type"]
-                if droneInfo["mac"] == nil {
-                    droneInfo["mac"] = basicId["MAC"] ?? basicId["mac"]
-                }
-                if droneInfo["rssi"] == nil {
-                    droneInfo["rssi"] = basicId["RSSI"] ?? basicId["rssi"]
-                }
-            }
-            
-            // Get the RSSI and MAC from AUX_ADV_IND if ZMQ
-            if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any] {
-                if droneInfo["rssi"] == nil {
-                    droneInfo["rssi"] = auxAdvInd["rssi"]
-                }
-                if let aext = message["aext"] as? [String: Any],
-                   let advA = aext["AdvA"] as? String {
-                    droneInfo["mac"] = advA.components(separatedBy: " ")[0]
-                }
-            }
-            
-            // Process Location data (keep original field name)
-            if let location = message["Location/Vector Message"] as? [String: Any] {
-                droneInfo["lat"] = location["latitude"] ?? 0.0
-                droneInfo["lon"] = location["longitude"] ?? 0.0
-                droneInfo["speed"] = location["speed"] ?? 0.0
-                droneInfo["vspeed"] = location["vert_speed"] ?? 0.0
-                droneInfo["alt"] = location["geodetic_altitude"] ?? 0.0
-                droneInfo["height"] = location["height_agl"] ?? 0.0
-                // Add additional location fields
-                droneInfo["alt_pressure"] = location["alt_pressure"]
-                droneInfo["baro_acc"] = location["baro_acc"]
-                droneInfo["direction"] = location["direction"]
-                droneInfo["height_type"] = location["height_type"]
-                droneInfo["horiz_acc"] = location["horiz_acc"]
-                droneInfo["speed_acc"] = location["speed_acc"]
-                droneInfo["vert_acc"] = location["vert_acc"]
-                droneInfo["status"] = location["status"]
-                droneInfo["timestamp"] = location["timestamp"]
-            }
-            
-            // Process System data (keep original field name)
-            if let system = message["System"] as? [String: Any] {
-                droneInfo["pilot_lat"] = system["latitude"]
-                droneInfo["pilot_lat"] = system["longitude"]
-                droneInfo["area_count"] = system["area_count"]
-                droneInfo["area_ceiling"] = system["area_ceiling"]
-                droneInfo["area_floor"] = system["area_floor"]
-                droneInfo["area_radius"] = system["area_radius"]
-                droneInfo["classification"] = system["classification"]
-                droneInfo["operator_alt_geo"] = system["operator_alt_geo"]
-            }
-            
-            // Process Self ID (keep original field name)
-            if let selfId = message["Self-ID Message"] as? [String: Any] {
-                droneInfo["description"] = selfId["text"] ?? ""
-                droneInfo["description_type"] = selfId["description_type"]
-            } else if let selfId = message["SelfID"] as? [String: Any] {
-                droneInfo["description"] = selfId["Description"] ?? ""
-            }
-            
-            // Process Auth Message
-            if let auth = message["Auth Message"] as? [String: Any] {
-                droneInfo["auth_type"] = auth["type"]
-                droneInfo["auth_data"] = auth["data"]
-                droneInfo["auth_timestamp"] = auth["timestamp"]
-                droneInfo["auth_page"] = auth["page"]
-                droneInfo["auth_length"] = auth["length"]
-            }
-        }
-        
-        // UAType handling (keep original logic)
-        let uaType: String
-        if let typeInt = droneInfo["ua_type"] as? Int {
-            uaType = String(typeInt)
-        } else if let typeStr = droneInfo["ua_type"] as? String {
-            uaType = typeStr == "Helicopter (or Multirotor)" ? "2" : "0"
-        } else {
-            uaType = "2"  // Default to helicopter
-        }
-        
-        return """
-        <event version="2.0" uid="drone-\(droneInfo["id"] as? String ?? UUID().uuidString)" type="a-f-G-U-C">
-            <point lat="\(droneInfo["lat"] as? Double ?? 0.0)" lon="\(droneInfo["lon"] as? Double ?? 0.0)" hae="\(droneInfo["alt"] as? Double ?? 0.0)" ce="9999999" le="999999"/>
-            <detail>
-                <BasicID>
-                   <DeviceID>drone-\((droneInfo["id"] as? String)?.replacingOccurrences(of: "^drone-", with: "", options: .regularExpression) ?? "")</DeviceID>
-                    <MAC>\(droneInfo["mac"] as? String ?? "")</MAC>
-                    <RSSI>\(droneInfo["rssi"] as? Int ?? 0)</RSSI>
-                    <Type>\(droneInfo["id_type"] as? String ?? "Unknown")</Type>
-                    <UAType>\(uaType)</UAType>
-                </BasicID>
-                <LocationVector>
-                    <Speed>\(droneInfo["speed"] as? Double ?? 0.0)</Speed>
-                    <VerticalSpeed>\(droneInfo["vspeed"] as? Double ?? 0.0)</VerticalSpeed>
-                    <Altitude>\(droneInfo["alt"] as? Double ?? 0.0)</Altitude>
-                    <Height>\(droneInfo["height"] as? Double ?? 0.0)</Height>
-                    <AltPressure>\(droneInfo["alt_pressure"] as? Double ?? -1000.0)</AltPressure>
-                    <BaroAcc>\(droneInfo["baro_acc"] as? Double ?? 0.0)</BaroAcc>
-                    <Direction>\(droneInfo["direction"] as? Int ?? 361)</Direction>
-                    <HeightType>\(droneInfo["height_type"] as? Int ?? 0)</HeightType>
-                    <HorizAcc>\(droneInfo["horiz_acc"] as? Double ?? 0.0)</HorizAcc>
-                    <SpeedAcc>\(droneInfo["speed_acc"] as? Double ?? 0.0)</SpeedAcc>
-                    <VertAcc>\(droneInfo["vert_acc"] as? Double ?? 0.0)</VertAcc>
-                    <Status>\(droneInfo["status"] as? Int ?? 0)</Status>
-                    <TimeSpeed>\(droneInfo["timestamp"] as? Int ?? 0)</TimeSpeed>
-                </LocationVector>
-                <System>
-                    <PilotLocation>
-                        <lat>\(droneInfo["pilot_lat"] as? Double ?? 0.0)</lat>
-                        <lon>\(droneInfo["pilot_lon"] as? Double ?? 0.0)</lon>
-                    </PilotLocation>
-                    <AreaCount>\(droneInfo["area_count"] as? Int ?? 1)</AreaCount>
-                    <AreaCeiling>\(droneInfo["area_ceiling"] as? Double ?? -1000.0)</AreaCeiling>
-                    <AreaFloor>\(droneInfo["area_floor"] as? Double ?? -1000.0)</AreaFloor>
-                    <AreaRadius>\(droneInfo["area_radius"] as? Double ?? 0.0)</AreaRadius>
-                    <Classification>\(droneInfo["classification"] as? Int ?? 0)</Classification>
-                    <OperatorAltGeo>\(droneInfo["operator_alt_geo"] as? Double ?? -1000.0)</OperatorAltGeo>
-                </System>
-                <SelfID>
-                    <Description>\(droneInfo["description"] as? String ?? "")</Description>
-                    <DescriptionType>\(droneInfo["description_type"] as? Int ?? 0)</DescriptionType>
-                </SelfID>
-                <Authentication>
-                    <AuthType>\(droneInfo["auth_type"] as? Int ?? 0)</AuthType>
-                    <AuthData>\(droneInfo["auth_data"] as? String ?? "")</AuthData>
-                    <AuthTimestamp>\(droneInfo["auth_timestamp"] as? Int ?? 0)</AuthTimestamp>
-                    <AuthPage>\(droneInfo["auth_page"] as? Int ?? 0)</AuthPage>
-                    <AuthLength>\(droneInfo["auth_length"] as? Int ?? 0)</AuthLength>
-                </Authentication>
-                <color argb="-256"/>
-                <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
-            </detail>
-        </event>
-        """
-    }
     
     private func createStatusXML(_ json: [String: Any]) -> String {
         // top level
@@ -652,7 +407,7 @@ class ZMQHandler: ObservableObject {
         return """
         <event version="2.0" uid="\(serialNumber)" type="b-m-p-s-m">
             <point lat="\(gpsData["latitude"] as? Double ?? 0.0)" lon="\(gpsData["longitude"] as? Double ?? 0.0)" hae="\(gpsData["altitude"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
-            <detail>
+            <detail> 
                 <status readiness="true"/>
                 <remarks>\(remarks)</remarks>
             </detail>

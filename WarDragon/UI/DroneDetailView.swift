@@ -76,54 +76,28 @@ struct DroneDetailView: View {
                         InfoRow(title: "RSSI", value: "\(rssi) dBm")
                     }
                 }
-                
-                if let aux = message.rawMessage["AUX_ADV_IND"] as? [String: Any],
-                   let aext = message.rawMessage["aext"] as? [String: Any] {
-                    Group {
-                        SectionHeader(title: "Transmission Data")
-                        if let rssi = aux["rssi"] as? Int {
-                            InfoRow(title: "Signal", value: "\(rssi) dBm")
-                        }
-                        if let channel = aux["chan"] as? Int {
-                            InfoRow(title: "Channel", value: "\(channel)")
-                        }
-                        if let mode = aext["AdvMode"] as? String {
-                            InfoRow(title: "Mode", value: mode)
-                        }
-                        if let addr = aext["AdvA"] as? String {
-                            InfoRow(title: "Address", value: addr)
-                        }
-                        if let dataInfo = aext["AdvDataInfo"] as? [String: Any] {
-                            if let did = dataInfo["did"] as? Int {
-                                InfoRow(title: "Data ID", value: "\(did)")
-                            }
-                            if let sid = dataInfo["sid"] as? Int {
-                                InfoRow(title: "Set ID", value: "\(sid)")
-                            }
-                        }
-                    }
-                }
-                
+
                 Group {
                     SectionHeader(title: "Position")
                     InfoRow(title: "Latitude", value: message.lat)
                     InfoRow(title: "Longitude", value: message.lon)
                     InfoRow(title: "Altitude", value: "\(message.alt)m")
-                    InfoRow(title: "Height AGL", value: "\(message.height)m")
-                    if let altPressure = message.altPressure {
-                        InfoRow(title: "Pressure Altitude", value: "\(altPressure)m")
+                    if let heightAGL = message.height_type {
+                        InfoRow(title: "Height Type", value: "\(heightAGL)m")
                     }
                     if let heightType = message.heightType {
                         InfoRow(title: "Height Type", value: heightType)
+                        InfoRow(title: "Operation Status", value: message.op_status ?? "Unknown")
                     }
+                    
                 }
                 
                 Group {
-                    SectionHeader(title: "Movement")
-                    InfoRow(title: "Ground Speed", value: "\(message.speed)m/s")
-                    InfoRow(title: "Vertical Speed", value: "\(message.vspeed)m/s")
                     if let direction = message.direction {
+                        SectionHeader(title: "Movement")
                         InfoRow(title: "Direction", value: "\(direction)°")
+                        InfoRow(title: "Speed", value: "\(message.speed)m/s")
+                        InfoRow(title: "Vertical Speed", value: "\(message.vspeed)m/s")
                     }
                     if let timeSpeed = message.timeSpeed {
                         InfoRow(title: "Time Speed", value: timeSpeed)
@@ -175,14 +149,39 @@ struct DroneDetailView: View {
                     }
                 }
                 
-                
-                if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
+                // Operator Section
+                if message.operator_id != nil {
                     Group {
-                        SectionHeader(title: "Operator Location")
-                        InfoRow(title: "Latitude", value: message.pilotLat)
-                        InfoRow(title: "Longitude", value: message.pilotLon)
-                        if let operatorAltGeo = message.operatorAltGeo {
-                            InfoRow(title: "Altitude", value: "\(operatorAltGeo)m")
+                        SectionHeader(title: "Operator")
+                        InfoRow(title: "ID", value: message.operator_id ?? "")
+                        InfoRow(title: "Type", value: message.operator_id_type ?? "")
+                        
+                    }
+                }
+                
+                if let aux = message.rawMessage["AUX_ADV_IND"] as? [String: Any],
+                   let aext = message.rawMessage["aext"] as? [String: Any] {
+                    Group {
+                        SectionHeader(title: "Transmission Data")
+                        if let rssi = aux["rssi"] as? Int {
+                            InfoRow(title: "Signal", value: "\(rssi) dBm")
+                        }
+                        if let channel = aux["chan"] as? Int {
+                            InfoRow(title: "Channel", value: "\(channel)")
+                        }
+                        if let mode = aext["AdvMode"] as? String {
+                            InfoRow(title: "Mode", value: mode)
+                        }
+                        if let addr = aext["AdvA"] as? String {
+                            InfoRow(title: "Address", value: addr)
+                        }
+                        if let dataInfo = aext["AdvDataInfo"] as? [String: Any] {
+                            if let did = dataInfo["did"] as? Int {
+                                InfoRow(title: "Data ID", value: "\(did)")
+                            }
+                            if let sid = dataInfo["sid"] as? Int {
+                                InfoRow(title: "Set ID", value: "\(sid)")
+                            }
                         }
                     }
                 }

@@ -64,6 +64,7 @@ struct ContentView: View {
                             cotViewModel.parsedMessages.removeAll()  // Remove UI messages
                             cotViewModel.droneSignatures.removeAll() // Ditch old signatures BUGFIX #
                             cotViewModel.macIdHistory.removeAll()
+                            cotViewModel.macProcessing.removeAll()
                         }) {
                             Image(systemName: "trash")
                         }
@@ -119,7 +120,7 @@ struct ContentView: View {
         .onChange(of: settings.isListening) {
             if settings.isListening {
                 cotViewModel.startListening()
-            } else {
+            } else { 
                 cotViewModel.stopListening()
             }
         }

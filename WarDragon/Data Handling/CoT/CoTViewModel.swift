@@ -28,11 +28,14 @@ class CoTViewModel: ObservableObject {
     public var isListeningCot = false
     public var macIdHistory: [String: Set<String>] = [:]
     public var macProcessing: [String: Bool] = [:]
+    private var lastNotificationTime: Date?
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
         var uid: String
         var type: String
+        
+        // Basic location and movement
         var lat: String
         var lon: String
         var speed: String
@@ -44,22 +47,72 @@ class CoTViewModel: ObservableObject {
         var description: String
         var uaType: DroneSignature.IdInfo.UAType
         
-        // Basic ID fields
+        // Basic ID fields with protocol info
         var idType: String
+        var protocolVersion: String?
         var mac: String?
         var rssi: Int?
         
-        // Location extended fields
+        // Location/Vector Message fields
+        var location_protocol: String?
+        var op_status: String?
+        var height_type: String?
+        var ew_dir_segment: String?
+        var speed_multiplier: String?
+        var direction: String?
+        var vertical_accuracy: String?
+        var horizontal_accuracy: String?
+        var baro_accuracy: String?
+        var speed_accuracy: String?
+        var timestamp: String?
+        var timestamp_accuracy: String?
+        
+        // Multicast CoT specific fields
+        var time: String?
+        var start: String?
+        var stale: String?
+        var how: String?
+        var ce: String?  // Circular error
+        var le: String?  // Linear error
+        var hae: String? // Height above ellipsoid
+        
+        // BT/WiFi transmission fields from ZMQ
+        var aux_rssi: Int?
+        var channel: Int?
+        var phy: Int?
+        var aa: Int?
+        var adv_mode: String?
+        var adv_mac: String?
+        var did: Int?
+        var sid: Int?
+        
+        // Extended Location fields
         var timeSpeed: String?
         var status: String?
-        var direction: String?
+        var opStatus: String?
         var altPressure: String?
         var heightType: String?
         var horizAcc: String?
         var vertAcc: String?
         var baroAcc: String?
         var speedAcc: String?
-        var timestamp: String?
+        var timestampAccuracy: String?
+        
+        
+        // ZMQ Operator & System fields
+        var operator_id: String?
+        var operator_id_type: String?
+        var classification_type: String?
+        var operator_location_type: String?
+        var area_count: String?
+        var area_radius: String?
+        var area_ceiling: String?
+        var area_floor: String?
+        var advMode: String?
+        var txAdd: Int?
+        var rxAdd: Int?
+        var adLength: Int?
+        var accessAddress: Int?
         
         // System Message fields
         var operatorAltGeo: String?
@@ -83,9 +136,6 @@ class CoTViewModel: ObservableObject {
         // Spoof detection
         var isSpoofed: Bool = false
         var spoofingDetails: DroneSignatureGenerator.SpoofDetectionResult?
-        var channel: Int?
-        var phy: Int?
-        var accessAddress: Int?
         
         var formattedAltitude: String {
             if let altValue = Double(alt), altValue != 0 {
@@ -118,16 +168,37 @@ class CoTViewModel: ObservableObject {
             lhs.uaType == rhs.uaType &&
             lhs.idType == rhs.idType &&
             lhs.mac == rhs.mac &&
+            lhs.rssi == rhs.rssi &&
+            lhs.location_protocol == rhs.location_protocol &&
+            lhs.op_status == rhs.op_status &&
+            lhs.height_type == rhs.height_type &&
+            lhs.speed_multiplier == rhs.speed_multiplier &&
+            lhs.direction == rhs.direction &&
+            lhs.vertical_accuracy == rhs.vertical_accuracy &&
+            lhs.horizontal_accuracy == rhs.horizontal_accuracy &&
+            lhs.baro_accuracy == rhs.baro_accuracy &&
+            lhs.speed_accuracy == rhs.speed_accuracy &&
+            lhs.timestamp == rhs.timestamp &&
+            lhs.timestamp_accuracy == rhs.timestamp_accuracy &&
+            lhs.operator_id == rhs.operator_id &&
+            lhs.operator_id_type == rhs.operator_id_type &&
+            lhs.aux_rssi == rhs.aux_rssi &&
+            lhs.channel == rhs.channel &&
+            lhs.phy == rhs.phy &&
+            lhs.aa == rhs.aa &&
+            lhs.adv_mode == rhs.adv_mode &&
+            lhs.adv_mac == rhs.adv_mac &&
+            lhs.did == rhs.did &&
+            lhs.sid == rhs.sid &&
+            lhs.type == rhs.type &&
             lhs.timeSpeed == rhs.timeSpeed &&
             lhs.status == rhs.status &&
-            lhs.direction == rhs.direction &&
             lhs.altPressure == rhs.altPressure &&
             lhs.heightType == rhs.heightType &&
             lhs.horizAcc == rhs.horizAcc &&
             lhs.vertAcc == rhs.vertAcc &&
             lhs.baroAcc == rhs.baroAcc &&
             lhs.speedAcc == rhs.speedAcc &&
-            lhs.timestamp == rhs.timestamp &&
             lhs.operatorAltGeo == rhs.operatorAltGeo &&
             lhs.areaCount == rhs.areaCount &&
             lhs.areaRadius == rhs.areaRadius &&
@@ -144,10 +215,18 @@ class CoTViewModel: ObservableObject {
             lhs.isSpoofed == rhs.isSpoofed &&
             lhs.spoofingDetails?.isSpoofed == rhs.spoofingDetails?.isSpoofed &&
             lhs.spoofingDetails?.confidence == rhs.spoofingDetails?.confidence &&
+            lhs.accessAddress == rhs.accessAddress &&
+            lhs.mac == rhs.mac &&
             lhs.rssi == rhs.rssi &&
-            lhs.channel == rhs.channel &&
-            lhs.phy == rhs.phy &&
-            lhs.accessAddress == rhs.accessAddress
+            lhs.lat == rhs.lat &&
+            lhs.lon == rhs.lon &&
+            lhs.speed == rhs.speed &&
+            lhs.vspeed == rhs.vspeed &&
+            lhs.alt == rhs.alt &&
+            lhs.height == rhs.height &&
+            lhs.op_status == rhs.op_status &&
+            lhs.height_type == rhs.height_type &&
+            lhs.direction == rhs.direction
         }
         
         var coordinate: CLLocationCoordinate2D? {
@@ -283,7 +362,7 @@ class CoTViewModel: ObservableObject {
         xmlParser.delegate = parser
         
         guard xmlParser.parse() else {
-            print("Failed to parse XML")
+            print("Failed to parse XML: \(xmlData)")
             return
         }
         
@@ -393,76 +472,17 @@ class CoTViewModel: ObservableObject {
     
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
+            print("DEBUG: Raw message in: \(message)")
             // Generate/update signature from raw message
             guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else {
                 print("Failed to create signature from message")
                 return
             }
             
-            print("MESSAGE TYPE ID: \(message.idType)")
-            
-            if message.idType == "CAA Assigned Registration ID" {
-                print("skipping CAA message id")
-                return
-            }
-            
-            guard let mac = message.mac else {
-                print("DEBUG - Message has no MAC address")
-                return
-            }
-
-            // Mark this MAC as being processed
-            self.macProcessing[mac] = true
-
-            // Check if the MAC and ID combination is already processed
-            if self.macIdHistory[mac]?.contains(message.id) == true {
-                // DEBUG - Duplicate message for MAC \(mac) with ID \(message.id), already processed.
-                self.macProcessing[mac] = false // Reset the processing flag before returning
-                return
-            }
-
-            // Add the message ID to the history to prevent future duplicates
-            self.macIdHistory[mac, default: Set<String>()].insert(message.id)
-
-            // Process the message
-//            print("DEBUG - Processing new message for MAC \(mac) with ID \(message.id)")
-
-            // Check for existing message with the same MAC
-            if let mac = message.mac, !mac.isEmpty {
-                if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
-                    // Check if the IDs match before updating
-                    if self.parsedMessages[existingIndex].id == message.id {
-                        // Update existing message with the same MAC and same ID
-                        self.parsedMessages[existingIndex] = message
-//                        print("Updated existing message with MAC: \(mac) and ID: \(message.id)")
-                    } else {
-                        print("Skipped updating message for MAC: \(mac) due to ID mismatch.")
-                    }
-                    return
-                }
-            }
-
-            // If no existing message, add the new message
-            self.parsedMessages.append(message)
-            print("Added new message for MAC: \(mac) with ID: \(message.id)")
-
-            // Reset the processing flag
-            self.macProcessing[mac] = false
-
-            
-            // Update monitor location if we have a status update
-            if let status = self.statusViewModel.statusMessages.last {
-                let monitorLoc = CLLocation(
-                    latitude: status.gpsData.latitude,
-                    longitude: status.gpsData.longitude
-                )
-                self.signatureGenerator.updateMonitorLocation(monitorLoc)
-            }
-            
-            // DEBUG - Check for existing signature match
+            // Check for existing signature match
             _ = self.droneSignatures.firstIndex { existing in
                 let matchScore = self.signatureGenerator.matchSignatures(existing, signature)
-                //                print("Checking for existing match, score: \(matchScore)")
+//                print("Checking for existing match, score: \(matchScore)")
                 return matchScore > 0.42 // High confidence threshold
             }
             
@@ -484,23 +504,73 @@ class CoTViewModel: ObservableObject {
                 updatedMessage.spoofingDetails = spoofResult
             }
             
-            // Update messages collection if no MAC match was found earlier
+            // Update monitor location if we have a status update
+            if let status = self.statusViewModel.statusMessages.last {
+                let monitorLoc = CLLocation(
+                    latitude: status.gpsData.latitude,
+                    longitude: status.gpsData.longitude
+                )
+                self.signatureGenerator.updateMonitorLocation(monitorLoc)
+            }
+            
+            
+            // Find existing message by UID
             if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
-                self.parsedMessages[index] = updatedMessage
+                let existing = self.parsedMessages[index]
+                
+                // Check for actual value changes
+                let hasChanges = existing.rssi != message.rssi ||
+                existing.lat != message.lat ||
+                existing.lon != message.lon ||
+                existing.speed != message.speed ||
+                existing.vspeed != message.vspeed ||
+                existing.alt != message.alt ||
+                existing.height != message.height ||
+                existing.op_status != message.op_status ||
+                existing.height_type != message.height_type ||
+                existing.direction != message.direction
+                
+                if hasChanges {
+                    print("Updating drone: \(message.uid)")
+                    
+                    self.parsedMessages[index] = message
+                    
+                    // Force UI refresh
+                    self.objectWillChange.send()
+                }
             } else {
-                self.parsedMessages.append(updatedMessage)
-                self.sendNotification(for: updatedMessage)
+                print("Adding new drone: \(message.uid)")
+                self.parsedMessages.append(message)
+                self.sendNotification(for: message)
             }
         }
     }
     
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
         guard Settings.shared.notificationsEnabled else { return }
+        
+        // Only send notification if more than 5 seconds have passed
+        if let lastTime = lastNotificationTime,
+           Date().timeIntervalSince(lastTime) < 5 {
+            return
+        }
+        
+        // Create and send notification
         let content = UNMutableNotificationContent()
+        print("Attempting to send notification for drone: \(message.uid)")
         content.title = "New CoT Message"
         content.body = "From: \(message.uid)\nType: \(message.type)\nLocation: \(message.lat), \(message.lon)"
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule notification: \(error)")
+            } else {
+                print("Successfully scheduled notification")
+            }
+        }
+        
+        lastNotificationTime = Date()
     }
     
     private func sendStatusNotification(for message: StatusViewModel.StatusMessage) {
