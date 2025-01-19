@@ -21,7 +21,10 @@
 
 
 - **Instant System Alerts**  
-  Stay informed with real-time status updates about your system’s performance. Memory, CPU, temp and more.
+  Stay informed with real-time status updates about your system’s performance & location. Memory, GPS, CPU, temp and more. WarDragon Pro also displays ANTSDR internal temperatures.
+
+  ![image](https://github.com/user-attachments/assets/daf1f020-b852-40e9-be95-dcc3d02371af)
+
 
 - **Seamless WarDragon Integration**  
   Designed to work flawlessly with the WarDragon DragonOS platform directly over ZMQ or broader applications with Multicast. A unified and user-friendly experience out of the box. 
