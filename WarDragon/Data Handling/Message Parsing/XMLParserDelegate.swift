@@ -119,7 +119,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             currentValue += string.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
-
+    
     private func processJSONArray(_ messages: [[String: Any]]) {
         var droneData: [String: Any] = [:]
         
@@ -166,47 +166,47 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
         
         if let basicId = droneData["id"] as? String {
-               cotMessage = CoTViewModel.CoTMessage(
-                   uid: basicId,
-                   type: buildDroneType(droneData),
-                   lat: String(describing: droneData["latitude"] ?? "0.0"),
-                   lon: String(describing: droneData["longitude"] ?? "0.0"),
-                   speed: String(describing: droneData["speed"] ?? "0.0"),
-                   vspeed: String(describing: droneData["vert_speed"] ?? "0.0"),
-                   alt: String(describing: droneData["geodetic_altitude"] ?? "0.0"),
-                   height: String(describing: droneData["height_agl"] ?? "0.0"),
-                   pilotLat: String(describing: droneData["pilot_lat"] ?? "0.0"),
-                   pilotLon: String(describing: droneData["pilot_lon"] ?? "0.0"),
-                   description: droneData["description"] as? String ?? "",
-                   uaType: mapUAType(droneData["ua_type"]),
-                   idType: droneData["id_type"] as? String ?? "Unknown",
-                   mac: droneData["mac"] as? String,
-                   rssi: droneData["rssi"] as? Int,
-                   location_protocol: droneData["protocol_version"] as? String,
-                   op_status: droneData["op_status"] as? String,
-                   height_type: droneData["height_type"] as? String,
-                   ew_dir_segment: droneData["ew_dir_segment"] as? String,
-                   speed_multiplier: droneData["speed_multiplier"] as? String,
-                   direction: droneData["direction"] as? String,
-                   vertical_accuracy: droneData["vertical_accuracy"] as? String,
-                   horizontal_accuracy: droneData["horizontal_accuracy"] as? String,
-                   baro_accuracy: droneData["baro_accuracy"] as? String,
-                   speed_accuracy: droneData["speed_accuracy"] as? String,
-                   timestamp: droneData["timestamp"] as? String,
-                   timestamp_accuracy: droneData["timestamp_accuracy"] as? String,
-                   operator_id: droneData["operator_id"] as? String,
-                   operator_id_type: droneData["operator_id_type"] as? String,
-                   rawMessage: droneData
-               )
-           }
+            cotMessage = CoTViewModel.CoTMessage(
+                uid: basicId,
+                type: buildDroneType(droneData),
+                lat: String(describing: droneData["latitude"] ?? "0.0"),
+                lon: String(describing: droneData["longitude"] ?? "0.0"),
+                speed: String(describing: droneData["speed"] ?? "0.0"),
+                vspeed: String(describing: droneData["vert_speed"] ?? "0.0"),
+                alt: String(describing: droneData["geodetic_altitude"] ?? "0.0"),
+                height: String(describing: droneData["height_agl"] ?? "0.0"),
+                pilotLat: String(describing: droneData["pilot_lat"] ?? "0.0"),
+                pilotLon: String(describing: droneData["pilot_lon"] ?? "0.0"),
+                description: droneData["description"] as? String ?? "",
+                uaType: mapUAType(droneData["ua_type"]),
+                idType: droneData["id_type"] as? String ?? "Unknown",
+                mac: droneData["mac"] as? String,
+                rssi: droneData["rssi"] as? Int,
+                location_protocol: droneData["protocol_version"] as? String,
+                op_status: droneData["op_status"] as? String,
+                height_type: droneData["height_type"] as? String,
+                ew_dir_segment: droneData["ew_dir_segment"] as? String,
+                speed_multiplier: droneData["speed_multiplier"] as? String,
+                direction: droneData["direction"] as? String,
+                vertical_accuracy: droneData["vertical_accuracy"] as? String,
+                horizontal_accuracy: droneData["horizontal_accuracy"] as? String,
+                baro_accuracy: droneData["baro_accuracy"] as? String,
+                speed_accuracy: droneData["speed_accuracy"] as? String,
+                timestamp: droneData["timestamp"] as? String,
+                timestamp_accuracy: droneData["timestamp_accuracy"] as? String,
+                operator_id: droneData["operator_id"] as? String,
+                operator_id_type: droneData["operator_id_type"] as? String,
+                rawMessage: droneData
+            )
+        }
     }
-
+    
     private func processSingleJSON(_ json: [String: Any]) {
         if let message = parseESP32Message(json) {
             cotMessage = message
         }
     }
-
+    
     func parseESP32Message(_ jsonData: [String: Any]) -> CoTViewModel.CoTMessage? {
         if let basicId = jsonData["Basic ID"] as? [String: Any] {
             let droneId = basicId["id"] as? String ?? UUID().uuidString
@@ -251,7 +251,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
         return nil
     }
-
+    
     private func buildDroneType(_ json: [String: Any]) -> String {
         var droneType = "a-f-G-U"
         
@@ -276,8 +276,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         droneType += "-F"
         return droneType
     }
-
-
+    
+    
     private func mapUAType(_ value: Any?) -> DroneSignature.IdInfo.UAType {
         if let intValue = value as? Int {
             switch intValue {
@@ -686,7 +686,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             if let jsonData = messageContent.data(using: .utf8) {
                 // Try to parse as array first
                 if let jsonArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
-
+                    
                     // Store complete array for signature generation
                     rawMessage = ["messages": jsonArray]
                     
@@ -1116,7 +1116,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
         return "None"
     }
-
+    
     private func mapUAType(_ typeStr: String?) -> DroneSignature.IdInfo.UAType {
         guard let typeStr = typeStr else { return .helicopter }
         switch typeStr {

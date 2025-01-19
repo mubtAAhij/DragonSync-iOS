@@ -321,7 +321,7 @@ class ZMQHandler: ObservableObject {
         var auth: [String: Any]?
         var index: Int?
         var runtime: Int?
-
+        
         // Find first Basic ID with a valid id field
         for obj in jsonArray {
             if let basicIdMsg = obj["Basic ID"] as? [String: Any],
@@ -331,7 +331,7 @@ class ZMQHandler: ObservableObject {
                 break
             }
         }
-
+        
         // Collect other messages
         for obj in jsonArray {
             if let locationMsg = obj["Location/Vector Message"] as? [String: Any] { location = locationMsg }
@@ -353,7 +353,7 @@ class ZMQHandler: ObservableObject {
         if let auth = auth { consolidatedObject["Auth Message"] = auth }
         if let index = index { consolidatedObject["index"] = index }
         if let runtime = runtime { consolidatedObject["runtime"] = runtime }
-
+        
         return processJsonObject(consolidatedObject)
     }
     
@@ -500,6 +500,24 @@ class ZMQHandler: ObservableObject {
         let diskFree = Double(disk["free"] as? Int64 ?? 0) / (1024 * 1024)
         let diskPercent = Double(disk["percent"] as? Double ?? 0.0)
         
+        // Get ANTSDR temps either from dedicated field or remarks string
+        var plutoTemp = antSDRTemps["pluto_temp"] as? Double ?? 0.0
+        var zynqTemp = antSDRTemps["zynq_temp"] as? Double ?? 0.0
+        
+        // If temps are 0, try to parse from remarks if available
+        if (plutoTemp == 0.0 || zynqTemp == 0.0),
+           let details = json["detail"] as? [String: Any],
+           let remarks = details["remarks"] as? String {
+            // Extract Pluto temp
+            if let plutoMatch = remarks.firstMatch(of: /Pluto Temp: (\d+\.?\d*)°C/) {
+                plutoTemp = Double(plutoMatch.1) ?? 0.0
+            }
+            // Extract Zynq temp
+            if let zynqMatch = remarks.firstMatch(of: /Zynq Temp: (\d+\.?\d*)°C/) {
+                zynqTemp = Double(zynqMatch.1) ?? 0.0
+            }
+        }
+        
         // Exact format that parseRemarks() expects
         let remarks = "CPU Usage: \(systemStats["cpu_usage"] as? Double ?? 0.0)%, " +
         "Memory Total: \(String(format: "%.1f", memoryTotal)) MB, " +
@@ -519,18 +537,18 @@ class ZMQHandler: ObservableObject {
         "Disk Percent: \(String(format: "%.1f", diskPercent))%, " +
         "Temperature: \(systemStats["temperature"] as? Double ?? 0.0)°C, " +
         "Uptime: \(systemStats["uptime"] as? Double ?? 0.0) seconds, " +
-        "Pluto Temp: \(antSDRTemps["pluto_temp"] as? Double ?? 0.0)°C, " +
-        "Zynq Temp: \(antSDRTemps["zynq_temp"] as? Double ?? 0.0)°C"
+        "Pluto Temp: \(plutoTemp)°C, " +
+        "Zynq Temp: \(zynqTemp)°C"
         
         return """
-        <event version="2.0" uid="\(serialNumber)" type="b-m-p-s-m">
-            <point lat="\(gpsData["latitude"] as? Double ?? 0.0)" lon="\(gpsData["longitude"] as? Double ?? 0.0)" hae="\(gpsData["altitude"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
-            <detail> 
-                <status readiness="true"/>
-                <remarks>\(remarks)</remarks>
-            </detail>
-        </event>
-        """
+            <event version="2.0" uid="\(serialNumber)" type="b-m-p-s-m">
+                <point lat="\(gpsData["latitude"] as? Double ?? 0.0)" lon="\(gpsData["longitude"] as? Double ?? 0.0)" hae="\(gpsData["altitude"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
+                <detail> 
+                    <status readiness="true"/>
+                    <remarks>\(remarks)</remarks>
+                </detail>
+            </event>
+            """
     }
     
     //MARK: - Services Manager
