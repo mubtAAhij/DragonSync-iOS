@@ -24,7 +24,6 @@ struct MessageRow: View {
         cotViewModel.droneSignatures.first(where: { $0.primaryId.id == message.uid })
     }
     
-    
     private func rssiColor(_ rssi: Double) -> Color {
         switch rssi {
         case ..<(-75): return .red
@@ -57,6 +56,7 @@ struct MessageRow: View {
         return nil
     }
     
+    
     private func getMAC() -> String? {
         // Check signature for MAC
         if let signature = signature,
@@ -77,9 +77,7 @@ struct MessageRow: View {
            let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/) {
             return String(match.1) // Convert Substring to String
         }
-//        print("Signature MAC: \(signature?.transmissionInfo.macAddress ?? "nil")")
-//        print("Raw Message MACs: \(message.rawMessage)")
-        
+
         if let details = message.rawMessage["detail"] as? [String: Any],
            let remarks = details["remarks"] as? String {
             print("Remarks: \(remarks)")
@@ -146,13 +144,16 @@ struct MessageRow: View {
                         Text("Position: \(message.lat), \(message.lon)")
                     }
                     if message.alt != "0.0" {
-                        Text("Altitude: \(message.alt)m Speed: \(message.alt)m/s")
+                        Text("Altitude: \(message.alt)m")
                     }
                     if message.speed != "0.0" {
-                        Text("Speed: \(message.speed)m/s Vertical: \(message.vspeed)m/s")
+                        Text("Speed: \(message.speed)m/s")
                     }
                     if message.pilotLat != "0.0" {
                         Text("Pilot Location: \(message.pilotLat), \(message.pilotLon)")
+                    }
+                    if message.operator_id != "" {
+                        Text("Operator ID: \(String(describing: message.operator_id))")
                     }
                     if (message.mac != nil) {
                         Text("MAC: \(message.mac ?? "")")

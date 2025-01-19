@@ -60,7 +60,10 @@ struct DroneDetailView: View {
                     if !message.description.isEmpty {
                         InfoRow(title: "Description", value: message.description)
                     }
-                    InfoRow(title: "UA Type", value: message.uaType.rawValue)
+                    
+                    if !message.uaType.rawValue.isEmpty {
+                        InfoRow(title: "UA Type", value: message.uaType.rawValue)
+                    }
                     
                     // MAC from multiple sources
                     if let mac = message.mac ??
@@ -75,6 +78,12 @@ struct DroneDetailView: View {
                         (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["rssi"] as? Int {
                         InfoRow(title: "RSSI", value: "\(rssi) dBm")
                     }
+                    
+                    if let opID = message.operator_id ??
+                        (message.rawMessage["Operator ID Message"] as? [String: Any])?["operator_id"] as? String {
+                        InfoRow(title: "Operator ID", value: opID)
+                    }
+                    
                 }
 
                 Group {
@@ -82,8 +91,8 @@ struct DroneDetailView: View {
                     InfoRow(title: "Latitude", value: message.lat)
                     InfoRow(title: "Longitude", value: message.lon)
                     InfoRow(title: "Altitude", value: "\(message.alt)m")
-                    if let heightAGL = message.height_type {
-                        InfoRow(title: "Height Type", value: "\(heightAGL)m")
+                    if let heightformatted = message.formattedHeight {
+                        InfoRow(title: "Height", value: "\(heightformatted)m")
                     }
                     if let heightType = message.heightType {
                         InfoRow(title: "Height Type", value: heightType)

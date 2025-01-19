@@ -41,7 +41,7 @@ class CoTViewModel: ObservableObject {
         var speed: String
         var vspeed: String
         var alt: String
-        var height: String
+        var height: String?
         var pilotLat: String
         var pilotLon: String
         var description: String
@@ -137,18 +137,18 @@ class CoTViewModel: ObservableObject {
         var isSpoofed: Bool = false
         var spoofingDetails: DroneSignatureGenerator.SpoofDetectionResult?
         
-        var formattedAltitude: String {
+        var formattedAltitude: String? {
             if let altValue = Double(alt), altValue != 0 {
                 return String(format: "%.1f m MSL", altValue)
             }
-            return "N/A"
+            return nil
         }
-        
-        var formattedHeight: String {
-            if let heightValue = Double(height), heightValue != 0 {
+
+        var formattedHeight: String? {
+            if let heightValue = Double(height ?? ""), heightValue != 0 {
                 return String(format: "%.1f m AGL", heightValue)
             }
-            return "N/A"
+            return nil
         }
         
         var rawMessage: [String: Any]
@@ -461,7 +461,7 @@ class CoTViewModel: ObservableObject {
             if let index = self.statusViewModel.statusMessages.firstIndex(where: { $0.uid == message.uid }) {
                 // Update existing status message
                 self.statusViewModel.statusMessages[index] = message
-                print("Updated existing status message: \(message.uid)")
+                print("Updated existing status message: \(message)")
             } else {
                 // Add new status message
                 self.statusViewModel.statusMessages.append(message)

@@ -399,47 +399,143 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
     }
     
-    private func parseDroneRemarks(_ remarks: String) -> (String?, Int?, String?, String?) {
-//        print("DEBUG- Parsing drone remarks: \(remarks)")
+    private func parseDroneRemarks(_ remarks: String) -> (
+        mac: String?,
+        rssi: Int?,
+        protocolVersion: String?,
+        description: String?,
+        speed: Double?,
+        vspeed: Double?,
+        alt: Double?,
+        heightAGL: Double?,
+        heightType: String?,
+        pressureAltitude: Double?,
+        ewDirSegment: String?,
+        speedMultiplier: Double?,
+        opStatus: String?,
+        direction: Double?,
+        timestamp: String?,
+        runtime: String?,
+        index: String?,
+        status: String?,
+        altPressure: Double?,
+        horizAcc: Int?,
+        vertAcc: String?,
+        baroAcc: Int?,
+        speedAcc: Int?,
+        selfIDtext: String?,
+        selfIDDesc: String?,
+        operatorID: String?,
+        uaType: String?,
+        operatorLat: Double?,
+        operatorLon: Double?,
+        operatorAltGeo: Double?,
+        classification: Int?
+    ) {
         var mac: String?
         var rssi: Int?
+        var protocolVersion: String?
         var description: String?
+        var speed: Double?
+        var vspeed: Double?
+        var alt: Double?
+        var heightAGL: Double?
+        var heightType: String?
+        var pressureAltitude: Double?
+        var ewDirSegment: String?
+        var speedMultiplier: Double?
+        var opStatus: String?
+        var direction: Double?
+        var timestamp: String?
+        var runtime: String?
+        var index: String?
+        var status: String?
+        var altPressure: Double?
+        var horizAcc: Int?
+        var vertAcc: String?
+        var baroAcc: Int?
+        var speedAcc: Int?
+        var selfIDtext: String?
+        var selfIDDesc: String?
         var operatorID: String?
+        var uaType: String?
+        var operatorLat: Double?
+        var operatorLon: Double?
+        var operatorAltGeo: Double?
+        var classification: Int?
         
-        // The remarks string should contain drone details; split it by commas or other delimiters
         let components = remarks.components(separatedBy: ", ")
         
         for component in components {
             let trimmed = component.trimmingCharacters(in: .whitespaces)
             
-            // Check for MAC address
-            if trimmed.contains("MAC:") {
-                mac = trimmed.replacingOccurrences(of: "MAC:", with: "")
-                    .trimmingCharacters(in: .whitespaces)
-                    .components(separatedBy: " ")[0]
-            }
-            
-            // Check for RSSI
-            if trimmed.contains("RSSI:") {
-                let rssiString = trimmed.replacingOccurrences(of: "RSSI: ", with: "")
-                    .replacingOccurrences(of: "dBm", with: "")
-                rssi = Int(rssiString)
-            }
-            
-            // Check for description (Self-ID)
-            if trimmed.contains("Self-ID:") {
-                description = trimmed.replacingOccurrences(of: "Self-ID: ", with: "")
-            }
-            
-            // Check for Operator-ID (Self-ID)
-            if trimmed.contains("OperatorID:") {
-                operatorID = trimmed.replacingOccurrences(of: "OperatorID: ", with: "")
+            if trimmed.hasPrefix("MAC:") {
+                mac = trimmed.dropFirst(4).trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first
+            } else if trimmed.hasPrefix("RSSI:") {
+                rssi = Int(trimmed.dropFirst(5).replacingOccurrences(of: "dBm", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Protocol Version:") {
+                protocolVersion = trimmed.dropFirst(17).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Description:") {
+                description = trimmed.dropFirst(12).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Speed:") {
+                speed = Double(trimmed.dropFirst(6).replacingOccurrences(of: "m/s", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Vert Speed:") {
+                vspeed = Double(trimmed.dropFirst(11).replacingOccurrences(of: "m/s", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Geodetic Altitude:") {
+                alt = Double(trimmed.dropFirst(18).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Height AGL:") {
+                heightAGL = Double(trimmed.dropFirst(11).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Height Type:") {
+                heightType = trimmed.dropFirst(12).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Pressure Altitude:") {
+                pressureAltitude = Double(trimmed.dropFirst(18).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("EW Direction Segment:") {
+                ewDirSegment = trimmed.dropFirst(21).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Speed Multiplier:") {
+                speedMultiplier = Double(trimmed.dropFirst(17).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Operational Status:") {
+                opStatus = trimmed.dropFirst(19).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Direction:") {
+                direction = Double(trimmed.dropFirst(10).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Timestamp:") {
+                timestamp = trimmed.dropFirst(10).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Runtime:") {
+                runtime = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Index:") {
+                index = trimmed.dropFirst(6).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Status:") {
+                status = trimmed.dropFirst(7).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Alt Pressure:") {
+                altPressure = Double(trimmed.dropFirst(13).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Horizontal Accuracy:") {
+                horizAcc = Int(trimmed.dropFirst(20).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Vertical Accuracy:") {
+                vertAcc = trimmed.dropFirst(18).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Baro Accuracy:") {
+                baroAcc = Int(trimmed.dropFirst(14).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Speed Accuracy:") {
+                speedAcc = Int(trimmed.dropFirst(15).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Self-ID Message: Text:") {
+                selfIDtext = trimmed.dropFirst(22).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Self-ID Message: Description:") {
+                selfIDDesc = trimmed.dropFirst(30).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Operator ID:") {
+                operatorID = trimmed.dropFirst(12).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("UA Type:") {
+                uaType = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Operator Location: Lat") {
+                operatorLat = Double(trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "")
+            } else if trimmed.hasPrefix("Lon") {
+                operatorLon = Double(trimmed.dropFirst(3).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "")
+            } else if trimmed.hasPrefix("Altitude") {
+                operatorAltGeo = Double(trimmed.dropFirst(8).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Classification:") {
+                classification = Int(trimmed.dropFirst(15).trimmingCharacters(in: .whitespaces))
             }
         }
-//        print("DEBUG: Parsed Remarks are mac \(String(describing: mac)) rssi \(String(describing: rssi)) and desc \(String(describing: description))")
-        return (mac, rssi, description, operatorID)
+        
+        return (mac, rssi, protocolVersion, description, speed, vspeed, alt, heightAGL, heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus, direction, timestamp, runtime, index, status, altPressure, horizAcc, vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType, operatorLat, operatorLon, operatorAltGeo, classification)
     }
-    
     
     private func parseRemarks(_ remarks: String) {
         let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
@@ -490,36 +586,46 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private func handleDroneMessage(_ elementName: String, _ parent: String) {
         switch elementName {
         case "remarks":
-            // Parse remarks field which contains MAC, RSSI, and other info
-            let (mac, rssi, desc, operator_id) = parseDroneRemarks(remarks)
+            // Parse remarks field
+            let (mac, rssi, protocolVersion, description, speed, vspeed, alt, heightAGL, heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus, direction, timestamp, runtime, index, status, altPressure, horizAcc, vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType, operatorLat, operatorLon, operatorAltGeo, classification) = parseDroneRemarks(remarks)
+            
             if cotMessage == nil {
                 cotMessage = CoTViewModel.CoTMessage(
                     uid: eventAttributes["uid"] ?? "",
                     type: eventAttributes["type"] ?? "",
                     lat: pointAttributes["lat"] ?? "0.0",
                     lon: pointAttributes["lon"] ?? "0.0",
-                    speed: speed,
-                    vspeed: vspeed,
-                    alt: pointAttributes["hae"] ?? alt,
-                    height: height,
-                    pilotLat: pilotLat,
-                    pilotLon: pilotLon,
-                    description: desc ?? "",
-                    uaType: .helicopter,
+                    speed: speed?.description ?? "0.0",
+                    vspeed: vspeed?.description ?? "0.0",
+                    alt: alt?.description ?? "0.0",
+                    height: heightAGL?.description ?? "0.0",
+                    pilotLat: operatorLat?.description ?? "0.0",
+                    pilotLon: operatorLon?.description ?? "0.0",
+                    description: description ?? "",
+                    uaType: mapUAType(uaType),
                     idType: buildIdType(),
+                    protocolVersion: protocolVersion,
                     mac: mac,
                     rssi: rssi,
                     location_protocol: location_protocol,
-                    op_status: op_status,
-                    height_type: height_type,
-                    ew_dir_segment: ew_dir_segment,
-                    speed_multiplier: speed_multiplier,
-                    vertical_accuracy: vertical_accuracy,
-                    horizontal_accuracy: horizontal_accuracy,
-                    baro_accuracy: baro_accuracy,
-                    speed_accuracy: speed_accuracy,
+                    op_status: opStatus,
+                    height_type: heightType,
+                    ew_dir_segment: ewDirSegment,
+                    speed_multiplier: speedMultiplier?.description,
+                    direction: direction?.description,
+                    vertical_accuracy: vertAcc,
+                    horizontal_accuracy: horizAcc?.description,
+                    baro_accuracy: baroAcc?.description,
+                    speed_accuracy: speedAcc?.description,
                     timestamp: timestamp,
                     timestamp_accuracy: timestamp_accuracy,
+                    time: nil,
+                    start: nil,
+                    stale: nil,
+                    how: nil,
+                    ce: nil,
+                    le: nil,
+                    hae: nil,
                     aux_rssi: aux_rssi,
                     channel: channel,
                     phy: phy,
@@ -528,10 +634,45 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     adv_mac: adv_mac,
                     did: did,
                     sid: sid,
-                    operator_id: operator_id,
-                    operator_id_type: operator_id_type,
-                    
-                    rawMessage: buildRawMessage(mac, rssi, desc)
+                    timeSpeed: nil,
+                    status: nil,
+                    opStatus: opStatus,
+                    altPressure: altPressure?.description,
+                    heightType: heightType,
+                    horizAcc: horizAcc?.description,
+                    vertAcc: vertAcc,
+                    baroAcc: baroAcc?.description,
+                    speedAcc: speedAcc?.description,
+                    timestampAccuracy: timestamp_accuracy,
+                    operator_id: operatorID,
+                    operator_id_type: nil,
+                    classification_type: nil,
+                    operator_location_type: nil,
+                    area_count: nil,
+                    area_radius: nil,
+                    area_ceiling: nil,
+                    area_floor: nil,
+                    advMode: nil,
+                    txAdd: nil,
+                    rxAdd: nil,
+                    adLength: nil,
+                    accessAddress: nil,
+                    operatorAltGeo: operatorAltGeo?.description,
+                    areaCount: nil,
+                    areaRadius: nil,
+                    areaCeiling: nil,
+                    areaFloor: nil,
+                    classification: classification?.description,
+                    selfIdType: nil,
+                    selfIdId: nil,
+                    authType: nil,
+                    authPage: nil,
+                    authLength: nil,
+                    authTimestamp: nil,
+                    authData: nil,
+                    isSpoofed: false,
+                    spoofingDetails: nil,
+                    rawMessage: buildRawMessage(mac, rssi, description)
                 )
             }
         case "location_protocol", "op_status", "height_type", "ew_dir_segment",

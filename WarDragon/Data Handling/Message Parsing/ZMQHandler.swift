@@ -187,49 +187,83 @@ class ZMQHandler: ObservableObject {
             let operatorId = jsonArray.first { $0["Operator ID Message"] != nil }?["Operator ID Message"] as? [String: Any]
             let selfID = jsonArray.first { $0["Self-ID Message"] != nil }?["Self-ID Message"] as? [String: Any]
             
+            // WiFi only RID
+            let mIndex = jsonArray.first { $0["index"] != nil }?["index"] as? [String: Any]
+            let mRuntime = jsonArray.first { $0["runtime"] != nil }?["runtime"] as? [String: Any]
+            
+            
             if let basicId = basicId {
+                // Basic ID Message Fields
                 let idType = basicId["id_type"] as? String ?? ""
                 if idType.contains("CAA") {
                     print("SKIPPING THE CAA IN XML CONVERSION")
                     return nil
                 }
-                
                 let uaType = basicId["ua_type"] as? String ?? ""
                 let droneId = basicId["id"] as? String ?? UUID().uuidString
                 var mac = basicId["MAC"] as? String ?? ""
                 let rssi = basicId["RSSI"] as? Int ?? 0
+                let desc = basicId["description"] as? String ?? ""
+                let mProtocol = basicId["protocol_version"] as? String ?? ""
                 
-                var selfIDtext = ""
-                var selfIDDesc = ""
+                // SelfID Message Fields
+                let selfIDtext = selfID?["text"] as? String ?? ""
+                let selfIDDesc = selfID?["description"] as? String ?? ""
                 
-                // Tricky way to get MAC from  "text": "UAV 4f:16:39:ff:ff:ff operational"
+                // Tricky way to get MAC from  "text": "UAV 4f:16:39:ff:ff:ff operational" if mac empty
                 if let selfID = selfID {
-                    selfIDtext = selfID["text"] as? String ?? ""
-                    selfIDDesc = selfID["description"] as? String ?? ""
                     if mac.isEmpty {
                         mac = selfIDtext.replacingOccurrences(of: "UAV ", with: "").replacingOccurrences(of: " operational", with: "")
                     }
                 }
                 
-                var opID = ""
-                
-                if let operatorId = operatorId {
-                    if operatorId["operator_id"] as? String == "Terminator0x00" {
-                        opID = "N/A"
-                    } else {
-                        opID = operatorId["operator_id"] as? String ?? ""
-                    }
-                }
-               
-                // Parse location data, handling both string and numeric formats
+                // Location Message Fields
                 var lat = 0.0
                 var lon = 0.0
                 var alt = 0.0
                 var speed = 0.0
                 var vspeed = 0.0
-                var height = 0.0
+                
+                // BT Specific Location/Vector IDs
+                var protocol_version = ""
+                var op_status = ""
+                var ew_dir_segment = ""
+                var speed_multiplier = 0.0
+                var pressure_altitude = 0.0
+                
+                var height_type = ""
+                var height_agl = 0.0
+                
+                // TODO: Implement these
+                var status = ""
+                var direction = 0.0
+                var alt_pressure = 0.0
+                var horiz_acc = 0
+                var vert_acc = ""
+                var baro_acc = 0
+                var speed_acc = 0
+                var timestamp = 0
                 
                 if let location = location {
+                    // Handle BT specific data
+                    if let protocolStr = location["protocol_version"] as? String {
+                        protocol_version = String(protocolStr)
+                    }
+                    if let opStatus = location["op_status"] as? String {
+                        op_status = String(opStatus)
+                    }
+                    if let ewDir = location["ew_dir_segment"] as? String {
+                        ew_dir_segment = String(ewDir)
+                    }
+                    if let speedMultiStr = location["speed_multiplier"] as? String {
+                        speed_multiplier = Double(speedMultiStr) ?? 0.0
+                    } else if let spdMulti = location["speed_multiplier"] as? Double {
+                        speed_multiplier = spdMulti
+                    }
+                    if let heightStr = location["height_type"] as? String {
+                        height_type = heightStr
+                    }
+                    
                     // Handle latitude
                     if let latStr = location["latitude"] as? String {
                         lat = Double(latStr) ?? 0.0
@@ -250,6 +284,12 @@ class ZMQHandler: ObservableObject {
                     } else if let altNum = location["geodetic_altitude"] as? Double {
                         alt = altNum
                     }
+                    // Pressure altitude in BT RID
+                    if let altPressureStr = location["pressure_altitude"] as? String {
+                        pressure_altitude = Double(altPressureStr.replacingOccurrences(of: " m", with: "")) ?? 0.0
+                    } else if let pAltNum = location["pressure_altitude"] as? Double {
+                        pressure_altitude = pAltNum
+                    }
                     
                     // Handle speed
                     if let speedStr = location["speed"] as? String {
@@ -265,14 +305,61 @@ class ZMQHandler: ObservableObject {
                         vspeed = vspeedNum
                     }
                     
-                    // Handle height
+                    // Handle heightAGL
                     if let heightStr = location["height_agl"] as? String {
-                        height = Double(heightStr.replacingOccurrences(of: " m", with: "")) ?? 0.0
+                        height_agl = Double(heightStr.replacingOccurrences(of: " m", with: "")) ?? 0.0
                     } else if let heightNum = location["height_agl"] as? Double {
-                        height = heightNum
+                        height_agl = heightNum
+                    }
+                    
+                }
+                
+                // System Message (WiFI/DJI)
+                var operator_lat = 0.0
+                var operator_lon = 0.0
+                var operator_alt_geo = 0.0
+                var classification = 0  // TODO: handle this one if needed
+                
+                if let system = system {
+                    // Handle operator_lat
+                    if let opLat = system["operator_lat"] as? String {
+                        operator_lat = Double(opLat) ?? 0.0
+                    } else if let opLatnum = system["operator_lat"] as? Double {
+                        operator_lat = opLatnum
+                    }
+                    
+                    // Handle operator_lon
+                    if let opLon = system["operator_lon"] as? String {
+                        operator_lat = Double(opLon) ?? 0.0
+                    } else if let opLonnum = system["operator_lon"] as? Double {
+                        operator_lon = opLonnum
+                    }
+                    
+                    // Handle operator_alt_geo
+                    if let opAlt = system["operator_alt_geo"] as? String {
+                        operator_alt_geo = Double(opAlt) ?? 0.0
+                    } else if let opAltNum = system["operator_alt_geo"] as? Double {
+                        operator_alt_geo = opAltNum
                     }
                 }
                 
+                // Operator ID Message (BT)
+                var opID = ""
+                
+                if let operatorId = operatorId {
+                    if operatorId["operator_id"] as? String == "Terminator0x00" {
+                        opID = "N/A"
+                    } else {
+                        opID = operatorId["operator_id"] as? String ?? ""
+                    }
+                }
+               
+                // Auth Message (WiFI RID)
+                if let auth = auth {
+                    // TODO: Get the auth data if needed, mostly boring
+                }
+                
+                // Make an XML message we can send and parse TODO: decide if we want to forward CoT using this without remarks for TAK
                 let now = ISO8601DateFormatter().string(from: Date())
                 let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
                 
@@ -280,7 +367,7 @@ class ZMQHandler: ObservableObject {
                 <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
                     <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
                     <detail>
-                        <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Location/Vector: [Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height) m], Height Type: \(location?["height_type"] as? String ?? ""), Direction: \(location?["direction"] as? Int ?? 0), Timestamp: \(location?["timestamp"] as? String ?? "")], Self-ID Message: [selfIDtext: \(selfIDtext) selfIDDesc: \(selfIDDesc)], [OperatorID: \(opID)], [UAType: \(uaType)], </remarks>
+                        <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime?["runtime"] as? String ?? ""), Index: \(mIndex?["index"] as? String ?? ""), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification)</remarks>
                         <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
                         <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
                         <color argb="-256"/>
@@ -410,10 +497,6 @@ class ZMQHandler: ObservableObject {
         let diskUsed = Double(disk["used"] as? Int64 ?? 0) / (1024 * 1024)
         let diskFree = Double(disk["free"] as? Int64 ?? 0) / (1024 * 1024)
         let diskPercent = Double(disk["percent"] as? Double ?? 0.0)
-        
-        // ANTSDR stats
-        let plutoTemp = Double(antSDRTemps["pluto_temp"] as? Double ?? 0.0)
-        let zynq_temp = Double(antSDRTemps["zynq_temp"] as? Double ?? 0.0)
         
         // Exact format that parseRemarks() expects
         let remarks = "CPU Usage: \(systemStats["cpu_usage"] as? Double ?? 0.0)%, " +
