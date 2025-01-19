@@ -161,7 +161,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             }
             
             if let selfId = message["Self-ID Message"] as? [String: Any] {
-                droneData["description"] = selfId["text"]
+                droneData["description"] = selfId["description"]
+                droneData["text"] = selfId["text"]
             }
         }
         
@@ -178,6 +179,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 pilotLat: String(describing: droneData["pilot_lat"] ?? "0.0"),
                 pilotLon: String(describing: droneData["pilot_lon"] ?? "0.0"),
                 description: droneData["description"] as? String ?? "",
+                selfIDText: droneData["text"] as? String ?? "",
                 uaType: mapUAType(droneData["ua_type"]),
                 idType: droneData["id_type"] as? String ?? "Unknown",
                 mac: droneData["mac"] as? String,
@@ -227,7 +229,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 height: String(describing: location?["height_agl"] ?? "0.0"),
                 pilotLat: String(describing: system?["operator_lat"] ?? "0.0"),
                 pilotLon: String(describing: system?["operator_lon"] ?? "0.0"),
-                description: selfId?["text"] as? String ?? "",
+                description: selfId?["description"] as? String ?? "",
+                selfIDText: selfId?["text"] as? String ?? "",
                 uaType: mapUAType(basicId["ua_type"]),
                 idType: basicId["id_type"] as? String ?? "Unknown",
                 mac: basicId["MAC"] as? String,
@@ -589,6 +592,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             // Parse remarks field
             let (mac, rssi, protocolVersion, description, speed, vspeed, alt, heightAGL, heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus, direction, timestamp, runtime, index, status, altPressure, horizAcc, vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType, operatorLat, operatorLon, operatorAltGeo, classification) = parseDroneRemarks(remarks)
             
+            var finalDescription = description?.isEmpty ?? true ? selfIDDesc : description ?? ""
+            
             if cotMessage == nil {
                 cotMessage = CoTViewModel.CoTMessage(
                     uid: eventAttributes["uid"] ?? "",
@@ -601,7 +606,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     height: heightAGL?.description ?? "0.0",
                     pilotLat: operatorLat?.description ?? "0.0",
                     pilotLon: operatorLon?.description ?? "0.0",
-                    description: description ?? "",
+                    description: finalDescription ?? "",
+                    selfIDText: selfIDtext ?? "",
                     uaType: mapUAType(uaType),
                     idType: buildIdType(),
                     protocolVersion: protocolVersion,
@@ -711,6 +717,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     var droneMAC: String?
                     var droneRSSI: Int?
                     var description = ""
+                    var text = ""
                     var location: [String: Any]?
                     var system: [String: Any]?
                     var droneType = "a-f-G-U"
@@ -727,6 +734,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             droneMAC = basicId["MAC"] as? String ??
                             (aext?["AdvA"] as? String)?.components(separatedBy: " ").first
                             idType = basicId["id_type"] as? String ?? "Unknown"
+                            
                             if let uaTypeStr = basicId["ua_type"] as? String {
                                 uaType = mapUAType(uaTypeStr)
                             }
@@ -735,7 +743,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             if idType == "Serial Number (ANSI/CTA-2063-A)" {
                                 droneType += "-S"
                             } else if idType == "CAA Registration ID" {
-                                droneType += "-R"
+                                return
                             } else {
                                 droneType += "-U"
                             }
@@ -760,7 +768,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                                 droneType += "-O"
                             }
                         } else if let selfId = message["Self-ID Message"] as? [String: Any] {
-                            description = selfId["text"] as? String ?? ""
+                            description = selfId["description"] as? String ?? ""
+                            text = selfId["text"] as? String ?? ""
+                            
                         }
                     }
                     
@@ -780,6 +790,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             pilotLat: String(describing: system?["operator_lat"] ?? "0.0"),
                             pilotLon: String(describing: system?["operator_lon"] ?? "0.0"),
                             description: description,
+                            selfIDText: text,
                             uaType: uaType,
                             idType: idType,
                             mac: droneMAC ?? "",
@@ -827,7 +838,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             height: String(describing: location?["height_agl"] ?? "0.0"),
                             pilotLat: pilotLat,
                             pilotLon: pilotLon,
-                            description: selfId?["text"] as? String ?? "",
+                            description: selfId?["description"] as? String ?? "",
+                            selfIDText: selfId?["text"] as? String ?? "",
                             uaType: mapUAType(basicId["ua_type"] as? String),
                             idType: basicId["id_type"] as? String ?? "Unknown",
                             mac: basicId["MAC"] as? String ?? "",
@@ -860,7 +872,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         "longitude": pilotLon
                     ],
                     "Self-ID Message": [
-                        "text": droneDescription
+                        "text": droneDescription,
                     ],
                     "AUX_ADV_IND": auxAdvInd ?? [:],
                     "adtype": adType ?? [:],
@@ -881,6 +893,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     pilotLat: pilotLat,
                     pilotLon: pilotLon,
                     description: droneDescription,
+                    selfIDText: "",
                     uaType: .helicopter,
                     idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
                         ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
@@ -999,6 +1012,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     pilotLat: pilotLat,
                     pilotLon: pilotLon,
                     description: droneDescription,
+                    selfIDText: "",
                     uaType: .helicopter,
                     idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
                         ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",

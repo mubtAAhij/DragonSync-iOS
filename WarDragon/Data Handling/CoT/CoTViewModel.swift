@@ -45,6 +45,7 @@ class CoTViewModel: ObservableObject {
         var pilotLat: String
         var pilotLon: String
         var description: String
+        var selfIDText: String
         var uaType: DroneSignature.IdInfo.UAType
         
         // Basic ID fields with protocol info
@@ -489,9 +490,9 @@ class CoTViewModel: ObservableObject {
             // Update signatures collection
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
                 self.droneSignatures[index] = signature
-                print("Updating existing drone")
+                print("Updating existing signature")
             } else {
-                print("Added new drone")
+                print("Added new signature")
                 self.droneSignatures.append(signature)
             }
             
@@ -519,16 +520,9 @@ class CoTViewModel: ObservableObject {
                 let existing = self.parsedMessages[index]
                 
                 // Check for actual value changes
-                let hasChanges = existing.rssi != message.rssi ||
-                existing.lat != message.lat ||
-                existing.lon != message.lon ||
-                existing.speed != message.speed ||
-                existing.vspeed != message.vspeed ||
-                existing.alt != message.alt ||
-                existing.height != message.height ||
-                existing.op_status != message.op_status ||
-                existing.height_type != message.height_type ||
-                existing.direction != message.direction
+                let hasChanges = existing.height != message.height ||
+                existing.heightType != message.heightType ||
+                existing.classification != message.classification
                 
                 if hasChanges {
                     print("Updating drone: \(message.uid)")

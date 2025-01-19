@@ -61,6 +61,10 @@ struct DroneDetailView: View {
                         InfoRow(title: "Description", value: message.description)
                     }
                     
+                    if !message.selfIDText.isEmpty {
+                        InfoRow(title: "Info", value: message.selfIDText)
+                    }
+                    
                     if !message.uaType.rawValue.isEmpty {
                         InfoRow(title: "UA Type", value: message.uaType.rawValue)
                     }
