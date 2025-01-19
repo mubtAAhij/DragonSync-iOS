@@ -153,7 +153,7 @@ struct MessageRow: View {
                         Text("Pilot Location: \(message.pilotLat), \(message.pilotLon)")
                     }
                     if message.operator_id != "" {
-                        Text("Operator ID: \(String(describing: message.operator_id))")
+                        Text("Operator ID: \(message.operator_id ?? "")")
                     }
                     if (message.mac != nil) {
                         Text("MAC: \(message.mac ?? "")")

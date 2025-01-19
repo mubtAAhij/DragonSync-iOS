@@ -172,214 +172,216 @@ class ZMQHandler: ObservableObject {
     }
     
     //MARK: - Message Parsing & Conversion
+    // TODO: Implement these
+    var status = ""
+    var direction = 0.0
+    var alt_pressure = 0.0
+    var horiz_acc = 0
+    var vert_acc = ""
+    var baro_acc = 0
+    var speed_acc = 0
+    var timestamp = 0
     
     func convertTelemetryToXML(_ jsonString: String) -> String? {
         guard let data = jsonString.data(using: .utf8) else { return nil }
         print("Raw Message: ", jsonString)
         
-        // Try to parse as array first
-        if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-            // Find the relevant messages in the array
-            let basicId = jsonArray.first { $0["Basic ID"] != nil }?["Basic ID"] as? [String: Any]
-            let location = jsonArray.first { $0["Location/Vector Message"] != nil }?["Location/Vector Message"] as? [String: Any]
-            let system = jsonArray.first { $0["System Message"] != nil }?["System Message"] as? [String: Any]
-            let auth = jsonArray.first { $0["Auth Message"] != nil }?["Auth Message"] as? [String: Any]
-            let operatorId = jsonArray.first { $0["Operator ID Message"] != nil }?["Operator ID Message"] as? [String: Any]
-            let selfID = jsonArray.first { $0["Self-ID Message"] != nil }?["Self-ID Message"] as? [String: Any]
-            
-            // WiFi only RID
-            let mIndex = jsonArray.first { $0["index"] != nil }?["index"] as? [String: Any]
-            let mRuntime = jsonArray.first { $0["runtime"] != nil }?["runtime"] as? [String: Any]
-            
-            
-            if let basicId = basicId {
-                // Basic ID Message Fields
-                let idType = basicId["id_type"] as? String ?? ""
-                if idType.contains("CAA") {
-                    print("SKIPPING THE CAA IN XML CONVERSION")
-                    return nil
-                }
-                let uaType = basicId["ua_type"] as? String ?? ""
-                let droneId = basicId["id"] as? String ?? UUID().uuidString
-                var mac = basicId["MAC"] as? String ?? ""
-                let rssi = basicId["RSSI"] as? Int ?? 0
-                let desc = basicId["description"] as? String ?? ""
-                let mProtocol = basicId["protocol_version"] as? String ?? ""
-                
-                // SelfID Message Fields
-                let selfIDtext = selfID?["text"] as? String ?? ""
-                let selfIDDesc = selfID?["description"] as? String ?? ""
-                
-                // Tricky way to get MAC from  "text": "UAV 4f:16:39:ff:ff:ff operational" if mac empty
-                if let selfID = selfID {
-                    if mac.isEmpty {
-                        mac = selfIDtext.replacingOccurrences(of: "UAV ", with: "").replacingOccurrences(of: " operational", with: "")
-                    }
-                }
-                
-                // Location Message Fields
-                var lat = 0.0
-                var lon = 0.0
-                var alt = 0.0
-                var speed = 0.0
-                var vspeed = 0.0
-                
-                // BT Specific Location/Vector IDs
-                var protocol_version = ""
-                var op_status = ""
-                var ew_dir_segment = ""
-                var speed_multiplier = 0.0
-                var pressure_altitude = 0.0
-                
-                var height_type = ""
-                var height_agl = 0.0
-                
-                // TODO: Implement these
-                var status = ""
-                var direction = 0.0
-                var alt_pressure = 0.0
-                var horiz_acc = 0
-                var vert_acc = ""
-                var baro_acc = 0
-                var speed_acc = 0
-                var timestamp = 0
-                
-                if let location = location {
-                    // Handle BT specific data
-                    if let protocolStr = location["protocol_version"] as? String {
-                        protocol_version = String(protocolStr)
-                    }
-                    if let opStatus = location["op_status"] as? String {
-                        op_status = String(opStatus)
-                    }
-                    if let ewDir = location["ew_dir_segment"] as? String {
-                        ew_dir_segment = String(ewDir)
-                    }
-                    if let speedMultiStr = location["speed_multiplier"] as? String {
-                        speed_multiplier = Double(speedMultiStr) ?? 0.0
-                    } else if let spdMulti = location["speed_multiplier"] as? Double {
-                        speed_multiplier = spdMulti
-                    }
-                    if let heightStr = location["height_type"] as? String {
-                        height_type = heightStr
-                    }
-                    
-                    // Handle latitude
-                    if let latStr = location["latitude"] as? String {
-                        lat = Double(latStr) ?? 0.0
-                    } else if let latNum = location["latitude"] as? Double {
-                        lat = latNum
-                    }
-                    
-                    // Handle longitude
-                    if let lonStr = location["longitude"] as? String {
-                        lon = Double(lonStr) ?? 0.0
-                    } else if let lonNum = location["longitude"] as? Double {
-                        lon = lonNum
-                    }
-                    
-                    // Handle altitude
-                    if let altStr = location["geodetic_altitude"] as? String {
-                        alt = Double(altStr.replacingOccurrences(of: " m", with: "")) ?? 0.0
-                    } else if let altNum = location["geodetic_altitude"] as? Double {
-                        alt = altNum
-                    }
-                    // Pressure altitude in BT RID
-                    if let altPressureStr = location["pressure_altitude"] as? String {
-                        pressure_altitude = Double(altPressureStr.replacingOccurrences(of: " m", with: "")) ?? 0.0
-                    } else if let pAltNum = location["pressure_altitude"] as? Double {
-                        pressure_altitude = pAltNum
-                    }
-                    
-                    // Handle speed
-                    if let speedStr = location["speed"] as? String {
-                        speed = Double(speedStr.replacingOccurrences(of: " m/s", with: "")) ?? 0.0
-                    } else if let speedNum = location["speed"] as? Double {
-                        speed = speedNum
-                    }
-                    
-                    // Handle vertical speed
-                    if let vspeedStr = location["vert_speed"] as? String {
-                        vspeed = Double(vspeedStr.replacingOccurrences(of: " m/s", with: "")) ?? 0.0
-                    } else if let vspeedNum = location["vert_speed"] as? Double {
-                        vspeed = vspeedNum
-                    }
-                    
-                    // Handle heightAGL
-                    if let heightStr = location["height_agl"] as? String {
-                        height_agl = Double(heightStr.replacingOccurrences(of: " m", with: "")) ?? 0.0
-                    } else if let heightNum = location["height_agl"] as? Double {
-                        height_agl = heightNum
-                    }
-                    
-                }
-                
-                // System Message (WiFI/DJI)
-                var operator_lat = 0.0
-                var operator_lon = 0.0
-                var operator_alt_geo = 0.0
-                var classification = 0  // TODO: handle this one if needed
-                
-                if let system = system {
-                    // Handle operator_lat
-                    if let opLat = system["operator_lat"] as? String {
-                        operator_lat = Double(opLat) ?? 0.0
-                    } else if let opLatnum = system["operator_lat"] as? Double {
-                        operator_lat = opLatnum
-                    }
-                    
-                    // Handle operator_lon
-                    if let opLon = system["operator_lon"] as? String {
-                        operator_lat = Double(opLon) ?? 0.0
-                    } else if let opLonnum = system["operator_lon"] as? Double {
-                        operator_lon = opLonnum
-                    }
-                    
-                    // Handle operator_alt_geo
-                    if let opAlt = system["operator_alt_geo"] as? String {
-                        operator_alt_geo = Double(opAlt) ?? 0.0
-                    } else if let opAltNum = system["operator_alt_geo"] as? Double {
-                        operator_alt_geo = opAltNum
-                    }
-                }
-                
-                // Operator ID Message (BT)
-                var opID = ""
-                
-                if let operatorId = operatorId {
-                    if operatorId["operator_id"] as? String == "Terminator0x00" {
-                        opID = "N/A"
-                    } else {
-                        opID = operatorId["operator_id"] as? String ?? ""
-                    }
-                }
-               
-                // Auth Message (WiFI RID)
-                if let auth = auth {
-                    // TODO: Get the auth data if needed, mostly boring
-                }
-                
-                // Make an XML message we can send and parse TODO: decide if we want to forward CoT using this without remarks for TAK
-                let now = ISO8601DateFormatter().string(from: Date())
-                let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
-                
-                return """
-                <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
-                    <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
-                    <detail>
-                        <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime?["runtime"] as? String ?? ""), Index: \(mIndex?["index"] as? String ?? ""), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification)</remarks>
-                        <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
-                        <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
-                        <color argb="-256"/>
-                        <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
-                    </detail>
-                </event>
-                """
+        do {
+            // Try parsing as a single object first (ESP32 format)
+            if let jsonObject = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                return processJsonObject(jsonObject)
             }
+            
+            // If not a single object, try parsing as an array (DJI/BT formats)
+            if let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                return processJsonArray(jsonArray)
+            }
+        } catch {
+            print("JSON parsing error: \(error)")
         }
         
         print("Failed to parse message")
         return nil
+    }
+    
+    func processJsonObject(_ jsonObject: [String: Any]) -> String? {
+        // Extract messages from the object
+        let basicId = jsonObject["Basic ID"] as? [String: Any]
+        let location = jsonObject["Location/Vector Message"] as? [String: Any]
+        let system = jsonObject["System Message"] as? [String: Any]
+        let auth = jsonObject["Auth Message"] as? [String: Any]
+        let operatorId = jsonObject["Operator ID Message"] as? [String: Any]
+        let selfID = jsonObject["Self-ID Message"] as? [String: Any]
+        
+        // Extract index and runtime
+        let mIndex = jsonObject["index"] as? Int ?? 0
+        let mRuntime = jsonObject["runtime"] as? Int ?? 0
+        
+        guard let basicId = basicId else {
+            print("No Basic ID found")
+            return nil
+        }
+        
+        // Basic ID Message Fields
+        let idType = basicId["id_type"] as? String ?? ""
+        if idType.contains("CAA") {
+            print("SKIPPING THE CAA IN XML CONVERSION")
+            return nil
+        }
+        
+        let uaType = String(describing: basicId["ua_type"] ?? "")
+        let droneId = basicId["id"] as? String ?? UUID().uuidString
+        var mac = basicId["MAC"] as? String ?? ""
+        let rssi = basicId["RSSI"] as? Int ?? 0
+        let desc = basicId["description"] as? String ?? ""
+        let mProtocol = basicId["protocol_version"] as? String ?? ""
+        
+        // SelfID Message Fields
+        let selfIDtext = selfID?["text"] as? String ?? ""
+        let selfIDDesc = selfID?["description"] as? String ?? ""
+        
+        // Tricky way to get MAC from "text": "UAV 4f:16:39:ff:ff:ff operational" if mac empty
+        if mac.isEmpty, let selfIDtext = selfID?["text"] as? String {
+            mac = selfIDtext.replacingOccurrences(of: "UAV ", with: "").replacingOccurrences(of: " operational", with: "")
+        }
+        
+        // Location Message Fields
+        func extractDouble(_ dict: [String: Any]?, key: String) -> Double {
+            guard let dict = dict else { return 0.0 }
+            if let str = dict[key] as? String {
+                return Double(str.replacingOccurrences(of: " m/s", with: "").replacingOccurrences(of: " m", with: "")) ?? 0.0
+            }
+            return dict[key] as? Double ?? 0.0
+        }
+        
+        let lat = extractDouble(location, key: "latitude")
+        let lon = extractDouble(location, key: "longitude")
+        let alt = extractDouble(location, key: "geodetic_altitude")
+        let speed = extractDouble(location, key: "speed")
+        let vspeed = extractDouble(location, key: "vert_speed")
+        
+        // Additional Location Fields
+        let protocol_version = location?["protocol_version"] as? String ?? ""
+        let op_status = location?["op_status"] as? String ?? ""
+        let ew_dir_segment = location?["ew_dir_segment"] as? String ?? ""
+        let speed_multiplier = extractDouble(location, key: "speed_multiplier")
+        let pressure_altitude = extractDouble(location, key: "pressure_altitude")
+        let height_type = location?["height_type"] as? String ?? ""
+        let height_agl = extractDouble(location, key: "height_agl")
+        
+        // Status and Accuracy Fields
+        let status = location?["status"] as? Int ?? 0
+        let direction = extractDouble(location, key: "direction")
+        let alt_pressure = extractDouble(location, key: "alt_pressure")
+        let horiz_acc = location?["horiz_acc"] as? Int ?? 0
+        let vert_acc = location?["vert_acc"] as? String ?? ""
+        let baro_acc = location?["baro_acc"] as? Int ?? 0
+        let speed_acc = location?["speed_acc"] as? Int ?? 0
+        let timestamp = location?["timestamp"] as? Int ?? 0
+        
+        // System Message Fields
+        let operator_lat = extractDouble(system, key: "operator_lat")
+        let operator_lon = extractDouble(system, key: "operator_lon")
+        let operator_alt_geo = extractDouble(system, key: "operator_alt_geo")
+        let classification = system?["classification"] as? Int ?? 0
+        
+        // Operator ID Message
+        var opID = ""
+        if let operatorId = operatorId {
+            opID = operatorId["operator_id"] as? String ?? ""
+            if opID == "Terminator0x00" {
+                opID = "N/A"
+            }
+        }
+        
+        // Generate XML
+        let now = ISO8601DateFormatter().string(from: Date())
+        let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
+        
+        return """
+        <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
+            <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
+            <detail>
+                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification)</remarks>
+                <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
+                <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
+                <color argb="-256"/>
+                <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
+            </detail>
+        </event>
+        """
+    }
+    
+    func processJsonArray(_ jsonArray: [[String: Any]]) -> String? {
+        var basicId: [String: Any]?
+        var location: [String: Any]?
+        var system: [String: Any]?
+        var selfID: [String: Any]?
+        var operatorId: [String: Any]?
+        var auth: [String: Any]?
+        var index: Int?
+        var runtime: Int?
+
+        // Find first Basic ID with a valid id field
+        for obj in jsonArray {
+            if let basicIdMsg = obj["Basic ID"] as? [String: Any],
+               let id = basicIdMsg["id"] as? String,
+               !id.isEmpty {
+                basicId = basicIdMsg
+                break
+            }
+        }
+
+        // Collect other messages
+        for obj in jsonArray {
+            if let locationMsg = obj["Location/Vector Message"] as? [String: Any] { location = locationMsg }
+            if let systemMsg = obj["System Message"] as? [String: Any] { system = systemMsg }
+            if let selfIDMsg = obj["Self-ID Message"] as? [String: Any] { selfID = selfIDMsg }
+            if let operatorIDMsg = obj["Operator ID Message"] as? [String: Any] { operatorId = operatorIDMsg }
+            if let authMsg = obj["Auth Message"] as? [String: Any] { auth = authMsg }
+            if let indexVal = obj["index"] as? Int { index = indexVal }
+            if let runtimeVal = obj["runtime"] as? Int { runtime = runtimeVal }
+        }
+        
+        // Create consolidated object and process it
+        var consolidatedObject: [String: Any] = [:]
+        if let basicId = basicId { consolidatedObject["Basic ID"] = basicId }
+        if let location = location { consolidatedObject["Location/Vector Message"] = location }
+        if let system = system { consolidatedObject["System Message"] = system }
+        if let selfID = selfID { consolidatedObject["Self-ID Message"] = selfID }
+        if let operatorId = operatorId { consolidatedObject["Operator ID Message"] = operatorId }
+        if let auth = auth { consolidatedObject["Auth Message"] = auth }
+        if let index = index { consolidatedObject["index"] = index }
+        if let runtime = runtime { consolidatedObject["runtime"] = runtime }
+
+        return processJsonObject(consolidatedObject)
+    }
+    
+    // Helper functions to safely extract values
+    func extractDouble(from dict: [String: Any]?, key: String) -> Double? {
+        guard let dict = dict else { return nil }
+        
+        if let strValue = dict[key] as? String {
+            return Double(strValue.replacingOccurrences(of: " m/s", with: "").replacingOccurrences(of: " m", with: ""))
+        }
+        return dict[key] as? Double
+    }
+    
+    func extractString(from dict: [String: Any]?, key: String) -> String? {
+        return dict?[key] as? String
+    }
+    
+    func extractInt(from dict: [String: Any]?, key: String) -> Int? {
+        return dict?[key] as? Int
+    }
+    
+    func extractOperatorID(from dict: [String: Any]?) -> String {
+        guard let operatorId = dict else { return "" }
+        
+        if let opId = operatorId["operator_id"] as? String {
+            return opId == "Terminator0x00" ? "N/A" : opId
+        }
+        return ""
     }
     
     private func getFieldValue(_ json: [String: Any], keys: [String], defaultValue: Any) -> Any {
@@ -392,43 +394,43 @@ class ZMQHandler: ObservableObject {
     }
     
     func convertDJITelemetryToXML(_ json: [String: Any]) -> String? {
-            let now = ISO8601DateFormatter().string(from: Date())
-            let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(60))
-            
-            // Handle field name variations
-            let pilotLat: Double
-            let pilotLon: Double
-            if let system = json["System"] as? [String: Any],
-               let pilotLocation = system["Pilot Location"] as? [String: Any] {
-                pilotLat = getFieldValue(pilotLocation, keys: ["lat", "latitude"], defaultValue: 0.0) as! Double
-                pilotLon = getFieldValue(pilotLocation, keys: ["lon", "longitude"], defaultValue: 0.0) as! Double
-            } else {
-                // Fallback to flat structure
-                pilotLat = getFieldValue(json, keys: ["app_lat", "pilot_lat", "operator_lat"], defaultValue: 0.0) as! Double
-                pilotLon = getFieldValue(json, keys: ["app_lon", "pilot_lon", "operator_lon"], defaultValue: 0.0) as! Double
-            }
-            let droneLat = getFieldValue(json, keys: ["drone_lat", "latitude", "lat"], defaultValue: 0.0) as! Double
-            let droneLon = getFieldValue(json, keys: ["drone_lon", "longitude", "lon"], defaultValue: 0.0) as! Double
-            let speed = getFieldValue(json, keys: ["horizontal_speed", "speed"], defaultValue: 0.0) as! Double
-            let vertSpeed = getFieldValue(json, keys: ["vertical_speed", "vert_speed"], defaultValue: 0.0) as! Double
-            let height = getFieldValue(json, keys: ["height_agl", "height"], defaultValue: 0.0) as! Double
-            let altitude = getFieldValue(json, keys: ["geodetic_altitude", "altitude"], defaultValue: 0.0) as! Double
-            let serialNumber = getFieldValue(json, keys: ["serial_number", "id"], defaultValue: "unknown") as! String
-            let deviceType = getFieldValue(json, keys: ["device_type", "description"], defaultValue: "DJI Drone") as! String
-            let rssi = getFieldValue(json, keys: ["rssi", "RSSI", "signal_strength"], defaultValue: 0) as! Int
-            let mac = getFieldValue(json, keys: ["mac", "MAC"], defaultValue: "") as! String
-            
-            // UAType handling for both string and int formats
-            let uaType: String
-            if let typeInt = json["ua_type"] as? Int {
-                uaType = String(typeInt)
-            } else if let typeStr = json["ua_type"] as? String {
-                uaType = typeStr == "Helicopter (or Multirotor)" ? "2" : "0"
-            } else {
-                uaType = "2"  // Default to helicopter
-            }
-            
-            return """
+        let now = ISO8601DateFormatter().string(from: Date())
+        let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(60))
+        
+        // Handle field name variations
+        let pilotLat: Double
+        let pilotLon: Double
+        if let system = json["System"] as? [String: Any],
+           let pilotLocation = system["Pilot Location"] as? [String: Any] {
+            pilotLat = getFieldValue(pilotLocation, keys: ["lat", "latitude"], defaultValue: 0.0) as! Double
+            pilotLon = getFieldValue(pilotLocation, keys: ["lon", "longitude"], defaultValue: 0.0) as! Double
+        } else {
+            // Fallback to flat structure
+            pilotLat = getFieldValue(json, keys: ["app_lat", "pilot_lat", "operator_lat"], defaultValue: 0.0) as! Double
+            pilotLon = getFieldValue(json, keys: ["app_lon", "pilot_lon", "operator_lon"], defaultValue: 0.0) as! Double
+        }
+        let droneLat = getFieldValue(json, keys: ["drone_lat", "latitude", "lat"], defaultValue: 0.0) as! Double
+        let droneLon = getFieldValue(json, keys: ["drone_lon", "longitude", "lon"], defaultValue: 0.0) as! Double
+        let speed = getFieldValue(json, keys: ["horizontal_speed", "speed"], defaultValue: 0.0) as! Double
+        let vertSpeed = getFieldValue(json, keys: ["vertical_speed", "vert_speed"], defaultValue: 0.0) as! Double
+        let height = getFieldValue(json, keys: ["height_agl", "height"], defaultValue: 0.0) as! Double
+        let altitude = getFieldValue(json, keys: ["geodetic_altitude", "altitude"], defaultValue: 0.0) as! Double
+        let serialNumber = getFieldValue(json, keys: ["serial_number", "id"], defaultValue: "unknown") as! String
+        let deviceType = getFieldValue(json, keys: ["device_type", "description"], defaultValue: "DJI Drone") as! String
+        let rssi = getFieldValue(json, keys: ["rssi", "RSSI", "signal_strength"], defaultValue: 0) as! Int
+        let mac = getFieldValue(json, keys: ["mac", "MAC"], defaultValue: "") as! String
+        
+        // UAType handling for both string and int formats
+        let uaType: String
+        if let typeInt = json["ua_type"] as? Int {
+            uaType = String(typeInt)
+        } else if let typeStr = json["ua_type"] as? String {
+            uaType = typeStr == "Helicopter (or Multirotor)" ? "2" : "0"
+        } else {
+            uaType = "2"  // Default to helicopter
+        }
+        
+        return """
             <event version="2.0" uid="drone-\(serialNumber)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
                 <point lat="\(droneLat)" lon="\(droneLon)" hae="\(altitude)" ce="9999999" le="999999"/>
                 <detail>
@@ -459,7 +461,7 @@ class ZMQHandler: ObservableObject {
                 </detail>
             </event>
             """
-        }
+    }
     
     func convertStatusToXML(_ jsonString: String) -> String? {
         guard let jsonData = jsonString.data(using: .utf8),
