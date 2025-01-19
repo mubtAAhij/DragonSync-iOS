@@ -19,8 +19,9 @@ class StatusViewModel: ObservableObject {
         var timestamp: Double
         var gpsData: GPSData
         var systemStats: SystemStats
+        var antStats: ANTStats
         
-        
+
         struct GPSData {
             var latitude: Double
             var longitude: Double
@@ -51,8 +52,6 @@ class StatusViewModel: ObservableObject {
                 var cached: Int64
                 var shared: Int64
                 var slab: Int64
-               
-
             }
             
             struct DiskStats {
@@ -61,6 +60,11 @@ class StatusViewModel: ObservableObject {
                 var free: Int64
                 var percent: Double
             }
+        }
+        
+        struct ANTStats {
+            var plutoTemp: Double
+            var zynqTemp: Double
         }
     }
 }

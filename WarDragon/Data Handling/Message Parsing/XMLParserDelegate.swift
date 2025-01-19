@@ -73,6 +73,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private var temperature: Double = 0.0
     private var uptime: Double = 0.0
     
+    private var plutoTemp: Double = 0.0
+    private var zynqTemp: Double = 0.0
+    
     var cotMessage: CoTViewModel.CoTMessage?
     var statusMessage: StatusViewModel.StatusMessage?
     private var isStatusMessage = false
@@ -385,6 +388,10 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     ),
                     temperature: temperature,
                     uptime: uptime
+                ),
+                antStats: .init(
+                    plutoTemp: plutoTemp,
+                    zynqTemp: zynqTemp
                 )
             )
         default:
@@ -392,11 +399,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
     }
     
-    private func parseDroneRemarks(_ remarks: String) -> (String?, Int?, String?) {
+    private func parseDroneRemarks(_ remarks: String) -> (String?, Int?, String?, String?) {
 //        print("DEBUG- Parsing drone remarks: \(remarks)")
         var mac: String?
         var rssi: Int?
         var description: String?
+        var operatorID: String?
+        
         // The remarks string should contain drone details; split it by commas or other delimiters
         let components = remarks.components(separatedBy: ", ")
         
@@ -421,9 +430,14 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             if trimmed.contains("Self-ID:") {
                 description = trimmed.replacingOccurrences(of: "Self-ID: ", with: "")
             }
+            
+            // Check for Operator-ID (Self-ID)
+            if trimmed.contains("OperatorID:") {
+                operatorID = trimmed.replacingOccurrences(of: "OperatorID: ", with: "")
+            }
         }
 //        print("DEBUG: Parsed Remarks are mac \(String(describing: mac)) rssi \(String(describing: rssi)) and desc \(String(describing: description))")
-        return (mac, rssi, description)
+        return (mac, rssi, description, operatorID)
     }
     
     
@@ -463,8 +477,10 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 memorySlab = Double(component.replacingOccurrences(of: "Memory Slab: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
             } else if component.hasPrefix("Memory Percent:") {
                 memoryPercent = Double(component.replacingOccurrences(of: "Memory Percent: ", with: "").replacingOccurrences(of: " percent", with: "")) ?? 0.0
-            } else if component.hasPrefix("Disk Percent:") {
-                diskPercent = Double(component.replacingOccurrences(of: "Disk Percent: ", with: "").replacingOccurrences(of: " percent", with: "")) ?? 0.0
+            } else if component.hasPrefix("Pluto Temp:") {
+                plutoTemp = Double(component.replacingOccurrences(of: "Pluto Temp: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
+            } else if component.hasPrefix("Zynq Temp:") {
+                zynqTemp = Double(component.replacingOccurrences(of: "Zynq Temp: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
             }
             
         }
@@ -475,7 +491,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         switch elementName {
         case "remarks":
             // Parse remarks field which contains MAC, RSSI, and other info
-            let (mac, rssi, desc) = parseDroneRemarks(remarks)
+            let (mac, rssi, desc, operator_id) = parseDroneRemarks(remarks)
             if cotMessage == nil {
                 cotMessage = CoTViewModel.CoTMessage(
                     uid: eventAttributes["uid"] ?? "",

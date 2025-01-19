@@ -197,6 +197,7 @@ struct MemoryBarView: View {
 // MARK: - SystemStatsView
 struct SystemStatsView: View {
     let stats: StatusViewModel.StatusMessage.SystemStats
+    let antStats: StatusViewModel.StatusMessage.ANTStats
     @State private var showingMemoryDetail = false
     
     var body: some View {
@@ -219,6 +220,27 @@ struct SystemStatsView: View {
                         title: "TEMP",
                         unit: "°C",
                         color: temperatureColor(stats.temperature)
+                    )
+                }
+                
+                // Add ANTSDR temps
+                if antStats.plutoTemp > 0 {
+                    CircularGauge(
+                        value: antStats.plutoTemp,
+                        maxValue: 85,
+                        title: "PLUTO",
+                        unit: "°C",
+                        color: antSdrTemperatureColor(antStats.plutoTemp)
+                    )
+                }
+                
+                if antStats.zynqTemp > 0 {
+                    CircularGauge(
+                        value: antStats.zynqTemp,
+                        maxValue: 85,
+                        title: "ZYNQ",
+                        unit: "°C",
+                        color: antSdrTemperatureColor(antStats.zynqTemp)
                     )
                 }
             }
@@ -302,6 +324,14 @@ struct SystemStatsView: View {
         }
     }
     
+    private func antSdrTemperatureColor(_ temp: Double) -> Color {
+           switch temp {
+           case 0..<45: return .green
+           case 45..<65: return .yellow
+           default: return .red
+           }
+       }
+    
     private func temperatureColor(_ temp: Double) -> Color {
         switch temp {
         case 0..<50: return .green
@@ -356,8 +386,11 @@ struct StatusMessageView: View {
             
             HStack(spacing: 16) {
                 // System Stats
-                SystemStatsView(stats: message.systemStats)
-                    .frame(maxWidth: .infinity)
+                SystemStatsView(
+                    stats: message.systemStats,
+                    antStats: message.antStats
+                )
+                .frame(maxWidth: .infinity)
                 
                 // Location Data
                 VStack(alignment: .trailing, spacing: 8) {

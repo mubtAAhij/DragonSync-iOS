@@ -182,7 +182,10 @@ class ZMQHandler: ObservableObject {
             // Find the relevant messages in the array
             let basicId = jsonArray.first { $0["Basic ID"] != nil }?["Basic ID"] as? [String: Any]
             let location = jsonArray.first { $0["Location/Vector Message"] != nil }?["Location/Vector Message"] as? [String: Any]
+            let system = jsonArray.first { $0["System Message"] != nil }?["System Message"] as? [String: Any]
+            let auth = jsonArray.first { $0["Auth Message"] != nil }?["Auth Message"] as? [String: Any]
             let operatorId = jsonArray.first { $0["Operator ID Message"] != nil }?["Operator ID Message"] as? [String: Any]
+            let selfID = jsonArray.first { $0["Self-ID Message"] != nil }?["Self-ID Message"] as? [String: Any]
             
             if let basicId = basicId {
                 let idType = basicId["id_type"] as? String ?? ""
@@ -190,11 +193,34 @@ class ZMQHandler: ObservableObject {
                     print("SKIPPING THE CAA IN XML CONVERSION")
                     return nil
                 }
-                let droneId = basicId["id"] as? String ?? UUID().uuidString
-                let mac = basicId["MAC"] as? String ?? ""
-                let rssi = basicId["RSSI"] as? Int ?? 0
-               
                 
+                let uaType = basicId["ua_type"] as? String ?? ""
+                let droneId = basicId["id"] as? String ?? UUID().uuidString
+                var mac = basicId["MAC"] as? String ?? ""
+                let rssi = basicId["RSSI"] as? Int ?? 0
+                
+                var selfIDtext = ""
+                var selfIDDesc = ""
+                
+                // Tricky way to get MAC from  "text": "UAV 4f:16:39:ff:ff:ff operational"
+                if let selfID = selfID {
+                    selfIDtext = selfID["text"] as? String ?? ""
+                    selfIDDesc = selfID["description"] as? String ?? ""
+                    if mac.isEmpty {
+                        mac = selfIDtext.replacingOccurrences(of: "UAV ", with: "").replacingOccurrences(of: " operational", with: "")
+                    }
+                }
+                
+                var opID = ""
+                
+                if let operatorId = operatorId {
+                    if operatorId["operator_id"] as? String == "Terminator0x00" {
+                        opID = "N/A"
+                    } else {
+                        opID = operatorId["operator_id"] as? String ?? ""
+                    }
+                }
+               
                 // Parse location data, handling both string and numeric formats
                 var lat = 0.0
                 var lon = 0.0
@@ -254,7 +280,7 @@ class ZMQHandler: ObservableObject {
                 <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
                     <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
                     <detail>
-                        <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Location/Vector: [Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height) m], Height Type: \(location?["height_type"] as? String ?? ""), Direction: \(location?["direction"] as? Int ?? 0), Timestamp: \(location?["timestamp"] as? String ?? "")]</remarks>
+                        <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Location/Vector: [Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height) m], Height Type: \(location?["height_type"] as? String ?? ""), Direction: \(location?["direction"] as? Int ?? 0), Timestamp: \(location?["timestamp"] as? String ?? "")], Self-ID Message: [selfIDtext: \(selfIDtext) selfIDDesc: \(selfIDDesc)], [OperatorID: \(opID)], [UAType: \(uaType)], </remarks>
                         <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
                         <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
                         <color argb="-256"/>
@@ -362,6 +388,7 @@ class ZMQHandler: ObservableObject {
         let serialNumber = json["serial_number"] as? String ?? ""
         let gpsData = json["gps_data"] as? [String: Any] ?? [:]
         let systemStats = json["system_stats"] as? [String: Any] ?? [:]
+        let antSDRTemps = json["ant_sdr_temps"] as? [String: Any] ?? [:]
         
         // memory block
         let memory = systemStats["memory"] as? [String: Any] ?? [:]
@@ -384,6 +411,10 @@ class ZMQHandler: ObservableObject {
         let diskFree = Double(disk["free"] as? Int64 ?? 0) / (1024 * 1024)
         let diskPercent = Double(disk["percent"] as? Double ?? 0.0)
         
+        // ANTSDR stats
+        let plutoTemp = Double(antSDRTemps["pluto_temp"] as? Double ?? 0.0)
+        let zynq_temp = Double(antSDRTemps["zynq_temp"] as? Double ?? 0.0)
+        
         // Exact format that parseRemarks() expects
         let remarks = "CPU Usage: \(systemStats["cpu_usage"] as? Double ?? 0.0)%, " +
         "Memory Total: \(String(format: "%.1f", memoryTotal)) MB, " +
@@ -402,7 +433,9 @@ class ZMQHandler: ObservableObject {
         "Disk Free: \(String(format: "%.1f", diskFree)) MB, " +
         "Disk Percent: \(String(format: "%.1f", diskPercent))%, " +
         "Temperature: \(systemStats["temperature"] as? Double ?? 0.0)°C, " +
-        "Uptime: \(systemStats["uptime"] as? Double ?? 0.0) seconds"
+        "Uptime: \(systemStats["uptime"] as? Double ?? 0.0) seconds, " +
+        "Pluto Temp: \(antSDRTemps["pluto_temp"] as? Double ?? 0.0)°C, " +
+        "Zynq Temp: \(antSDRTemps["zynq_temp"] as? Double ?? 0.0)°C"
         
         return """
         <event version="2.0" uid="\(serialNumber)" type="b-m-p-s-m">
