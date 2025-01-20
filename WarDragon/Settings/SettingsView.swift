@@ -40,21 +40,53 @@ struct SettingsView: View {
                 .disabled(settings.isListening)
                 
                 if settings.connectionMode == .zmq {
-                    TextField("ZMQ Host", text: .init(
-                        get: { settings.zmqHost },
-                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: true) }
-                    ))
-                    .textContentType(.URL)
-                    .autocapitalization(.none)
-                    .disabled(settings.isListening)
+                    HStack {
+                        TextField("ZMQ Host", text: .init(
+                            get: { settings.zmqHost },
+                            set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: true) }
+                        ))
+                        .textContentType(.URL)
+                        .autocapitalization(.none)
+                        .disabled(settings.isListening)
+                        
+                        if !settings.zmqHostHistory.isEmpty {
+                            Menu {
+                                ForEach(settings.zmqHostHistory, id: \.self) { host in
+                                    Button(host) {
+                                        settings.updateConnection(mode: settings.connectionMode, host: host, isZmqHost: true)
+                                        settings.updateConnectionHistory(host: host, isZmq: true)
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: "clock.arrow.circlepath")
+                            }
+                            .disabled(settings.isListening)
+                        }
+                    }
                 } else {
-                    TextField("Multicast Host", text: .init(
-                        get: { settings.multicastHost },
-                        set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: false) }
-                    ))
-                    .textContentType(.URL)
-                    .autocapitalization(.none)
-                    .disabled(settings.isListening)
+                    HStack {
+                        TextField("Multicast Host", text: .init(
+                            get: { settings.multicastHost },
+                            set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: false) }
+                        ))
+                        .textContentType(.URL)
+                        .autocapitalization(.none)
+                        .disabled(settings.isListening)
+                        
+                        if !settings.multicastHostHistory.isEmpty {
+                            Menu {
+                                ForEach(settings.multicastHostHistory, id: \.self) { host in
+                                    Button(host) {
+                                        settings.updateConnection(mode: settings.connectionMode, host: host, isZmqHost: false)
+                                        settings.updateConnectionHistory(host: host, isZmq: false)
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: "clock.arrow.circlepath")
+                            }
+                            .disabled(settings.isListening)
+                        }
+                    }
                 }
                 
                 Toggle(isOn: .init(

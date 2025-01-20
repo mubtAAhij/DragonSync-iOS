@@ -82,7 +82,17 @@ class Settings: ObservableObject {
             objectWillChange.send()
         }
     }
-    
+    @AppStorage("zmqHostHistory") var zmqHostHistoryJson: String = "[]" {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+    @AppStorage("multicastHostHistory") var multicastHostHistoryJson: String = "[]" {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
     private init() {
         toggleListening(false)
     }
@@ -91,8 +101,10 @@ class Settings: ObservableObject {
         if let host = host {
             if isZmqHost {
                 zmqHost = host
+                updateConnectionHistory(host: host, isZmq: true)
             } else {
                 multicastHost = host
+                updateConnectionHistory(host: host, isZmq: false)
             }
         }
         
@@ -117,6 +129,59 @@ class Settings: ObservableObject {
         objectWillChange.send()
         
     }
+    
+    var zmqHostHistory: [String] {
+           get {
+               if let data = zmqHostHistoryJson.data(using: .utf8),
+                  let array = try? JSONDecoder().decode([String].self, from: data) {
+                   return array
+               }
+               return []
+           }
+           set {
+               if let data = try? JSONEncoder().encode(newValue),
+                  let json = String(data: data, encoding: .utf8) {
+                   zmqHostHistoryJson = json
+               }
+           }
+       }
+       
+       var multicastHostHistory: [String] {
+           get {
+               if let data = multicastHostHistoryJson.data(using: .utf8),
+                  let array = try? JSONDecoder().decode([String].self, from: data) {
+                   return array
+               }
+               return []
+           }
+           set {
+               if let data = try? JSONEncoder().encode(newValue),
+                  let json = String(data: data, encoding: .utf8) {
+                   multicastHostHistoryJson = json
+               }
+           }
+       }
+    
+    func updateConnectionHistory(host: String, isZmq: Bool) {
+            if isZmq {
+                var history = zmqHostHistory
+                history.removeAll { $0 == host }
+                history.insert(host, at: 0)
+                if history.count > 5 {
+                    history = Array(history.prefix(5))
+                }
+                zmqHostHistory = history
+            } else {
+                var history = multicastHostHistory
+                history.removeAll { $0 == host }
+                history.insert(host, at: 0)
+                if history.count > 5 {
+                    history = Array(history.prefix(5))
+                }
+                multicastHostHistory = history
+            }
+        }
+    
     
     func updatePreferences(notifications: Bool, screenOn: Bool) {
         notificationsEnabled = notifications
