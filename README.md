@@ -21,10 +21,13 @@
 
 
 - **Instant System Alerts**  
-  Stay informed with real-time status updates about your system’s performance. Memory, CPU, temp and more.
+  Stay informed with real-time status updates about your system’s performance & location. Memory, GPS, CPU, temp and more. WarDragon Pro also displays ANTSDR internal temperatures.
+
+  ![image](https://github.com/user-attachments/assets/daf1f020-b852-40e9-be95-dcc3d02371af)
+
 
 - **Seamless WarDragon Integration**  
-  Designed to work flawlessly with the WarDragon DragonOS platform & `dragonsync.py`, providing a unified and user-friendly experience out of the box. 
+  Designed to work flawlessly with the WarDragon DragonOS platform directly over ZMQ or broader applications with Multicast. A unified and user-friendly experience out of the box. 
 
 - **Flexible Protocol Support**  
   Supports ZMQ and Multicast configurations to receive CoT and status messages, tailored to your operational needs.
@@ -50,10 +53,17 @@
    - Click the **Build and Run** button to install and launch the app on your device.
 
 ## Usage
-
+**WarDragon Direct ZMQ**
 - Ensure that your device is connected to the same network as your WarDragon or host system.
-- Launch the app & choose Multicast or ZMQ from settings
-- Input the IP of the WarDragon or host for ZMQ. (Default multicast address is pre-configured for `dragonsync.py`, adjust if your network requires it.)
+- Launch the app & choose ZMQ from settings 
+- Tap the address and enter the IP of the WarDragon (use `arp -a` for example)
+- Start the listener & status and drone detection will happen automatically. 
+
+**Multicast**
+- Start dragonsync.py and wardragon-monitor.py from the DragonSync repo.
+- From the DroneId repo start zmq_decoder.py and WiFi/BT sniffer. 
+
+(Default multicast address is pre-configured for `dragonsync.py`, adjust per network requirements.)
 
   _**Refer to [dragonsync.py](https://github.com/alphafox02/DragonSync) for detailed instructions & commands**_
 
