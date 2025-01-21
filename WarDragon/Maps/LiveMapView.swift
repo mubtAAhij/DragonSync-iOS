@@ -18,7 +18,7 @@ struct LiveMapView: View {
     @State private var flightPaths: [String: [(coordinate: CLLocationCoordinate2D, timestamp: Date)]] = [:]
     @State private var lastProcessedDrones: [String: CoTViewModel.CoTMessage] = [:] // Track last processed drones
     @State private var shouldUpdateMapView: Bool = false
-    let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect() // Timer for updates
+    let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect() // Timer for updates
     
     init(cotViewModel: CoTViewModel, initialMessage: CoTViewModel.CoTMessage) {
         self.cotViewModel = cotViewModel
@@ -70,7 +70,7 @@ struct LiveMapView: View {
             
             var path = flightPaths[message.uid] ?? []
             path.append((coordinate: coordinate, timestamp: Date()))
-            if path.count > 100 {
+            if path.count > 200 {
                 path.removeFirst()
             }
             flightPaths[message.uid] = path
