@@ -302,7 +302,7 @@ class ZMQHandler: ObservableObject {
         <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
             <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
             <detail>
-                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification)</remarks>
+                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Operator Location: Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification)</remarks>
                 <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
                 <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
                 <color argb="-256"/>
@@ -391,76 +391,6 @@ class ZMQHandler: ObservableObject {
             }
         }
         return defaultValue
-    }
-    
-    func convertDJITelemetryToXML(_ json: [String: Any]) -> String? {
-        let now = ISO8601DateFormatter().string(from: Date())
-        let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(60))
-        
-        // Handle field name variations
-        let pilotLat: Double
-        let pilotLon: Double
-        if let system = json["System"] as? [String: Any],
-           let pilotLocation = system["Pilot Location"] as? [String: Any] {
-            pilotLat = getFieldValue(pilotLocation, keys: ["lat", "latitude"], defaultValue: 0.0) as! Double
-            pilotLon = getFieldValue(pilotLocation, keys: ["lon", "longitude"], defaultValue: 0.0) as! Double
-        } else {
-            // Fallback to flat structure
-            pilotLat = getFieldValue(json, keys: ["app_lat", "pilot_lat", "operator_lat"], defaultValue: 0.0) as! Double
-            pilotLon = getFieldValue(json, keys: ["app_lon", "pilot_lon", "operator_lon"], defaultValue: 0.0) as! Double
-        }
-        let droneLat = getFieldValue(json, keys: ["drone_lat", "latitude", "lat"], defaultValue: 0.0) as! Double
-        let droneLon = getFieldValue(json, keys: ["drone_lon", "longitude", "lon"], defaultValue: 0.0) as! Double
-        let speed = getFieldValue(json, keys: ["horizontal_speed", "speed"], defaultValue: 0.0) as! Double
-        let vertSpeed = getFieldValue(json, keys: ["vertical_speed", "vert_speed"], defaultValue: 0.0) as! Double
-        let height = getFieldValue(json, keys: ["height_agl", "height"], defaultValue: 0.0) as! Double
-        let altitude = getFieldValue(json, keys: ["geodetic_altitude", "altitude"], defaultValue: 0.0) as! Double
-        let serialNumber = getFieldValue(json, keys: ["serial_number", "id"], defaultValue: "unknown") as! String
-        let deviceType = getFieldValue(json, keys: ["device_type", "description"], defaultValue: "DJI Drone") as! String
-        let rssi = getFieldValue(json, keys: ["rssi", "RSSI", "signal_strength"], defaultValue: 0) as! Int
-        let mac = getFieldValue(json, keys: ["mac", "MAC"], defaultValue: "") as! String
-        
-        // UAType handling for both string and int formats
-        let uaType: String
-        if let typeInt = json["ua_type"] as? Int {
-            uaType = String(typeInt)
-        } else if let typeStr = json["ua_type"] as? String {
-            uaType = typeStr == "Helicopter (or Multirotor)" ? "2" : "0"
-        } else {
-            uaType = "2"  // Default to helicopter
-        }
-        
-        return """
-            <event version="2.0" uid="drone-\(serialNumber)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
-                <point lat="\(droneLat)" lon="\(droneLon)" hae="\(altitude)" ce="9999999" le="999999"/>
-                <detail>
-                    <BasicID>
-                        <DeviceID>drone-\((serialNumber.replacingOccurrences(of: "^drone-", with: "", options: .regularExpression)))</DeviceID>
-                        <MAC>\(mac)</MAC>
-                        <RSSI>\(rssi)</RSSI>
-                        <Type>DJI</Type>
-                        <UAType>\(uaType)</UAType>
-                    </BasicID>
-                    <LocationVector>
-                        <Speed>\(speed)</Speed>
-                        <VerticalSpeed>\(vertSpeed)</VerticalSpeed>
-                        <Altitude>\(altitude)</Altitude>
-                        <Height>\(height)</Height>
-                    </LocationVector>
-                    <System>
-                        <Pilot Location>
-                            <lat>\(pilotLat)</lat>
-                            <lon>\(pilotLon)</lon>
-                        </Pilot Location>
-                    </System>
-                    <SelfID>
-                        <Description>\(deviceType)</Description>
-                    </SelfID>
-                    <color argb="-256"/>
-                    <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
-                </detail>
-            </event>
-            """
     }
     
     func convertStatusToXML(_ jsonString: String) -> String? {

@@ -528,8 +528,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 uaType = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
             } else if trimmed.hasPrefix("Operator Location: Lat") {
                 operatorLat = Double(trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "")
-            } else if trimmed.hasPrefix("Lon") {
-                operatorLon = Double(trimmed.dropFirst(3).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "")
+            } else if trimmed.hasPrefix("Operator Location: Lon") {
+                operatorLon = Double(trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "")
             } else if trimmed.hasPrefix("Altitude") {
                 operatorAltGeo = Double(trimmed.dropFirst(8).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
             } else if trimmed.hasPrefix("Classification:") {

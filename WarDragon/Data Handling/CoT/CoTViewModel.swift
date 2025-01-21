@@ -528,7 +528,7 @@ class CoTViewModel: ObservableObject {
                 print("DEBUG: Failed to generate signature")
                 return
             }
-            print("DEBUG: Generated signature: \(signature)")
+//            print("DEBUG: Generated signature: \(signature)")
             
             // Update signatures collection
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
@@ -610,8 +610,8 @@ class CoTViewModel: ObservableObject {
         // Create and send notification
         let content = UNMutableNotificationContent()
         print("Attempting to send notification for drone: \(message.uid)")
-        content.title = "New CoT Message"
-        content.body = "From: \(message.uid)\nType: \(message.type)\nLocation: \(message.lat), \(message.lon)"
+        content.title = "Drone Detected"
+        content.body = "From: \(message.uid)\nMAC: \(message.mac ?? "")"
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         
         UNUserNotificationCenter.current().add(request) { error in

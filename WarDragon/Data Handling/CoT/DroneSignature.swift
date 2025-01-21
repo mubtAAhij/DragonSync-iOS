@@ -258,6 +258,8 @@ public struct DroneSignature: Hashable {
         public let advAddress: String?
         public let did: Int?
         public let sid: Int?
+        public let accessAddress: Int?
+        public let phy: Int?
         
         public enum TransmissionType: String {
             case ble = "BT4/5 DroneID"
@@ -292,7 +294,9 @@ public struct DroneSignature: Hashable {
                     advMode: String? = nil,
                     advAddress: String? = nil,
                     did: Int? = nil,
-                    sid: Int? = nil) {
+                    sid: Int? = nil,
+                    accessAddress: Int? = nil,
+                    phy: Int? = nil) {
             self.transmissionType = transmissionType
             self.signalStrength = signalStrength
             self.expectedSignalStrength = expectedSignalStrength
@@ -307,6 +311,8 @@ public struct DroneSignature: Hashable {
             self.advAddress = advAddress
             self.did = did
             self.sid = sid
+            self.accessAddress = accessAddress
+            self.phy = phy
         }
         
         public func hash(into hasher: inout Hasher) {

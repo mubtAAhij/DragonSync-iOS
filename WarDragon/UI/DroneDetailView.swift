@@ -83,11 +83,22 @@ struct DroneDetailView: View {
                         InfoRow(title: "RSSI", value: "\(rssi) dBm")
                     }
                     
-                    if let opID = message.operator_id ??
-                        (message.rawMessage["Operator ID Message"] as? [String: Any])?["operator_id"] as? String {
-                        InfoRow(title: "Operator ID", value: opID)
+                }
+                
+                
+                // Operator Section
+                if message.pilotLat != "0.0" || ((message.operator_id?.isEmpty) == nil)  {
+                    Group {
+                        SectionHeader(title: "Operator")
+                        InfoRow(title: "ID", value: message.operator_id ?? "")
+                        if message.pilotLat != "0.0" {
+                            InfoRow(title: "Pilot Location", value: "\(message.pilotLat)/\(message.pilotLon)")
+                        }
+                        if message.operatorAltGeo != "0.0" {
+                            InfoRow(title: "Pilot Altitude", value: message.operatorAltGeo ?? "")
+                        }
+                        
                     }
-                    
                 }
 
                 Group {
@@ -100,15 +111,18 @@ struct DroneDetailView: View {
                     }
                     if let heightType = message.heightType {
                         InfoRow(title: "Height Type", value: heightType)
+                        
+                    }
+                    if message.op_status != "" {
                         InfoRow(title: "Operation Status", value: message.op_status ?? "Unknown")
                     }
                     
                 }
                 
                 Group {
-                    if let direction = message.direction {
+                    if message.speed != "" {
                         SectionHeader(title: "Movement")
-                        InfoRow(title: "Direction", value: "\(direction)°")
+                        InfoRow(title: "Direction", value: "\(message.ew_dir_segment ?? "")")
                         InfoRow(title: "Speed", value: "\(message.speed)m/s")
                         InfoRow(title: "Vertical Speed", value: "\(message.vspeed)m/s")
                     }
@@ -162,15 +176,7 @@ struct DroneDetailView: View {
                     }
                 }
                 
-                // Operator Section
-                if message.operator_id != nil {
-                    Group {
-                        SectionHeader(title: "Operator")
-                        InfoRow(title: "ID", value: message.operator_id ?? "")
-                        InfoRow(title: "Type", value: message.operator_id_type ?? "")
-                        
-                    }
-                }
+             
                 
                 if let aux = message.rawMessage["AUX_ADV_IND"] as? [String: Any],
                    let aext = message.rawMessage["aext"] as? [String: Any] {

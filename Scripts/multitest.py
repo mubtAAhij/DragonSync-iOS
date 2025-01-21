@@ -254,49 +254,61 @@ class DroneMessageGenerator:
 	
 	def generate_original_format(self):
 		time_str, start_str, stale_str = self.get_timestamps()
-		lat = round(random.uniform(*self.lat_range), 4)
-		lon = round(random.uniform(*self.lon_range), 4)
-		drone_id = f"DRONE{random.randint(100,100)}"  # Only use 4 possible drones
+		lat = round(random.uniform(*self.lat_range), 6)
+		lon = round(random.uniform(*self.lon_range), 6)
+		alt = round(random.uniform(50, 400), 1)
+		mac = "8e:ab:93:22:33:fa"
 		rssi = random.randint(-90, -40)
+		protocol_version = "1.0"
+		desc = f"Test Drone DRONE{random.randint(100, 103)}"
+		speed = round(random.uniform(0, 30), 1)
+		vspeed = round(random.uniform(-5, 5), 1)
+		height_agl = round(random.uniform(20, 200), 1)
+		height_type = "AGL"
+		pressure_altitude = round(random.uniform(50, 400), 1)
+		ew_dir_segment = "N"
+		speed_multiplier = 1.0
+		op_status = "Operational"
+		direction = round(random.uniform(0, 360), 1)
+		timestamp = time_str
+		runtime = "5h 12m"
+		index = random.randint(1, 100)
+		status = "Active"
+		alt_pressure = pressure_altitude
+		horiz_acc = 5
+		vert_acc = 10
+		baro_acc = 3
+		speed_acc = 2
+		selfIDtext = "Self-ID Example"
+		selfIDDesc = desc
+		opID = "Operator123"
+		uaType = "Quadcopter"
+		operator_lat = lat + random.uniform(-0.001, 0.001)
+		operator_lon = lon + random.uniform(-0.001, 0.001)
+		operator_alt_geo = round(random.uniform(0, 100), 1)
+		classification = "Class A"
 		
-		# Random drone type generation
-		base_type = "a-f-G"
-		type_suffixes = ["-U", "-U-C", "-U-S", "-U-R", "-U-F"]
-		drone_type = base_type + random.choice(type_suffixes)
-		
-		# Add operator modifier randomly
-		if random.random() < 0.5:
-			drone_type += "-O"
-			
-		return f"""<event version="2.0" uid="drone-{drone_id}" type="{drone_type}" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
-				<point lat="{lat}" lon="{lon}" hae="100" ce="9999999" le="9999999"/>
-				<detail>
-					<AUX_ADV_IND>
-						<rssi>{random.randint(-90, -40)}</rssi>
-					</AUX_ADV_IND>
-					<BasicID>
-						<DeviceID>{drone_id}</DeviceID>
-						<Type>Serial Number</Type>
-						<MAC>8e:ab:93:22:33:fa</MAC>
-						<RSSI>-65</RSSI>
-					</BasicID>
-					<LocationVector>
-						<Speed>{round(random.uniform(0, 30), 1)}</Speed>
-						<VerticalSpeed>{round(random.uniform(-5, 5), 1)}</VerticalSpeed>
-						<Altitude>{round(random.uniform(50, 400), 1)}</Altitude>
-						<Height>{round(random.uniform(20, 200), 1)}</Height>
-					</LocationVector>
-					<SelfID>
-						<Description>Test Drone {drone_id}</Description>
-					</SelfID>
-					<System>
-						<PilotLocation>
-							<lat>{lat + random.uniform(-0.001, 0.001)}</lat>
-							<lon>{lon + random.uniform(-0.001, 0.001)}</lon>
-						</PilotLocation>
-					</System>
-				</detail>
-		</event>"""	
+		return f"""
+		<event version="2.0" uid="drone-{desc.split()[-1]}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
+			<point lat="{lat}" lon="{lon}" hae="{alt}" ce="9999999" le="999999"/>
+			<detail>
+				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Protocol Version: {protocol_version}, Description: {desc}, 
+				Location/Vector Message: Speed: {speed} m/s, Vert Speed: {vspeed} m/s, Geodetic Altitude: {alt} m, 
+				Height AGL: {height_agl} m, Height Type: {height_type}, Pressure Altitude: {pressure_altitude} m, 
+				EW Direction Segment: {ew_dir_segment}, Speed Multiplier: {speed_multiplier}, Operational Status: {op_status}, 
+				Direction: {direction}, Timestamp: {timestamp}, Runtime: {runtime}, Index: {index}, Status: {status}, 
+				Alt Pressure: {alt_pressure} m, Horizontal Accuracy: {horiz_acc}, Vertical Accuracy: {vert_acc}, 
+				Baro Accuracy: {baro_acc}, Speed Accuracy: {speed_acc}, Self-ID Message: Text: {selfIDtext}, 
+				Description: {selfIDDesc}, Operator ID: {opID}, UA Type: {uaType}, Operator Location: Lat {operator_lat},
+				Operator Location: Lon {operator_lon}, Altitude {operator_alt_geo} m, Classification: {classification}</remarks>
+				<contact endpoint="" phone="" callsign="drone-{desc.split()[-1]}"/>
+				<precisionlocation geopointsrc="GPS" altsrc="GPS"/>
+				<color argb="-256"/>
+				<usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
+			</detail>
+		</event>
+		"""
+	
 	
 	def generate_esp32_format(self):
 		"""Generate a telemetry message in ESP32-compatible format"""
@@ -305,23 +317,63 @@ class DroneMessageGenerator:
 		longitude = round(random.uniform(*self.lon_range), 6)
 		
 		message = {
+			"index": 57,
+			"runtime": 11,
 			"Basic ID": {
-				"id": f"{random.randint(1000, 1002)}",
+				"id": "112624150A90E3AE1EC0",
 				"id_type": "Serial Number (ANSI/CTA-2063-A)",
-				"MAC": "8e:3b:93:22:33:fa",
-				"rssi": random.randint(-90, -40)
+				"ua_type": 0,
+				"MAC": "8c:17:59:f5:95:65"
 			},
 			"Location/Vector Message": {
 				"latitude": latitude,
 				"longitude": longitude,
-				"geodetic_altitude": round(random.uniform(50.0, 400.0), 2),
-				"speed": round(random.uniform(0.0, 30.0), 1),
-				"vert_speed": round(random.uniform(-5.0, 5.0), 1),
+				"speed": 3,
+				"vert_speed": 10,
+				"geodetic_altitude": 110,
+				"height_agl": 80,
+				"status": 2,
+				"op_status": "Ground",
+				"height_type": "Above Takeoff",
+				"ew_dir_segment": "East",
+				"speed_multiplier": "0.25",
+				"direction": 99,
+				"direction": 361,
+				"alt_pressure": 100,
+				"height_type": 1,
+				"horiz_acc": 10,
+				"vert_acc": 4,
+				"baro_acc": 6,
+				"speed_acc": 3,
+				"timestamp": 360
 			},
 			"Self-ID Message": {
-				"text": "ESP32 UAV active",
+				"text": "UAV 8c:17:59:f5:95:65 operational",
+				"description_type": 0,
+				"description": "Drone ID test flight---"
 			},
+			"System Message": {
+				"latitude": 51.4791,
+				"longitude": -145.0013,
+				"operator_lat": 51.4391,
+				"operator_lon": -145.0113,
+				"area_count": 1,
+				"area_radius": 0,
+				"area_ceiling": 0,
+				"area_floor": 0,
+				"operator_alt_geo": 20,
+				"classification": 1,
+				"timestamp": 28056789
+			},
+			"Auth Message": {
+				"type": 1,
+				"page": 0,
+				"length": 63,
+				"timestamp": 28000000,
+				"data": "12345678901234567"
+			}
 		}
+		
 		return json.dumps(message, indent=4)
 	
 	def generate_status_message(self):
