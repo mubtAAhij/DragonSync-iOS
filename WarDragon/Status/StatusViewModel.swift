@@ -68,3 +68,68 @@ class StatusViewModel: ObservableObject {
         }
     }
 }
+
+extension StatusViewModel {
+    func checkSystemThresholds() {
+        guard Settings.shared.systemWarningsEnabled,
+              let lastMessage = statusMessages.last else {
+            return
+        }
+        
+        // Check CPU usage
+        if lastMessage.systemStats.cpuUsage > Settings.shared.cpuWarningThreshold {
+            sendSystemNotification(
+                title: "High CPU Usage",
+                message: "CPU usage at \(Int(lastMessage.systemStats.cpuUsage))%"
+            )
+        }
+        
+        // Check system temperature
+        if lastMessage.systemStats.temperature > Settings.shared.tempWarningThreshold {
+            sendSystemNotification(
+                title: "High System Temperature",
+                message: "Temperature at \(Int(lastMessage.systemStats.temperature))°C"
+            )
+        }
+        
+        // Check memory usage
+        let memoryUsage = Double(lastMessage.systemStats.memory.used) / Double(lastMessage.systemStats.memory.total)
+        if memoryUsage > Settings.shared.memoryWarningThreshold {
+            sendSystemNotification(
+                title: "High Memory Usage",
+                message: "Memory usage at \(Int(memoryUsage * 100))%"
+            )
+        }
+        
+        // Check ANTSDR temperatures
+        if lastMessage.antStats.plutoTemp > Settings.shared.plutoTempThreshold {
+            sendSystemNotification(
+                title: "High Pluto Temperature",
+                message: "Temperature at \(Int(lastMessage.antStats.plutoTemp))°C"
+            )
+        }
+        
+        if lastMessage.antStats.zynqTemp > Settings.shared.zynqTempThreshold {
+            sendSystemNotification(
+                title: "High Zynq Temperature",
+                message: "Temperature at \(Int(lastMessage.antStats.zynqTemp))°C"
+            )
+        }
+    }
+
+    private func sendSystemNotification(title: String, message: String) {
+        guard Settings.shared.notificationsEnabled else { return }
+        
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = message
+        
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        
+        UNUserNotificationCenter.current().add(request)
+    }
+}

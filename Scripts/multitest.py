@@ -20,8 +20,8 @@ class Config:
 		
 class DroneMessageGenerator:
 	def __init__(self):
-		self.lat_range = (25.0, 49.0)
-		self.lon_range = (-125.0, -67.0)
+		self.lat_range = (41.05, 41.07)
+		self.lon_range = (-75.05, -75.09)
 		self.msg_index = 0
 		self.start_time = time.time()
 		
@@ -256,7 +256,7 @@ class DroneMessageGenerator:
 		time_str, start_str, stale_str = self.get_timestamps()
 		lat = round(random.uniform(*self.lat_range), 4)
 		lon = round(random.uniform(*self.lon_range), 4)
-		drone_id = f"DRONE{random.randint(100,103)}"  # Only use 4 possible drones
+		drone_id = f"DRONE{random.randint(100,100)}"  # Only use 4 possible drones
 		rssi = random.randint(-90, -40)
 		
 		# Random drone type generation
@@ -278,6 +278,7 @@ class DroneMessageGenerator:
 						<DeviceID>{drone_id}</DeviceID>
 						<Type>Serial Number</Type>
 						<MAC>8e:ab:93:22:33:fa</MAC>
+						<RSSI>-65</RSSI>
 					</BasicID>
 					<LocationVector>
 						<Speed>{round(random.uniform(0, 30), 1)}</Speed>

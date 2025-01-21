@@ -6,8 +6,9 @@
 //
 
 import SwiftUI
-import Network
 import UIKit
+import Network
+
 
 struct SettingsView: View {
     @ObservedObject var cotHandler : CoTViewModel
@@ -121,6 +122,90 @@ struct SettingsView: View {
                     get: { settings.keepScreenOn },
                     set: { settings.updatePreferences(notifications: settings.notificationsEnabled, screenOn: $0) }
                 ))
+            }
+            
+            Section("Warning Thresholds") {
+                VStack(alignment: .leading) {
+                    Toggle("System Warnings", isOn: $settings.systemWarningsEnabled)
+                        .padding(.bottom)
+                    
+                    if settings.systemWarningsEnabled {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 30) {
+                                TacDial(
+                                    title: "CPU USAGE",
+                                    value: $settings.cpuWarningThreshold,
+                                    range: 50...90,
+                                    step: 5,
+                                    unit: "%",
+                                    color: .blue
+                                )
+                                
+                                TacDial(
+                                    title: "SYSTEM TEMP",
+                                    value: $settings.tempWarningThreshold,
+                                    range: 40...85,
+                                    step: 5,
+                                    unit: "°C",
+                                    color: .red
+                                )
+                                
+                                TacDial(
+                                    title: "MEMORY",
+                                    value: .init(
+                                        get: { settings.memoryWarningThreshold * 100 },
+                                        set: { settings.memoryWarningThreshold = $0 / 100 }
+                                    ),
+                                    range: 50...95,
+                                    step: 5,
+                                    unit: "%",
+                                    color: .green
+                                )
+                                
+                                TacDial(
+                                    title: "PLUTO TEMP",
+                                    value: $settings.plutoTempThreshold,
+                                    range: 40...85,
+                                    step: 5,
+                                    unit: "°C",
+                                    color: .purple
+                                )
+                                
+                                TacDial(
+                                    title: "ZYNQ TEMP",
+                                    value: $settings.zynqTempThreshold,
+                                    range: 40...85,
+                                    step: 5,
+                                    unit: "°C",
+                                    color: .orange
+                                )
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                
+                VStack(alignment: .leading) {
+                    Toggle("Proximity Warnings", isOn: $settings.enableProximityWarnings)
+                        .padding(.vertical)
+                    
+                    if settings.enableProximityWarnings {
+                        HStack {
+                            TacDial(
+                                title: "RSSI THRESHOLD",
+                                value: .init(
+                                    get: { Double(settings.proximityThreshold) },
+                                    set: { settings.proximityThreshold = Int($0) }
+                                ),
+                                range: -90...(-30),
+                                step: 5,
+                                unit: "dBm",
+                                color: .yellow
+                            )
+                        }
+                        .padding(.horizontal)
+                    }
+                }
             }
             
             Section("Ports") {

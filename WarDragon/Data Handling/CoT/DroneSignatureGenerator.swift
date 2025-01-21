@@ -84,6 +84,14 @@ public final class DroneSignatureGenerator {
         let distance: Double
     }
     
+    struct ProximityWarning {
+        let droneId: String
+        let rssi: Int
+        let distance: Double
+        let timestamp: Date
+        let isApproaching: Bool
+    }
+    
     private var monitorLocation: CLLocation?
     
     public func updateMonitorLocation(_ location: CLLocation) {
@@ -94,7 +102,7 @@ public final class DroneSignatureGenerator {
     private var signatureCache: [String: DroneTrackingInfo] = [:]
     private let cachePruneInterval: TimeInterval = 300
     private var lastPruneTime: TimeInterval = 0
-    
+    private var previousRSSIReadings: [String: [Double]] = [:]
     public var expectedSignal = 0.0
     public var trueSignal = 0.0
     
@@ -184,6 +192,45 @@ public final class DroneSignatureGenerator {
         
         return matchStrength
     }
+    
+    func checkProximity(_ signature: DroneSignature) -> ProximityWarning? {
+        guard let rssi = signature.transmissionInfo.signalStrength,
+              Settings.shared.enableProximityWarnings,
+              rssi > Double(Settings.shared.proximityThreshold) else {
+            return nil
+        }
+        
+        // Calculate if drone is approaching based on RSSI trend
+        let isApproaching = checkRSSITrend(signature.primaryId.id, rssi: rssi)
+        
+        return ProximityWarning(
+            droneId: signature.primaryId.id,
+            rssi: Int(rssi),
+            distance: calculateDistance(rssi),
+            timestamp: Date(),
+            isApproaching: isApproaching
+        )
+    }
+
+    private func checkRSSITrend(_ droneId: String, rssi: Double) -> Bool {
+        // Get previous readings and determine if signal is getting stronger
+        let readings = previousRSSIReadings[droneId] ?? []
+        guard !readings.isEmpty else {
+            return false
+        }
+        
+        let averagePrevious = readings.reduce(0.0, +) / Double(readings.count)
+        return rssi > averagePrevious
+    }
+
+    private func calculateDistance(_ rssi: Double) -> Double {
+        // Free space path loss formula
+        let frequency = 2400.0 // 2.4GHz for BLE/WiFi
+        let pathLoss = -(rssi + 32.44 + 20 * log10(frequency))
+        let distance = pow(10.0, pathLoss/20.0) / 1000.0 // Convert to meters
+        return distance
+    }
+
     
     func detectSpoof(_ signature: DroneSignature, fromMonitor monitorStatus: StatusViewModel.StatusMessage) -> SpoofDetectionResult? {
         

@@ -23,11 +23,24 @@ struct ContentView: View {
         let statusVM = StatusViewModel()
         _statusViewModel = StateObject(wrappedValue: statusVM)
         _cotViewModel = StateObject(wrappedValue: CoTViewModel(statusViewModel: statusVM))
-        _selectedTab = State(initialValue: Settings.shared.isListening ? 0 : 2)
+        _selectedTab = State(initialValue: Settings.shared.isListening ? 0 : 3)
     }
     
     var body: some View {
         TabView(selection: $selectedTab) {
+            NavigationStack {
+                DashboardView(
+                    statusViewModel: statusViewModel,
+                    cotViewModel: cotViewModel,
+                    spectrumViewModel: spectrumViewModel
+                )
+                .navigationTitle("Dashboard")
+            }
+            .tabItem {
+                Label("Dashboard", systemImage: "gauge")
+            }
+            .tag(0)
+            
             NavigationStack {
                 VStack {
                     ScrollViewReader { proxy in
@@ -82,7 +95,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Drones", systemImage: "airplane.circle")
             }
-            .tag(0)
+            .tag(1)
             
             NavigationStack {
                 StatusListView(statusViewModel: statusViewModel)
@@ -97,7 +110,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Status", systemImage: "server.rack")
             }
-            .tag(1)
+            .tag(2)
             
             NavigationStack {
                 SettingsView(cotHandler: cotViewModel)
@@ -105,7 +118,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Settings", systemImage: "gear")
             }
-            .tag(2)
+            .tag(3)
             
 //            NavigationStack {
 //                SpectrumView(viewModel: spectrumViewModel)
@@ -114,7 +127,7 @@ struct ContentView: View {
 //            .tabItem {
 //                Label("Spectrum", systemImage: "waveform")
 //            }
-//            .tag(3)
+//            .tag(4)
         }
         
         .onChange(of: settings.isListening) {

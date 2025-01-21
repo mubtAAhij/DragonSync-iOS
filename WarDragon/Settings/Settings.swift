@@ -23,6 +23,8 @@ enum ConnectionMode: String, Codable, CaseIterable {
     }
 }
 
+//MARK: - Local stored vars (nothing sensitive)
+
 class Settings: ObservableObject {
     static let shared = Settings()
     
@@ -92,6 +94,57 @@ class Settings: ObservableObject {
             objectWillChange.send()
         }
     }
+    //MARK: - Warning Thresholds
+    @AppStorage("cpuWarningThreshold") var cpuWarningThreshold: Double = 80.0 {  // 80% CPU
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("tempWarningThreshold") var tempWarningThreshold: Double = 70.0 {  // 70°C
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("memoryWarningThreshold") var memoryWarningThreshold: Double = 0.85 {  // 85%
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("plutoTempThreshold") var plutoTempThreshold: Double = 75.0 {  // 75°C
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("zynqTempThreshold") var zynqTempThreshold: Double = 75.0 {  // 75°C
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("proximityThreshold") var proximityThreshold: Int = -60 {  // -60 dBm
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("enableWarnings") var enableWarnings = true {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("systemWarningsEnabled") var systemWarningsEnabled = true {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+    @AppStorage("enableProximityWarnings") var enableProximityWarnings = true
+
+    //MARK: - Connection
 
     private init() {
         toggleListening(false)
@@ -186,5 +239,22 @@ class Settings: ObservableObject {
     func updatePreferences(notifications: Bool, screenOn: Bool) {
         notificationsEnabled = notifications
         keepScreenOn = screenOn
+    }
+    
+    func updateWarningThresholds(
+        cpu: Double? = nil,
+        temp: Double? = nil,
+        memory: Double? = nil,
+        plutoTemp: Double? = nil,
+        zynqTemp: Double? = nil,
+        proximity: Int? = nil
+    ) {
+        if let cpu = cpu { cpuWarningThreshold = cpu }
+        if let temp = temp { tempWarningThreshold = temp }
+        if let memory = memory { memoryWarningThreshold = memory }
+        if let plutoTemp = plutoTemp { plutoTempThreshold = plutoTemp }
+        if let zynqTemp = zynqTemp { zynqTempThreshold = zynqTemp }
+        if let proximity = proximity { proximityThreshold = proximity }
+        objectWillChange.send()
     }
 }
