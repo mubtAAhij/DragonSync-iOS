@@ -49,22 +49,18 @@ struct ContentView: View {
                         }
                         .listStyle(.inset)
                         .onChange(of: cotViewModel.parsedMessages) { oldMessages, newMessages in
-                            // Find the last message
-                            if let changedMessage = newMessages.last(where: { newMsg in
-                                oldMessages.first(where: { $0.id == newMsg.id && $0 != newMsg }) != nil
-                            }) {
-                                latestMessage = changedMessage
-                                showAlert = false
-                                withAnimation {
-                                    proxy.scrollTo(changedMessage.id, anchor: .bottom)
-                                }
-                            }
-                            // Scroll to new one
-                            else if let latest = newMessages.last, oldMessages.count != newMessages.count {
-                                latestMessage = latest
-                                showAlert = false
-                                withAnimation {
-                                    proxy.scrollTo(latest.id, anchor: .bottom)
+                            // Only proceed if we have more messages than before
+                            if oldMessages.count < newMessages.count {
+                                // Get the newest message
+                                if let latest = newMessages.last {
+                                    // Check if this message ID wasn't in the old messages
+                                    if !oldMessages.contains(where: { $0.id == latest.id }) {
+                                        latestMessage = latest
+                                        showAlert = false
+                                        withAnimation {
+                                            proxy.scrollTo(latest.id, anchor: .bottom)
+                                        }
+                                    }
                                 }
                             }
                         }

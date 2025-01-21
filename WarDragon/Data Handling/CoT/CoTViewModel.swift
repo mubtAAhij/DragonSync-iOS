@@ -238,6 +238,55 @@ class CoTViewModel: ObservableObject {
             }
             return CLLocationCoordinate2D(latitude: latDouble, longitude: lonDouble)
         }
+        
+        func toDictionary() -> [String: Any] {
+                var dict: [String: Any] = [
+                    "uid": self.uid,
+                    "type": self.type,
+                    "lat": self.lat,
+                    "lon": self.lon,
+                    "speed": self.speed,
+                    "vspeed": self.vspeed,
+                    "alt": self.alt,
+                    "pilotLat": self.pilotLat,
+                    "pilotLon": self.pilotLon,
+                    "description": self.description,
+                    "selfIDText": self.selfIDText,
+                    "uaType": self.uaType.rawValue, // Assuming `UAType` is an enum
+                    "idType": self.idType,
+                    "isSpoofed": self.isSpoofed
+                ]
+                
+                // Include optional fields if they exist
+                dict["height"] = self.height
+                dict["protocolVersion"] = self.protocolVersion
+                dict["mac"] = self.mac
+                dict["rssi"] = self.rssi
+                dict["location_protocol"] = self.location_protocol
+                dict["op_status"] = self.op_status
+                dict["height_type"] = self.height_type
+                dict["direction"] = self.direction
+                dict["time"] = self.time
+                dict["start"] = self.start
+                dict["stale"] = self.stale
+                dict["how"] = self.how
+                dict["ce"] = self.ce
+                dict["le"] = self.le
+                dict["hae"] = self.hae
+                dict["aux_rssi"] = self.aux_rssi
+                dict["channel"] = self.channel
+                dict["phy"] = self.phy
+                dict["aa"] = self.aa
+                dict["adv_mode"] = self.adv_mode
+                dict["adv_mac"] = self.adv_mac
+                dict["operator_id"] = self.operator_id
+                dict["classification_type"] = self.classification_type
+                dict["area_radius"] = self.area_radius
+                dict["area_ceiling"] = self.area_ceiling
+                dict["area_floor"] = self.area_floor
+
+                return dict
+            }
     }
     
     init(statusViewModel: StatusViewModel, spectrumViewModel: SpectrumData.SpectrumViewModel? = nil) {        self.statusViewModel = statusViewModel
@@ -474,18 +523,12 @@ class CoTViewModel: ObservableObject {
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
             print("DEBUG: Raw message in: \(message)")
-            // Generate/update signature from raw message
-            guard let signature = self.signatureGenerator.createSignature(from: message.rawMessage) else {
-                print("Failed to create signature from message")
+            // Convert CoTMessage to [String: Any]
+            guard let signature = self.signatureGenerator.createSignature(from: message.toDictionary()) else {
+                print("DEBUG: Failed to generate signature")
                 return
             }
-            
-            // Check for existing signature match
-            _ = self.droneSignatures.firstIndex { existing in
-                let matchScore = self.signatureGenerator.matchSignatures(existing, signature)
-//                print("Checking for existing match, score: \(matchScore)")
-                return matchScore > 0.42 // High confidence threshold
-            }
+            print("DEBUG: Generated signature: \(signature)")
             
             // Update signatures collection
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
@@ -496,6 +539,13 @@ class CoTViewModel: ObservableObject {
                 self.droneSignatures.append(signature)
             }
             
+            // Check for existing signature match
+            _ = self.droneSignatures.firstIndex { existing in
+                let matchScore = self.signatureGenerator.matchSignatures(existing, signature)
+                print("Checking for existing match, score: \(matchScore)")
+                return matchScore > 0.42 // High confidence threshold
+            }
+            
             // Check for spoofing if enabled
             var updatedMessage = message
             if Settings.shared.spoofDetectionEnabled,
@@ -503,6 +553,7 @@ class CoTViewModel: ObservableObject {
                let spoofResult = self.signatureGenerator.detectSpoof(signature, fromMonitor: monitorStatus) {
                 updatedMessage.isSpoofed = spoofResult.isSpoofed
                 updatedMessage.spoofingDetails = spoofResult
+                
             }
             
             // Update monitor location if we have a status update
@@ -534,15 +585,15 @@ class CoTViewModel: ObservableObject {
                 if hasChanges {
                     print("Updating drone: \(message.uid)")
                     
-                    self.parsedMessages[index] = message
+                    self.parsedMessages[index] = updatedMessage
                     
                     // Force UI refresh
                     self.objectWillChange.send()
                 }
             } else {
                 print("Adding new drone: \(message.uid)")
-                self.parsedMessages.append(message)
-                self.sendNotification(for: message)
+                self.parsedMessages.append(updatedMessage)
+                self.sendNotification(for: updatedMessage)
             }
         }
     }

@@ -272,9 +272,9 @@ struct SDRStatusCard: View {
                         Text("STATUS")
                             .font(.appCaption)
                             .foregroundColor(.secondary)
-                        Text(spectrumViewModel.isListening ? "ACTIVE" : "INACTIVE")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(spectrumViewModel.isListening ? .green : .red)
+                        Text(antStats.plutoTemp != 0.0 || antStats.zynqTemp != 0.0 ? "ACTIVE" : "INACTIVE")
+                           .font(.system(.caption, design: .monospaced))
+                           .foregroundColor(antStats.plutoTemp != 0.0 || antStats.zynqTemp != 0.0 ? .green : .red)
                     }
                 }
                 .padding(.vertical, 4)
@@ -348,35 +348,89 @@ struct WarningsCard: View {
     private var activeWarnings: [SystemWarning] {
         var warnings: [SystemWarning] = []
         
-        // Check system status
-        if let stats = statusViewModel.statusMessages.last?.systemStats {
-            if stats.temperature > 75 {
-                warnings.append(SystemWarning(
-                    id: "temp",
-                    title: "High Temperature",
-                    detail: "\(Int(stats.temperature))°C",
-                    severity: .high
-                ))
+        // Only check system warnings if enabled
+        if Settings.shared.systemWarningsEnabled {
+            if let lastMessage = statusViewModel.statusMessages.last {
+                let stats = lastMessage.systemStats
+                
+                // CPU Warning
+                if stats.cpuUsage > Settings.shared.cpuWarningThreshold {
+                    warnings.append(SystemWarning(
+                        id: "cpu",
+                        title: "High CPU Usage",
+                        detail: "\(Int(stats.cpuUsage))%",
+                        severity: .high
+                    ))
+                }
+                
+                // System Temperature Warning
+                if stats.temperature > Settings.shared.tempWarningThreshold {
+                    warnings.append(SystemWarning(
+                        id: "temp",
+                        title: "High Temperature",
+                        detail: "\(Int(stats.temperature))°C",
+                        severity: .high
+                    ))
+                }
+                
+                // Memory Warning
+                let memoryUsed = Double(stats.memory.total - stats.memory.available)
+                let memoryPercent = (memoryUsed / Double(stats.memory.total)) * 100
+                if memoryPercent > (Settings.shared.memoryWarningThreshold * 100) {
+                    warnings.append(SystemWarning(
+                        id: "memory",
+                        title: "High Memory Usage",
+                        detail: "\(Int(memoryPercent))%",
+                        severity: .medium
+                    ))
+                }
+                
+                // ANTSDR Temperature Warnings
+                if lastMessage.antStats.plutoTemp > Settings.shared.plutoTempThreshold {
+                    warnings.append(SystemWarning(
+                        id: "pluto_temp",
+                        title: "High Pluto Temperature",
+                        detail: "\(Int(lastMessage.antStats.plutoTemp))°C",
+                        severity: .high
+                    ))
+                }
+                
+                if lastMessage.antStats.zynqTemp > Settings.shared.zynqTempThreshold {
+                    warnings.append(SystemWarning(
+                        id: "zynq_temp",
+                        title: "High Zynq Temperature",
+                        detail: "\(Int(lastMessage.antStats.zynqTemp))°C",
+                        severity: .high
+                    ))
+                }
+            }
+        }
+
+        // Proximity Warnings
+        if Settings.shared.enableProximityWarnings {
+            let nearbyDrones = cotViewModel.parsedMessages.filter { message in
+                guard let rssi = message.rssi else { return false }
+                return rssi > Settings.shared.proximityThreshold
             }
             
-            if stats.cpuUsage > 80 {
+            if !nearbyDrones.isEmpty {
                 warnings.append(SystemWarning(
-                    id: "cpu",
-                    title: "High CPU Usage",
-                    detail: "\(Int(stats.cpuUsage))%",
+                    id: "proximity",
+                    title: "Nearby Drones",
+                    detail: "\(nearbyDrones.count) detected",
                     severity: .medium
                 ))
             }
         }
         
-        // Add drone warnings
+        // Spoofing Warnings (always enabled if detected)
         let spoofedDrones = cotViewModel.parsedMessages.filter { $0.isSpoofed }
         if !spoofedDrones.isEmpty {
             warnings.append(SystemWarning(
                 id: "spoof",
                 title: "Possible Spoofed Signals",
                 detail: "\(spoofedDrones.count) drones",
-                severity: .medium
+                severity: .high
             ))
         }
         
@@ -390,6 +444,7 @@ struct WarningsCard: View {
         default: return .red
         }
     }
+    
 }
 
 // Supporting Views
@@ -453,4 +508,13 @@ struct SystemWarning: Identifiable {
             }
         }
     }
+    
+    enum WarningType {
+            case system
+            case proximity
+            case spoof
+            case temperature
+            case performance
+        }
 }
+

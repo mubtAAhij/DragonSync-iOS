@@ -356,7 +356,7 @@ class DroneMessageGenerator:
 		<detail>
 				<contact endpoint="" phone="" callsign="{serial_number}"/>
 				<precisionlocation geopointsrc="gps" altsrc="gps"/>
-				<remarks>CPU Usage: {cpu_usage}%, Memory Total: {total_memory} MB, Memory Available: {available_memory} MB, Disk Total: {total_disk} MB, Disk Used: {used_disk} MB, Temperature: {round(random.uniform(30, 70), 1)}°C, Uptime: {runtime} seconds</remarks>
+				<remarks>CPU Usage: {cpu_usage}%, Memory Total: {total_memory} MB, Memory Available: {available_memory} MB, Disk Total: {total_disk} MB, Disk Used: {used_disk} MB, Temperature: {round(random.uniform(30, 70), 1)}°C, Uptime: {runtime} seconds, Pluto Temp: 55, Zynq Temp: 40</remarks>
 				<color argb="-256"/>
 				<usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/Ground_Vehicle.png"/>
 		</detail>
