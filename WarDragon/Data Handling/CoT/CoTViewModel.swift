@@ -53,6 +53,7 @@ class CoTViewModel: ObservableObject {
         var protocolVersion: String?
         var mac: String?
         var rssi: Int?
+        var manufacturer: String?
         
         // Location/Vector Message fields
         var location_protocol: String?

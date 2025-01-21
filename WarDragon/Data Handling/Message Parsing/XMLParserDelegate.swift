@@ -80,6 +80,57 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     var statusMessage: StatusViewModel.StatusMessage?
     private var isStatusMessage = false
     
+    let macPrefixesByManufacturer: [String: [String]] = [
+        "DJI": [
+            "04:A8:5A",
+            "34:D2:62",
+            "48:1C:B9",
+            "58:B8:58",
+            "60:60:1F",
+            "E4:7A:2C"
+        ],
+        "Parrot": [
+            "00:12:1C",
+            "00:26:7E",
+            "90:03:B7",
+            "90:3A:E6",
+            "A0:14:3D"
+        ],
+        "Skydio": [
+            "38:1D:14"
+        ],
+        "Autel": [
+            "EC:5B:CD"
+        ],
+        "Yuneec": [
+            "E0:B6:F5"
+        ],
+        "Hubsan": [
+            "98:AA:FC"
+        ],
+        "Holy Stone": [
+            "00:0C:BF",
+            "18:65:6A"
+        ],
+        "Ruko": [
+            "E0:4E:7A"
+        ],
+        "PowerVision": [
+            "54:7D:40"
+        ],
+        "Teal": [
+            "B0:30:C8"
+        ],
+        "UAV Navigation": [
+            "00:50:C2",
+            "B4:4D:43"
+        ],
+        "Amimon": [
+            "0C:D6:96"
+        ]
+    ]
+
+    
     // MARK: - XMLParserDelegate
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName: String?, attributes: [String : String] = [:]) {
         currentElement = elementName
@@ -218,6 +269,44 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             let system = jsonData["System Message"] as? [String: Any]
             let selfId = jsonData["Self-ID Message"] as? [String: Any]
             
+            // Extract the MAC address and determine the manufacturer
+               var mac = basicId["MAC"] as? String ?? ""
+               var manufacturer = "Unknown"
+
+               // Check if MAC exists and match it against prefixes
+               if !mac.isEmpty {
+                   let normalizedMac = mac.uppercased()
+                   for (key, prefixes) in macPrefixesByManufacturer {
+                       for prefix in prefixes {
+                           let normalizedPrefix = prefix.uppercased()
+                           if normalizedMac.hasPrefix(normalizedPrefix) {
+                               manufacturer = key
+                               break
+                           }
+                       }
+                       if manufacturer != "Unknown" { break }
+                   }
+               }
+
+               // Fallback to extract MAC and manufacturer from Self-ID Message
+               if mac.isEmpty, let selfIDtext = selfId?["text"] as? String {
+                   mac = selfIDtext
+                       .replacingOccurrences(of: "UAV ", with: "")
+                       .replacingOccurrences(of: " operational", with: "")
+                   
+                   let normalizedMac = mac.uppercased()
+                   for (key, prefixes) in macPrefixesByManufacturer {
+                       for prefix in prefixes {
+                           let normalizedPrefix = prefix.uppercased()
+                           if normalizedMac.hasPrefix(normalizedPrefix) {
+                               manufacturer = key
+                               break
+                           }
+                       }
+                       if manufacturer != "Unknown" { break }
+                   }
+               }
+            
             return CoTViewModel.CoTMessage(
                 uid: droneId,
                 type: droneType,
@@ -235,6 +324,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 idType: basicId["id_type"] as? String ?? "Unknown",
                 mac: basicId["MAC"] as? String,
                 rssi: basicId["RSSI"] as? Int,
+                manufacturer: manufacturer,
                 location_protocol: location?["protocol_version"] as? String,
                 op_status: location?["op_status"] as? String,
                 height_type: location?["height_type"] as? String,
@@ -405,6 +495,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private func parseDroneRemarks(_ remarks: String) -> (
         mac: String?,
         rssi: Int?,
+        manufacturer: String?,
         protocolVersion: String?,
         description: String?,
         speed: Double?,
@@ -433,7 +524,15 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         operatorLat: Double?,
         operatorLon: Double?,
         operatorAltGeo: Double?,
-        classification: Int?
+        classification: Int?,
+        channel: Int?, phy: Int?,
+        accessAddress: Int?,
+        advMode: String?,
+        deviceId: Int?,
+        sequenceId: Int?,
+        advAddress: String?,
+        timestampAdv: Double?
+
     ) {
         var mac: String?
         var rssi: Int?
@@ -466,6 +565,16 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         var operatorLon: Double?
         var operatorAltGeo: Double?
         var classification: Int?
+        var manufacturer = "Unknown"
+        var channel: Int?
+        var phy: Int?
+        var accessAddress: Int?
+        var advMode: String?
+        var deviceId: Int?
+        var sequenceId: Int?
+        var advAddress: String?
+        var timestampAdv: Double?
+        
         
         let components = remarks.components(separatedBy: ", ")
         
@@ -476,6 +585,24 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 mac = trimmed.dropFirst(4).trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first
             } else if trimmed.hasPrefix("RSSI:") {
                 rssi = Int(trimmed.dropFirst(5).replacingOccurrences(of: "dBm", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Channel:") {
+                channel = Int(trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("PHY:") {
+                phy = Int(trimmed.dropFirst(4).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Access Address:") {
+                accessAddress = Int(trimmed.dropFirst(15).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Advertisement Mode:") {
+                advMode = trimmed.dropFirst(18).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Device ID:") {
+                deviceId = Int(trimmed.dropFirst(10).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Sequence ID:") {
+                sequenceId = Int(trimmed.dropFirst(12).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Advertisement Address:") {
+                advAddress = trimmed.dropFirst(21).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Advertisement Timestamp:") {
+                if let tsStr = trimmed.dropFirst(23).trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first {
+                    timestampAdv = Double(tsStr)
+                }
             } else if trimmed.hasPrefix("Protocol Version:") {
                 protocolVersion = trimmed.dropFirst(17).trimmingCharacters(in: .whitespaces)
             } else if trimmed.hasPrefix("Description:") {
@@ -526,6 +653,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 operatorID = trimmed.dropFirst(12).trimmingCharacters(in: .whitespaces)
             } else if trimmed.hasPrefix("UA Type:") {
                 uaType = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("Manufacturer:") {
+                manufacturer = trimmed.dropFirst(13).trimmingCharacters(in: .whitespaces)
             } else if trimmed.hasPrefix("Operator Location: Lat") {
                 if let latString = trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces),
                    let latitude = Double(latString) {
@@ -547,7 +676,34 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             }
         }
         
-        return (mac, rssi, protocolVersion, description, speed, vspeed, alt, heightAGL, heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus, direction, timestamp, runtime, index, status, altPressure, horizAcc, vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType, operatorLat, operatorLon, operatorAltGeo, classification)
+        if manufacturer == "Unknown", let mac = mac {
+            print("MAC is \(mac)")
+            let cleanMac = mac.replacingOccurrences(of: ":", with: "").uppercased()  // Normalize MAC address
+            for (brand, prefixes) in macPrefixesByManufacturer {
+                for prefix in prefixes {
+                    let cleanPrefix = prefix.replacingOccurrences(of: ":", with: "").uppercased()  // Normalize prefix
+                    print("Checking prefix: \(cleanPrefix) against MAC: \(cleanMac)")
+                    if cleanMac.hasPrefix(cleanPrefix) {
+                        manufacturer = brand
+                        print("Match found! Manufacturer: \(manufacturer)")
+                        break
+                    }
+                }
+                if manufacturer != "Unknown" { break }  // Exit loop once manufacturer is found
+            }
+        }
+
+        print("Manufacturer: \(String(describing: manufacturer))")  // Final result
+
+            
+        
+        return (mac, rssi, manufacturer, protocolVersion, description, speed, vspeed, alt, heightAGL,
+                heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus,
+                direction, timestamp, runtime, index, status, altPressure, horizAcc,
+                vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType,
+                operatorLat, operatorLon, operatorAltGeo, classification,
+                channel, phy, accessAddress, advMode, deviceId, sequenceId, advAddress,
+                timestampAdv)
     }
     
     private func parseRemarks(_ remarks: String) {
@@ -600,7 +756,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         switch elementName {
         case "remarks":
             // Parse remarks field
-            let (mac, rssi, protocolVersion, description, speed, vspeed, alt, heightAGL, heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus, direction, timestamp, runtime, index, status, altPressure, horizAcc, vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType, operatorLat, operatorLon, operatorAltGeo, classification) = parseDroneRemarks(remarks)
+            let (mac, rssi, manufacturer, protocolVersion, description, speed, vspeed, alt, heightAGL,
+                 heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus,
+                 direction, timestamp, runtime, index, status, altPressure, horizAcc,
+                 vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType,
+                 operatorLat, operatorLon, operatorAltGeo, classification,
+                 channel, phy, accessAddress, advMode, deviceId, sequenceId, advAddress,
+                 timestampAdv) = parseDroneRemarks(remarks)
             
             var finalDescription = description?.isEmpty ?? true ? selfIDDesc : description ?? ""
             
@@ -623,6 +785,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     protocolVersion: protocolVersion,
                     mac: mac,
                     rssi: rssi,
+                    manufacturer: manufacturer,
                     location_protocol: location_protocol,
                     op_status: opStatus,
                     height_type: heightType,

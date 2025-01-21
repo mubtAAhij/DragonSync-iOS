@@ -257,7 +257,7 @@ class DroneMessageGenerator:
 		lat = round(random.uniform(*self.lat_range), 6)
 		lon = round(random.uniform(*self.lon_range), 6)
 		alt = round(random.uniform(50, 400), 1)
-		mac = "8e:ab:93:22:33:fa"
+		mac = "E0:4E:7A:9A:67:99"
 		rssi = random.randint(-90, -40)
 		protocol_version = "1.0"
 		desc = f"Test Drone DRONE{random.randint(100, 103)}"
@@ -287,12 +287,13 @@ class DroneMessageGenerator:
 		operator_lon = lon + random.uniform(-0.001, 0.001)
 		operator_alt_geo = round(random.uniform(0, 100), 1)
 		classification = "Class A"
+		did = 1324
 		
 		return f"""
 		<event version="2.0" uid="drone-{desc.split()[-1]}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
 			<point lat="{lat}" lon="{lon}" hae="{alt}" ce="9999999" le="999999"/>
 			<detail>
-				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Protocol Version: {protocol_version}, Description: {desc}, 
+				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Device ID: {did}, Protocol Version: {protocol_version}, Description: {desc}, 
 				Location/Vector Message: Speed: {speed} m/s, Vert Speed: {vspeed} m/s, Geodetic Altitude: {alt} m, 
 				Height AGL: {height_agl} m, Height Type: {height_type}, Pressure Altitude: {pressure_altitude} m, 
 				EW Direction Segment: {ew_dir_segment}, Speed Multiplier: {speed_multiplier}, Operational Status: {op_status}, 
@@ -323,7 +324,7 @@ class DroneMessageGenerator:
 				"id": "112624150A90E3AE1EC0",
 				"id_type": "Serial Number (ANSI/CTA-2063-A)",
 				"ua_type": 0,
-				"MAC": "8c:17:59:f5:95:65"
+				"MAC": "18:65:6A:00:4B:5B"
 			},
 			"Location/Vector Message": {
 				"latitude": latitude,

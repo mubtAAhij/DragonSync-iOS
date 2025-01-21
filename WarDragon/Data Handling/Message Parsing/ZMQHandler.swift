@@ -21,6 +21,59 @@ class ZMQHandler: ObservableObject {
         }
     }
     
+    private let manufacturerMapping: [Int: String] = [
+        1187: "Ruko",
+    ]
+    
+    let macPrefixesByManufacturer: [String: [String]] = [
+        "DJI": [
+            "04:A8:5A",
+            "34:D2:62",
+            "48:1C:B9",
+            "58:B8:58",
+            "60:60:1F",
+            "E4:7A:2C"
+        ],
+        "Parrot": [
+            "00:12:1C",
+            "00:26:7E",
+            "90:03:B7",
+            "90:3A:E6",
+            "A0:14:3D"
+        ],
+        "Skydio": [
+            "38:1D:14"
+        ],
+        "Autel": [
+            "EC:5B:CD:E"
+        ],
+        "Yuneec": [
+            "E0:B6:F5:8"
+        ],
+        "Hubsan": [
+            "98:AA:FC:7"
+        ],
+        "Holy Stone": [
+            "00:0C:BF"
+        ],
+        "Ruko": [
+            "E0:4E:7A"
+        ],
+        "PowerVision": [
+            "54:7D:40"
+        ],
+        "Teal": [
+            "B0:30:C8"
+        ],
+        "UAV Navigation": [
+            "00:50:C2:87:B",
+            "B4:4D:43:A"
+        ],
+        "Amimon": [
+            "0C:D6:96"
+        ]
+    ]
+    
     private var context: SwiftyZeroMQ.Context?
     private var telemetrySocket: SwiftyZeroMQ.Socket?
     private var statusSocket: SwiftyZeroMQ.Socket?
@@ -290,6 +343,14 @@ class ZMQHandler: ObservableObject {
         let operator_alt_geo = extractDouble(system, key: "operator_alt_geo")
         let classification = system?["classification"] as? Int ?? 0
         
+        var channel: Int?
+        var phy: Int?
+        var accessAddress: Int?
+        var advMode: String?
+        var deviceId: Int?
+        var sequenceId: Int?
+        var advAddress: String?
+        
         // Operator ID Message
         var opID = ""
         if let operatorId = operatorId {
@@ -299,6 +360,53 @@ class ZMQHandler: ObservableObject {
             }
         }
         
+        var manufacturer = "Unknown"
+        if let aext = jsonObject["aext"] as? [String: Any],
+           let advInfo = aext["AdvDataInfo"] as? [String: Any],
+           let macAddress = advInfo["mac"] as? String {
+
+            for (key, prefixes) in macPrefixesByManufacturer {
+                for prefix in prefixes {
+                    if macAddress.hasPrefix(prefix) {
+                        manufacturer = key
+                        break
+                    }
+                }
+            }
+        }
+        
+        if !mac.isEmpty {
+                let normalizedMac = mac.uppercased()
+                for (key, prefixes) in macPrefixesByManufacturer {
+                    for prefix in prefixes {
+                        let normalizedPrefix = prefix.uppercased()
+                        if normalizedMac.hasPrefix(normalizedPrefix) {
+                            manufacturer = key
+                            break
+                        }
+                    }
+                    if manufacturer != "Unknown" { break }
+                }
+            }
+        
+        // Extract from AUX_ADV_IND
+        if let auxData = jsonObject["AUX_ADV_IND"] as? [String: Any] {
+            channel = auxData["chan"] as? Int
+            phy = auxData["phy"] as? Int
+            accessAddress = auxData["aa"] as? Int
+        }
+
+        // Extract from aext
+        if let aext = jsonObject["aext"] as? [String: Any],
+           let advInfo = aext["AdvDataInfo"] as? [String: Any] {
+            deviceId = advInfo["did"] as? Int
+            sequenceId = advInfo["sid"] as? Int
+            advMode = aext["AdvMode"] as? String ?? ""
+            advAddress = aext["AdvA"] as? String ?? ""
+        }
+        
+
+        
         // Generate XML
         let now = ISO8601DateFormatter().string(from: Date())
         let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
@@ -307,7 +415,7 @@ class ZMQHandler: ObservableObject {
         <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
             <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
             <detail>
-                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Operator Location: Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification)</remarks>
+                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Manufacturer: \(manufacturer), Channel: \(String(describing: channel)), PHY: \(String(describing: phy)), Access Address: \(String(describing: accessAddress)), Advertisement Mode: \(String(describing: advMode)), Device ID: \(String(describing: deviceId)), Sequence ID: \(String(describing: sequenceId)), Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Operator Location: Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification)</remarks>
                 <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
                 <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
                 <color argb="-256"/>

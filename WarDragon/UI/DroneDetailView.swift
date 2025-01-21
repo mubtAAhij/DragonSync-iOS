@@ -87,8 +87,11 @@ struct DroneDetailView: View {
                 
                 
                 // Operator Section
-                if message.pilotLat != "0.0" || ((message.operator_id?.isEmpty) == nil)  {
+                if message.pilotLat != "0.0" || ((message.operator_id?.isEmpty) == nil) || message.manufacturer != "Unknown"  {
                     Group {
+                        if message.manufacturer != "Unknown"  {
+                            InfoRow(title: "Manufacturer", value: message.manufacturer ?? "")
+                        }
                         SectionHeader(title: "Operator")
                         InfoRow(title: "ID", value: message.operator_id ?? "")
                         if message.pilotLat != "0.0" {
