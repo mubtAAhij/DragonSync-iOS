@@ -45,16 +45,17 @@ class ZMQHandler: ObservableObject {
             "38:1D:14"
         ],
         "Autel": [
-            "EC:5B:CD:E"
+            "EC:5B:CD"
         ],
         "Yuneec": [
-            "E0:B6:F5:8"
+            "E0:B6:F5"
         ],
         "Hubsan": [
-            "98:AA:FC:7"
+            "98:AA:FC"
         ],
         "Holy Stone": [
-            "00:0C:BF"
+            "00:0C:BF",
+            "18:65:6A"
         ],
         "Ruko": [
             "E0:4E:7A"
@@ -66,12 +67,51 @@ class ZMQHandler: ObservableObject {
             "B0:30:C8"
         ],
         "UAV Navigation": [
-            "00:50:C2:87:B",
-            "B4:4D:43:A"
+            "00:50:C2",
+            "B4:4D:43"
         ],
         "Amimon": [
             "0C:D6:96"
+        ],
+        "Baiwang": [
+            "9C:5A:8A"
+        ],
+        "Bilian": [
+            "08:EA:40",
+            "0C:8C:24",
+            "0C:CF:89",
+            "10:A4:BE",
+            "14:5D:34",
+            "14:6B:9C",
+            "20:32:33",
+            "20:F4:1B",
+            "28:F3:66",
+            "2C:C3:E6",
+            "30:7B:C9",
+            "34:7D:E4",
+            "38:01:46",
+            "38:7A:CC",
+            "3C:33:00",
+            "44:01:BB",
+            "44:33:4C",
+            "54:EF:33",
+            "60:FB:00",
+            "74:EE:2A",
+            "78:22:88",
+            "7C:A7:B0",
+            "98:03:CF",
+            "A0:9F:10",
+            "AC:A2:13",
+            "B4:6D:C2",
+            "C4:3C:B0",
+            "C8:FE:0F",
+            "CC:64:1A",
+            "E0:B9:4D",
+            "EC:3D:FD",
+            "F0:C8:14",
+            "FC:23:CD"
         ]
+        
     ]
     
     private var context: SwiftyZeroMQ.Context?
