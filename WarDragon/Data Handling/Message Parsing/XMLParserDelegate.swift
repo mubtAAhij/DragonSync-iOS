@@ -527,9 +527,19 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             } else if trimmed.hasPrefix("UA Type:") {
                 uaType = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
             } else if trimmed.hasPrefix("Operator Location: Lat") {
-                operatorLat = Double(trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "")
+                if let latString = trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces),
+                   let latitude = Double(latString) {
+                    operatorLat = latitude
+                } else {
+                    print("Failed to parse operator latitude.")
+                }
             } else if trimmed.hasPrefix("Operator Location: Lon") {
-                operatorLon = Double(trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "")
+                if let lonString = trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces),
+                   let longitude = Double(lonString) {
+                    operatorLon = longitude
+                } else {
+                    print("Failed to parse operator longitude.")
+                }
             } else if trimmed.hasPrefix("Altitude") {
                 operatorAltGeo = Double(trimmed.dropFirst(8).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
             } else if trimmed.hasPrefix("Classification:") {
@@ -1128,7 +1138,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         } else if eventAttributes["type"]?.contains("-R") == true {
             return "CAA Assigned Registration ID"
         }
-        return "None"
+        return ""
     }
     
     private func mapUAType(_ typeStr: String?) -> DroneSignature.IdInfo.UAType {

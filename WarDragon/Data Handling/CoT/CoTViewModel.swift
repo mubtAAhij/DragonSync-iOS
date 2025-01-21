@@ -522,7 +522,7 @@ class CoTViewModel: ObservableObject {
     
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
-            print("DEBUG: Raw message in: \(message)")
+//            print("DEBUG: Raw message in: \(message)")
             // Convert CoTMessage to [String: Any]
             guard let signature = self.signatureGenerator.createSignature(from: message.toDictionary()) else {
                 print("DEBUG: Failed to generate signature")

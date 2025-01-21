@@ -155,7 +155,7 @@ struct MessageRow: View {
                     if message.operator_id != nil {
                         Text("Operator ID: \(message.operator_id ?? "")")
                     }
-                    if message.operatorAltGeo != nil {
+                    if message.operatorAltGeo != "0.0" {
                         Text("Operator Altitude: \(message.operatorAltGeo ?? "")m")
                     }
                     if (message.mac != nil) {

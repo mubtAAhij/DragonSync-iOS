@@ -586,7 +586,7 @@ public final class DroneSignatureGenerator {
         var lat = 0.0
         var lon = 0.0
         var alt = 0.0
-        print("DEBUG - Extracting position from message: \(message)")
+//        print("DEBUG - Extracting position from message: \(message)")
         // Handle multicast point format
         if let point = message["point_attributes"] as? [String: Any] {
             lat = Double(point["lat"] as? String ?? "0.0") ?? 0.0

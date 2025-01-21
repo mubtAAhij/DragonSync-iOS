@@ -229,8 +229,13 @@ class ZMQHandler: ObservableObject {
             return nil
         }
         
+        
         let uaType = String(describing: basicId["ua_type"] ?? "")
         let droneId = basicId["id"] as? String ?? UUID().uuidString
+        if droneId.contains("NONE"){
+            print("SKIPPING THE NONE IN ID")
+            return nil
+        }
         var mac = basicId["MAC"] as? String ?? ""
         let rssi = basicId["RSSI"] as? Int ?? 0
         let desc = basicId["description"] as? String ?? ""
