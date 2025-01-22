@@ -32,6 +32,7 @@ class CoTViewModel: ObservableObject {
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
+        var caaRegistration: String?
         var uid: String
         var type: String
         
@@ -139,6 +140,13 @@ class CoTViewModel: ObservableObject {
         var isSpoofed: Bool = false
         var spoofingDetails: DroneSignatureGenerator.SpoofDetectionResult?
         
+        // Data store
+        func saveToStorage() {
+                if let signature = DroneSignatureGenerator().createSignature(from: toDictionary()) {
+                    DroneStorageManager.shared.saveEncounter(signature)
+                }
+            }
+        
         var formattedAltitude: String? {
             if let altValue = Double(alt), altValue != 0 {
                 return String(format: "%.1f m MSL", altValue)
@@ -157,6 +165,7 @@ class CoTViewModel: ObservableObject {
         
         static func == (lhs: CoTViewModel.CoTMessage, rhs: CoTViewModel.CoTMessage) -> Bool {
             return lhs.uid == rhs.uid &&
+            lhs.caaRegistration == rhs.caaRegistration &&
             lhs.type == rhs.type &&
             lhs.lat == rhs.lat &&
             lhs.lon == rhs.lon &&
@@ -524,12 +533,29 @@ class CoTViewModel: ObservableObject {
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
 //            print("DEBUG: Raw message in: \(message)")
+            
+            if message.idType == "CAA Assigned Registration ID" {
+                // Try to match with existing drone by MAC address or other identifiers
+                if let mac = message.mac,
+                   let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
+                    // Update existing drone with CAA registration
+                    var updatedDrone = self.parsedMessages[existingIndex]
+                    updatedDrone.caaRegistration = message.uid // Add a caaRegistration field to CoTMessage
+                    self.parsedMessages[existingIndex] = updatedDrone
+                    self.objectWillChange.send()
+                    return
+                }
+                // If no match found, don't add as new drone - just return
+                return
+            }
+            
             // Convert CoTMessage to [String: Any]
             guard let signature = self.signatureGenerator.createSignature(from: message.toDictionary()) else {
                 print("DEBUG: Failed to generate signature")
                 return
             }
 //            print("DEBUG: Generated signature: \(signature)")
+            
             
             // Update signatures collection
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
@@ -538,6 +564,18 @@ class CoTViewModel: ObservableObject {
             } else {
                 print("Added new signature")
                 self.droneSignatures.append(signature)
+            }
+            
+            // Check if this drone exists in storage
+            let encounters = DroneStorageManager.shared.encounters
+            if encounters[signature.primaryId.id] != nil {
+                // Update existing encounter
+                DroneStorageManager.shared.saveEncounter(signature)
+                print("Updated existing encounter in storage")
+            } else {
+                // Add new encounter
+                DroneStorageManager.shared.saveEncounter(signature)
+                print("Added new encounter to storage")
             }
             
             // Check for existing signature match

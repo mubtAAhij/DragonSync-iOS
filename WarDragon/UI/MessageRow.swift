@@ -12,6 +12,8 @@ struct MessageRow: View {
     let message: CoTViewModel.CoTMessage
     @ObservedObject var cotViewModel: CoTViewModel
     @State private var activeSheet: SheetType?
+    @State private var showingSaveConfirmation = false
+
     
     enum SheetType: Identifiable {
         case liveMap
@@ -99,6 +101,11 @@ struct MessageRow: View {
                         .foregroundColor(.blue)
                     Text("ID: \(message.id)")
                         .font(.appHeadline)
+                    if let caaReg = message.caaRegistration {
+                        Text("CAA ID: \(caaReg)")
+                            .font(.appSubheadline)
+                            .foregroundColor(.secondary)
+                    }
                     
                     Spacer()
                     
@@ -114,6 +121,20 @@ struct MessageRow: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    
+                    Button {
+                        showingSaveConfirmation = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "square.and.arrow.down")
+                            Text("Save")
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.green)
                         .foregroundColor(.white)
                         .cornerRadius(8)
                     }

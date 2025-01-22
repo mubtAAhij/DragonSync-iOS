@@ -721,7 +721,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             for (brand, prefixes) in macPrefixesByManufacturer {
                 for prefix in prefixes {
                     let cleanPrefix = prefix.replacingOccurrences(of: ":", with: "").uppercased()  // Normalize prefix
-                    print("Checking prefix: \(cleanPrefix) against MAC: \(cleanMac)")
+//                    print("Checking prefix: \(cleanPrefix) against MAC: \(cleanMac)")
                     if cleanMac.hasPrefix(cleanPrefix) {
                         manufacturer = brand
                         print("Match found! Manufacturer: \(manufacturer)")
@@ -955,7 +955,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             if idType == "Serial Number (ANSI/CTA-2063-A)" {
                                 droneType += "-S"
                             } else if idType == "CAA Registration ID" {
-                                return
+                                droneType += "-R"
                             } else {
                                 droneType += "-U"
                             }

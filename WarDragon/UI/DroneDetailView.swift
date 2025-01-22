@@ -57,10 +57,12 @@ struct DroneDetailView: View {
                 .font(.appDefault)
                 Group {
                     InfoRow(title: "ID", value: message.uid)
+                    if message.caaRegistration != "" {
+                        InfoRow(title: "CAA Registration ID", value: message.caaRegistration ?? "")
+                    }
                     if !message.description.isEmpty {
                         InfoRow(title: "Description", value: message.description)
                     }
-                    
                     if !message.selfIDText.isEmpty {
                         InfoRow(title: "Info", value: message.selfIDText)
                     }

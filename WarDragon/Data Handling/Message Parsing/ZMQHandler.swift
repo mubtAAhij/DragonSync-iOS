@@ -317,11 +317,11 @@ class ZMQHandler: ObservableObject {
         
         // Basic ID Message Fields
         let idType = basicId["id_type"] as? String ?? ""
-        if idType.contains("CAA") {
-            print("SKIPPING THE CAA IN XML CONVERSION")
-            return nil
-        }
-        
+//        if idType.contains("CAA") {
+//            print("SKIPPING THE CAA IN XML CONVERSION")
+//            return nil
+//        }
+//        
         
         let uaType = String(describing: basicId["ua_type"] ?? "")
         let droneId = basicId["id"] as? String ?? UUID().uuidString
