@@ -13,9 +13,29 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
     let id: String
     let firstSeen: Date
     var lastSeen: Date
-    var flightPath: [FlightPathPoint]
     var signatures: [SignatureData]
     var metadata: [String: String]
+    private var _flightPath: [FlightPathPoint]
+    
+    // Computed property for flight path
+    var flightPath: [FlightPathPoint] {
+        get {
+            return _flightPath
+        }
+        set {
+            _flightPath = newValue
+        }
+    }
+    
+    // Initialize with private flight path
+    init(id: String, firstSeen: Date, lastSeen: Date, flightPath: [FlightPathPoint], signatures: [SignatureData], metadata: [String: String]) {
+        self.id = id
+        self.firstSeen = firstSeen
+        self.lastSeen = lastSeen
+        self._flightPath = flightPath
+        self.signatures = signatures
+        self.metadata = metadata
+    }
     
     var maxAltitude: Double {
         flightPath.map { $0.altitude }.max() ?? 0
@@ -34,13 +54,7 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
         lastSeen.timeIntervalSince(firstSeen)
     }
     
-    static func == (lhs: DroneEncounter, rhs: DroneEncounter) -> Bool {
-        lhs.id == rhs.id
-    }
     
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
 }
 
 struct FlightPathPoint: Codable, Hashable {
