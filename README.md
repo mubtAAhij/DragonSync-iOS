@@ -1,15 +1,12 @@
 # DragonSync iOS
+
 <p align="left">
-  <img src="https://github.com/user-attachments/assets/866fe12d-2bd7-431c-9979-0bc32e2bd2fd" >
+  <img src="https://github.com/user-attachments/assets/d21ab909-7dba-4b42-8996-a741248e9223">
 </p>
 
 > *Revolutionize your airspace awareness. Bridge the power of WarDragon to your iOS device. Stay ahead with real-time monitoring, instant alerts, and robust protocol support.*
 
 ## Features
-
-<p align="left">
-  <img src="https://github.com/user-attachments/assets/1f7ea78b-37f7-4ef1-939b-a1291d6216b4">
-</p>
 
 - **Real-Time Airspace Monitoring**  
   Track the status and location of Remote ID-compliant UAVs on your iOS device. See flightpaths and comprehensive decoded data of any RID broadcast.
@@ -25,6 +22,12 @@
 
   ![image](https://github.com/user-attachments/assets/daf1f020-b852-40e9-be95-dcc3d02371af)
 
+  
+- **Detect the Undetectable:**
+
+  *SDR-Powered Drone Detection & Decoding with WarDragon Pro. Support for Ocusync and other difficult signals*
+
+  OcuSync's advanced frequency-hopping and encrypted communication make it nearly invisible to standard detection tools.
 
 - **Seamless WarDragon Integration**  
   Designed to work flawlessly with the WarDragon DragonOS platform directly over ZMQ or broader applications with Multicast. A unified and user-friendly experience out of the box. 
