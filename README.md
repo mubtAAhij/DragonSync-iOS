@@ -25,6 +25,12 @@
 
   ![image](https://github.com/user-attachments/assets/daf1f020-b852-40e9-be95-dcc3d02371af)
 
+  
+- **Detect the Undetectable:**
+
+  *SDR-Powered Drone Detection & Decoding with WarDragon Pro. Support for Ocusync and other difficult signals*
+
+  OcuSync's advanced frequency-hopping and encrypted communication make it nearly invisible to standard detection tools. By leveraging SDR, this app decodes even the most resilient protocols, including OcuSync, for unmatched drone detection.
 
 - **Seamless WarDragon Integration**  
   Designed to work flawlessly with the WarDragon DragonOS platform directly over ZMQ or broader applications with Multicast. A unified and user-friendly experience out of the box. 
