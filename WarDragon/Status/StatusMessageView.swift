@@ -222,8 +222,9 @@ struct SystemStatsView: View {
                         color: temperatureColor(stats.temperature)
                     )
                 }
-                
-                // Add ANTSDR temps
+            }
+            
+            HStack {
                 if antStats.plutoTemp > 0 {
                     CircularGauge(
                         value: antStats.plutoTemp,
@@ -244,6 +245,8 @@ struct SystemStatsView: View {
                     )
                 }
             }
+            
+            
             
             // Memory and Disk section
             VStack(spacing: 12) {
@@ -282,6 +285,14 @@ struct SystemStatsView: View {
         }
     }
     
+    private func antSdrTemperatureColor(_ temp: Double) -> Color {
+        switch temp {
+        case 0..<45: return .green
+        case 45..<65: return .yellow
+        default: return .red
+        }
+    }
+    
     private func calculateDiskUsagePercent(_ diskStats: StatusViewModel.StatusMessage.SystemStats.DiskStats) -> Double {
         guard diskStats.total > 0 else {
             return 0
@@ -300,7 +311,7 @@ struct SystemStatsView: View {
         let usedMemory = memoryStats.total - memoryStats.available
         return (Double(usedMemory) / Double(memoryStats.total)) * 100
     }
-
+    
     
     // MARK: - Formatting and color helper functions
     private func formatMemory(_ memory: StatusViewModel.StatusMessage.SystemStats.MemoryStats) -> String {
@@ -323,14 +334,6 @@ struct SystemStatsView: View {
         default: return .red
         }
     }
-    
-    private func antSdrTemperatureColor(_ temp: Double) -> Color {
-           switch temp {
-           case 0..<45: return .green
-           case 45..<65: return .yellow
-           default: return .red
-           }
-       }
     
     private func temperatureColor(_ temp: Double) -> Color {
         switch temp {
