@@ -63,6 +63,7 @@ class CoTViewModel: ObservableObject {
         var ew_dir_segment: String?
         var speed_multiplier: String?
         var direction: String?
+        var geodetic_altitude: Double?
         var vertical_accuracy: String?
         var horizontal_accuracy: String?
         var baro_accuracy: String?
@@ -142,10 +143,10 @@ class CoTViewModel: ObservableObject {
         
         // Data store
         func saveToStorage() {
-                if let signature = DroneSignatureGenerator().createSignature(from: toDictionary()) {
-                    DroneStorageManager.shared.saveEncounter(signature)
-                }
+            if let signature = DroneSignatureGenerator().createSignature(from: toDictionary()) {
+                DroneStorageManager.shared.saveEncounter(signature)
             }
+        }
         
         var formattedAltitude: String? {
             if let altValue = Double(alt), altValue != 0 {
@@ -153,7 +154,7 @@ class CoTViewModel: ObservableObject {
             }
             return nil
         }
-
+        
         var formattedHeight: String? {
             if let heightValue = Double(height ?? ""), heightValue != 0 {
                 return String(format: "%.1f m AGL", heightValue)
@@ -237,7 +238,8 @@ class CoTViewModel: ObservableObject {
             lhs.height == rhs.height &&
             lhs.op_status == rhs.op_status &&
             lhs.height_type == rhs.height_type &&
-            lhs.direction == rhs.direction
+            lhs.direction == rhs.direction &&
+            lhs.geodetic_altitude == rhs.geodetic_altitude
         }
         
         var coordinate: CLLocationCoordinate2D? {
@@ -250,53 +252,71 @@ class CoTViewModel: ObservableObject {
         }
         
         func toDictionary() -> [String: Any] {
-                var dict: [String: Any] = [
-                    "uid": self.uid,
-                    "type": self.type,
-                    "lat": self.lat,
-                    "lon": self.lon,
-                    "speed": self.speed,
-                    "vspeed": self.vspeed,
-                    "alt": self.alt,
-                    "pilotLat": self.pilotLat,
-                    "pilotLon": self.pilotLon,
-                    "description": self.description,
-                    "selfIDText": self.selfIDText,
-                    "uaType": self.uaType.rawValue, // Assuming `UAType` is an enum
-                    "idType": self.idType,
-                    "isSpoofed": self.isSpoofed
-                ]
-                
-                // Include optional fields if they exist
-                dict["height"] = self.height
-                dict["protocolVersion"] = self.protocolVersion
-                dict["mac"] = self.mac
-                dict["rssi"] = self.rssi
-                dict["location_protocol"] = self.location_protocol
-                dict["op_status"] = self.op_status
-                dict["height_type"] = self.height_type
-                dict["direction"] = self.direction
-                dict["time"] = self.time
-                dict["start"] = self.start
-                dict["stale"] = self.stale
-                dict["how"] = self.how
-                dict["ce"] = self.ce
-                dict["le"] = self.le
-                dict["hae"] = self.hae
-                dict["aux_rssi"] = self.aux_rssi
-                dict["channel"] = self.channel
-                dict["phy"] = self.phy
-                dict["aa"] = self.aa
-                dict["adv_mode"] = self.adv_mode
-                dict["adv_mac"] = self.adv_mac
-                dict["operator_id"] = self.operator_id
-                dict["classification_type"] = self.classification_type
-                dict["area_radius"] = self.area_radius
-                dict["area_ceiling"] = self.area_ceiling
-                dict["area_floor"] = self.area_floor
-
-                return dict
-            }
+            var dict: [String: Any] = [
+                "uid": self.uid,
+                "id": self.id,
+                "type": self.type,
+                "lat": self.lat,
+                "lon": self.lon,
+                "latitude": self.lon,
+                "longitude": self.lon,
+                "speed": self.speed,
+                "vspeed": self.vspeed,
+                "alt": self.alt,
+                "pilotLat": self.pilotLat,
+                "pilotLon": self.pilotLon,
+                "description": self.description,
+                "selfIDText": self.selfIDText,
+                "uaType": self.uaType, // Assuming `UAType` is an enum
+                "idType": self.idType,
+                "isSpoofed": self.isSpoofed,
+                "rssi": self.rssi ?? 0.0,
+                "mac": self.mac ?? "",
+                "manufacturer": self.manufacturer ?? "",
+                "op_status": self.op_status ?? "",
+                "ew_dir_segment": self.ew_dir_segment ?? "",
+                "direction": self.direction ?? "",
+                "geodetic_altitude": self.geodetic_altitude ?? 0.0
+            ]
+            
+            // Include optional fields if they exist
+            dict["id"] = self.id
+            dict["uid"] = self.uid
+            dict["height"] = self.height
+            dict["protocolVersion"] = self.protocolVersion
+            dict["geodetic_altitude"] = self.geodetic_altitude
+            dict["mac"] = self.mac
+            dict["rssi"] = self.rssi
+            dict["rssi"] = self.rssi
+            dict["manufacturer"] = self.manufacturer
+            dict["op_status"] = self.op_status
+            dict["direction"] = self.direction
+            dict["ew_dir_segment"] = self.ew_dir_segment
+            dict["location_protocol"] = self.location_protocol
+            dict["op_status"] = self.op_status
+            dict["height_type"] = self.height_type
+            dict["direction"] = self.direction
+            dict["time"] = self.time
+            dict["start"] = self.start
+            dict["stale"] = self.stale
+            dict["how"] = self.how
+            dict["ce"] = self.ce
+            dict["le"] = self.le
+            dict["hae"] = self.hae
+            dict["aux_rssi"] = self.aux_rssi
+            dict["channel"] = self.channel
+            dict["phy"] = self.phy
+            dict["aa"] = self.aa
+            dict["adv_mode"] = self.adv_mode
+            dict["adv_mac"] = self.adv_mac
+            dict["operator_id"] = self.operator_id
+            dict["classification_type"] = self.classification_type
+            dict["area_radius"] = self.area_radius
+            dict["area_ceiling"] = self.area_ceiling
+            dict["area_floor"] = self.area_floor
+            
+            return dict
+        }
     }
     
     init(statusViewModel: StatusViewModel, spectrumViewModel: SpectrumData.SpectrumViewModel? = nil) {        self.statusViewModel = statusViewModel
@@ -462,7 +482,7 @@ class CoTViewModel: ObservableObject {
             }
             
             if let message = String(data: data, encoding: .utf8) {
-                print("Received data: \(message)")
+//                print("DEBUG - Received data: \(message)")
                 
                 // Check for Status message first (has both status code type and remarks with CPU Usage)
                 if message.contains("<remarks>CPU Usage:") {
@@ -496,7 +516,7 @@ class CoTViewModel: ObservableObject {
                 
                 // Finally check for regular XML drone message
                 if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
-                    print("Processing XML Drone message: \(message)")
+//                    print("Processing XML Drone message: \(message)")
                     let parser = XMLParser(data: data)
                     let cotParserDelegate = CoTMessageParser()
                     parser.delegate = cotParserDelegate
@@ -532,7 +552,7 @@ class CoTViewModel: ObservableObject {
     
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
-//            print("DEBUG: Raw message in: \(message)")
+            //            print("DEBUG: Raw message in: \(message)")
             
             if message.idType == "CAA Assigned Registration ID" {
                 // Try to match with existing drone by MAC address or other identifiers
@@ -540,12 +560,12 @@ class CoTViewModel: ObservableObject {
                    let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
                     // Update existing drone with CAA registration
                     var updatedDrone = self.parsedMessages[existingIndex]
-                    updatedDrone.caaRegistration = message.uid // Add a caaRegistration field to CoTMessage
+                    updatedDrone.caaRegistration = message.uid
                     self.parsedMessages[existingIndex] = updatedDrone
                     self.objectWillChange.send()
                     return
                 }
-                // If no match found, don't add as new drone - just return
+                // No match found, don't add as new
                 return
             }
             
@@ -554,8 +574,6 @@ class CoTViewModel: ObservableObject {
                 print("DEBUG: Failed to generate signature")
                 return
             }
-//            print("DEBUG: Generated signature: \(signature)")
-            
             
             // Update signatures collection
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
@@ -569,9 +587,16 @@ class CoTViewModel: ObservableObject {
             // Check if this drone exists in storage
             let encounters = DroneStorageManager.shared.encounters
             if encounters[signature.primaryId.id] != nil {
-                // Update existing encounter
-                DroneStorageManager.shared.saveEncounter(signature)
-                print("Updated existing encounter in storage")
+                // Only update if coordinates or attributes have changed
+                let existing = encounters[signature.primaryId.id]!
+                let hasNewPosition = existing.flightPath.last?.latitude != signature.position.coordinate.latitude ||
+                                    existing.flightPath.last?.longitude != signature.position.coordinate.longitude ||
+                                    existing.flightPath.last?.altitude != signature.position.altitude
+                
+                if hasNewPosition {
+                    DroneStorageManager.shared.saveEncounter(signature)
+                    print("Updated existing encounter with new position")
+                }
             } else {
                 // Add new encounter
                 DroneStorageManager.shared.saveEncounter(signature)

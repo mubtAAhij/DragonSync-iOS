@@ -124,20 +124,6 @@ struct MessageRow: View {
                         .foregroundColor(.white)
                         .cornerRadius(8)
                     }
-                    
-                    Button {
-                        showingSaveConfirmation = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "square.and.arrow.down")
-                            Text("Save")
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    }
                 }
                 
                 Text("Type: \(message.type)")

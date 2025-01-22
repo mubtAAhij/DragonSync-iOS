@@ -512,7 +512,7 @@ public final class DroneSignatureGenerator {
     }
     
     private func extractPrimaryId(_ message: [String: Any]) -> DroneSignature.IdInfo {
-        if let basicId = message["Basic ID"] as? [String: Any] {
+        if let basicId = message["id"] as? [String: Any] {
             // Get UA type from message
             // Handle both numeric and string UA types
             let uaType: DroneSignature.IdInfo.UAType
@@ -526,7 +526,7 @@ public final class DroneSignatureGenerator {
             }
             
             return DroneSignature.IdInfo(
-                id: basicId["id"] as? String ?? "Unknown",
+                id: message["id"] as? String ?? "",
                 type: .utmAssigned,
                 protocolVersion: "1.0",
                 uaType: uaType
@@ -539,7 +539,7 @@ public final class DroneSignatureGenerator {
                 protocolVersion: "1.0",
                 uaType: .none // Default until we parse BT UA type
             )
-        } else if let droneId = message["DroneID"] as? [String: Any] {
+        } else if let droneId = message["id"] as? [String: Any] {
             let mac = droneId.keys.first ?? "Unknown"
             return DroneSignature.IdInfo(
                 id: "ID: \(mac)",
@@ -550,7 +550,7 @@ public final class DroneSignatureGenerator {
         }
         
         return DroneSignature.IdInfo(
-            id: "Unknown",
+            id: message["uid"] as? String ?? "",
             type: .unknown,
             protocolVersion: "1.0",
             uaType: .helicopter
@@ -586,38 +586,38 @@ public final class DroneSignatureGenerator {
         var lat = 0.0
         var lon = 0.0
         var alt = 0.0
-//        print("DEBUG - Extracting position from message: \(message)")
-        // Handle multicast point format
-        if let point = message["point_attributes"] as? [String: Any] {
-            lat = Double(point["lat"] as? String ?? "0.0") ?? 0.0
-            lon = Double(point["lon"] as? String ?? "0.0") ?? 0.0
-            alt = Double(point["hae"] as? String ?? "0.0") ?? 0.0
+        var operatorLocation: CLLocationCoordinate2D?
+
+        // Handle XML point attributes
+        if let pointLat = message["lat"] as? String,
+           let pointLon = message["lon"] as? String {
+            lat = Double(pointLat) ?? 0.0
+            lon = Double(pointLon) ?? 0.0
         }
-        // Handle JSON format
-        else if let location = message["Location/Vector Message"] as? [String: Any] {
-            lat = location["latitude"] as? Double ?? 0.0
-            lon = location["longitude"] as? Double ?? 0.0
-            alt = location["geodetic_altitude"] as? Double ?? 0.0
+
+        // Handle geodetic altitude from hae attribute
+        if let haeAlt = message["hae"] as? String {
+            alt = Double(haeAlt) ?? 0.0
+        } else if let mAlt = message["alt"] as? String {
+            alt = Double(mAlt) ?? 0.0
+        } else if let mAlt = message["geodetic_altitude"] as? String {
+            alt = Double(mAlt) ?? 0.0
         }
-        
-        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-        let operatorLocation: CLLocationCoordinate2D?
-        
-        // Handle multicast pilot location
-        if let system = message["System Message"] as? [String: Any],
-           let pilotLoc = system["PilotLocation"] as? [String: Any],
-           let pilotLat = Double(pilotLoc["lat"] as? String ?? "0.0"),
-           let pilotLon = Double(pilotLoc["lon"] as? String ?? "0.0") {
-            operatorLocation = CLLocationCoordinate2D(latitude: pilotLat, longitude: pilotLon)
-        } else {
-            operatorLocation = nil
+
+        // Handle operator location
+        if let pilotLat = message["pilotLat"] as? String,
+           let pilotLon = message["pilotLon"] as? String,
+           let latDouble = Double(pilotLat),
+           let lonDouble = Double(pilotLon),
+           latDouble != 0 && lonDouble != 0 {
+            operatorLocation = CLLocationCoordinate2D(latitude: latDouble, longitude: lonDouble)
         }
-        
+
         return DroneSignature.PositionInfo(
-            coordinate: coordinate,
+            coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
             altitude: alt,
             altitudeReference: .wgs84,
-            lastKnownGoodPosition: lat == 0 && lon == 0 ? nil : coordinate,
+            lastKnownGoodPosition: lat == 0 && lon == 0 ? nil : CLLocationCoordinate2D(latitude: lat, longitude: lon),
             operatorLocation: operatorLocation,
             horizontalAccuracy: nil,
             verticalAccuracy: nil,
@@ -626,22 +626,15 @@ public final class DroneSignatureGenerator {
     }
     
     private func extractMovementVector(_ message: [String: Any], previousPath: [CLLocationCoordinate2D]?) -> DroneSignature.MovementVector {
-        if let location = message["Location/Vector Message"] as? [String: Any] {
-            return DroneSignature.MovementVector(
-                groundSpeed: location["speed"] as? Double ?? 0.0,
-                verticalSpeed: location["vert_speed"] as? Double ?? 0.0,
-                heading: location["heading"] as? Double ?? 0.0,
-                climbRate: nil,
-                turnRate: nil,
-                flightPath: previousPath,
-                timestamp: Date().timeIntervalSince1970
-            )
-        }
+        let speed = Double(message["speed"] as? String ?? "0.0") ?? 0.0
+        let vspeed = Double(message["vspeed"] as? String ?? "0.0") ?? 0.0
+        let direction = Double(message["direction"] as? String ?? "0.0") ?? 0.0
+
         return DroneSignature.MovementVector(
-            groundSpeed: 0.0,
-            verticalSpeed: 0.0,
-            heading: 0.0,
-            climbRate: nil,
+            groundSpeed: speed,
+            verticalSpeed: vspeed,
+            heading: direction,
+            climbRate: vspeed,
             turnRate: nil,
             flightPath: previousPath,
             timestamp: Date().timeIntervalSince1970
@@ -651,7 +644,7 @@ public final class DroneSignatureGenerator {
     private func extractHeightInfo(_ message: [String: Any], previousHeights: [Double]?) -> DroneSignature.HeightInfo {
         let location = message["Location/Vector Message"] as? [String: Any] ?? [:]
         let now = Date().timeIntervalSince1970
-        let height = location["height_agl"] as? Double ?? 0.0
+        let height = location["height"] as? Double ?? 0.0
         
         let consistencyScore = calculateHeightConsistency(height, previousHeights: previousHeights)
         
@@ -668,7 +661,6 @@ public final class DroneSignatureGenerator {
     }
     
     public func extractTransmissionInfo(_ message: [String: Any]) -> DroneSignature.TransmissionInfo {
-        print("DEBUG - Extract Trans info from message \(message)")
         let type: DroneSignature.TransmissionInfo.TransmissionType
         let messageType: DroneSignature.TransmissionInfo.MessageType
         var metadata: [String: Any]? = nil
@@ -755,7 +747,7 @@ public final class DroneSignatureGenerator {
             transmissionType: type,
             signalStrength: signalStrength,
             expectedSignalStrength: expectedSignalStrength,
-            macAddress: message["mac"] as? String,
+            macAddress: message["MAC"] as? String,
             frequency: nil,
             protocolType: .openDroneID,
             messageTypes: [messageType],

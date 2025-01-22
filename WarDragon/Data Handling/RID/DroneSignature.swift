@@ -124,7 +124,8 @@ public struct DroneSignature: Hashable {
             guard let lhs = lhs, let rhs = rhs else {
                 return lhs == nil && rhs == nil
             }
-            return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
+            return lhs.latitude == rhs.latitude &&
+            lhs.longitude == rhs.longitude
         }
         
         public func hash(into hasher: inout Hasher) {
@@ -187,7 +188,8 @@ public struct DroneSignature: Hashable {
             }
             guard p1.count == p2.count else { return false }
             return zip(p1, p2).allSatisfy { coord1, coord2 in
-                coord1.latitude == coord2.latitude && coord1.longitude == coord2.longitude
+                coord1.latitude == coord2.latitude &&
+                coord1.longitude == coord2.longitude
             }
         }
         

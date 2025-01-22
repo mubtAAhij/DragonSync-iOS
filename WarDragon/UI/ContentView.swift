@@ -116,6 +116,14 @@ struct ContentView: View {
             }
             .tag(3)
             
+            NavigationStack {
+                StoredEncountersView()
+            }
+            .tabItem {
+                Label("History", systemImage: "clock.arrow.circlepath")
+            }
+            .tag(4) 
+            
 //            NavigationStack {
 //                SpectrumView(viewModel: spectrumViewModel)
 //                    .navigationTitle("Spectrum")

@@ -260,7 +260,7 @@ class DroneMessageGenerator:
 		mac = "E0:4E:7A:9A:67:99"
 		rssi = random.randint(-90, -40)
 		protocol_version = "1.0"
-		desc = f"Test Drone DRONE{random.randint(100, 103)}"
+		desc = f"Test Drone DRONE{random.randint(100, 102)}"
 		speed = round(random.uniform(0, 30), 1)
 		vspeed = round(random.uniform(-5, 5), 1)
 		height_agl = round(random.uniform(20, 200), 1)
@@ -279,7 +279,7 @@ class DroneMessageGenerator:
 		vert_acc = 10
 		baro_acc = 3
 		speed_acc = 2
-		selfIDtext = "Self-ID Example"
+		selfIDtext = "Self-ID Text Stuff"
 		selfIDDesc = desc
 		opID = "Operator123"
 		uaType = "Quadcopter"
@@ -288,12 +288,13 @@ class DroneMessageGenerator:
 		operator_alt_geo = round(random.uniform(0, 100), 1)
 		classification = "Class A"
 		did = 1324
+		id_type = "CAA Assigned Registration ID"
 		
 		return f"""
 		<event version="2.0" uid="drone-{desc.split()[-1]}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
 			<point lat="{lat}" lon="{lon}" hae="{alt}" ce="9999999" le="999999"/>
 			<detail>
-				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Device ID: {did}, Protocol Version: {protocol_version}, Description: {desc}, 
+				<remarks>MAC: {mac}, RSSI: {rssi}dBm, ID Type: {id_type}, Device ID: {did}, IDProtocol Version: {protocol_version}, Description: {desc}, 
 				Location/Vector Message: Speed: {speed} m/s, Vert Speed: {vspeed} m/s, Geodetic Altitude: {alt} m, 
 				Height AGL: {height_agl} m, Height Type: {height_type}, Pressure Altitude: {pressure_altitude} m, 
 				EW Direction Segment: {ew_dir_segment}, Speed Multiplier: {speed_multiplier}, Operational Status: {op_status}, 
@@ -323,8 +324,11 @@ class DroneMessageGenerator:
 			"Basic ID": {
 				"id": "112624150A90E3AE1EC0",
 				"id_type": "Serial Number (ANSI/CTA-2063-A)",
+#				"id_type": "CAA Assigned Registration ID",
+#				"id": "112624150A",
 				"ua_type": 0,
-				"MAC": "18:65:6A:00:4B:5B"
+				"MAC": "18:65:6A:00:4B:5B",
+				"rssi": "-30"
 			},
 			"Location/Vector Message": {
 				"latitude": latitude,
