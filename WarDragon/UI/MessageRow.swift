@@ -102,9 +102,11 @@ struct MessageRow: View {
                     Text("ID: \(message.id)")
                         .font(.appHeadline)
                     if let caaReg = message.caaRegistration {
-                        Text("CAA ID: \(caaReg)")
-                            .font(.appSubheadline)
-                            .foregroundColor(.secondary)
+                        if !caaReg.isEmpty {
+                            Text("CAA ID: \(caaReg)")
+                                .font(.appSubheadline)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     
                     Spacer()

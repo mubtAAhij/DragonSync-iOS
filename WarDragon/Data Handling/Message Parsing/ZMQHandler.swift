@@ -316,18 +316,19 @@ class ZMQHandler: ObservableObject {
         }
         
         // Basic ID Message Fields
-        let idType = basicId["id_type"] as? String ?? ""
-//        if idType.contains("CAA") {
-//            print("SKIPPING THE CAA IN XML CONVERSION")
-//            return nil
-//        }
-//        
+      
         
         let uaType = String(describing: basicId["ua_type"] ?? "")
         let droneId = basicId["id"] as? String ?? UUID().uuidString
         if droneId.contains("NONE"){
             print("SKIPPING THE NONE IN ID")
             return nil
+        }
+        let idType = basicId["id_type"] as? String ?? ""
+        var caaReg =  ""
+        if idType.contains("CAA") {
+            caaReg = droneId
+            print("CAA IN XML CONVERSION")
         }
         var mac = basicId["MAC"] as? String ?? ""
         let rssi = basicId["RSSI"] as? Int ?? 0
@@ -455,7 +456,7 @@ class ZMQHandler: ObservableObject {
         <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
             <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
             <detail>
-                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, Manufacturer: \(manufacturer), Channel: \(String(describing: channel)), PHY: \(String(describing: phy)), Access Address: \(String(describing: accessAddress)), Advertisement Mode: \(String(describing: advMode)), Device ID: \(String(describing: deviceId)), Sequence ID: \(String(describing: sequenceId)), Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Operator Location: Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification)</remarks>
+                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, CAA: \(caaReg), ID Type: \(idType), Manufacturer: \(manufacturer), Channel: \(String(describing: channel)), PHY: \(String(describing: phy)), Access Address: \(String(describing: accessAddress)), Advertisement Mode: \(String(describing: advMode)), Device ID: \(String(describing: deviceId)), Sequence ID: \(String(describing: sequenceId)), Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Operator Location: Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification)</remarks>
                 <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
                 <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
                 <color argb="-256"/>

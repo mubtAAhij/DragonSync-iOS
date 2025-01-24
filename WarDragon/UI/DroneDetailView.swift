@@ -56,9 +56,9 @@ struct DroneDetailView: View {
                 .cornerRadius(12)
                 .font(.appDefault)
                 Group {
-                    InfoRow(title: "ID", value: message.uid)
+                    InfoRow(title: "Serial Number ID", value: message.uid)
                     if message.caaRegistration != "" {
-                        InfoRow(title: "CAA Registration ID", value: message.caaRegistration ?? "")
+                        InfoRow(title: "CAA Registration", value: message.caaRegistration ?? "")
                     }
                     if !message.description.isEmpty {
                         InfoRow(title: "Description", value: message.description)

@@ -71,10 +71,10 @@ struct EncounterRow: View {
             
             HStack {
                 Label("\(encounter.flightPath.count)", systemImage: "map")
-                Label(String(format: "%.1fm", encounter.maxAltitude), systemImage: "arrow.up")
-                Label(String(format: "%.1fm/s", encounter.maxSpeed), systemImage: "speedometer")
+                Label(String(format: "%.0fm", encounter.maxAltitude), systemImage: "arrow.up")
+                Label(String(format: "%.0fm/s", encounter.maxSpeed), systemImage: "speedometer")
                 if encounter.averageRSSI != 0 {
-                    Label(String(format: "%.0fdBm", encounter.averageRSSI),
+                    Label(String(format: "%.0fdB", encounter.averageRSSI),
                           systemImage: "antenna.radiowaves.left.and.right")
                 }
             }
