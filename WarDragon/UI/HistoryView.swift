@@ -13,158 +13,323 @@ import MapKit
 struct StoredEncountersView: View {
     @ObservedObject var storage = DroneStorageManager.shared
     @State private var showingDeleteConfirmation = false
+    @State private var searchText = ""
+    @State private var sortOrder: SortOrder = .lastSeen
+    
+    enum SortOrder {
+        case lastSeen, firstSeen, maxAltitude, maxSpeed
+    }
     
     var sortedEncounters: [DroneEncounter] {
-        storage.encounters.values.sorted { $0.lastSeen > $1.lastSeen }
+        let filtered = storage.encounters.values.filter { encounter in
+            searchText.isEmpty ||
+            encounter.id.localizedCaseInsensitiveContains(searchText) ||
+            encounter.metadata["caaRegistration"]?.localizedCaseInsensitiveContains(searchText) ?? false
+        }
+        
+        return filtered.sorted { first, second in
+            switch sortOrder {
+            case .lastSeen: return first.lastSeen > second.lastSeen
+            case .firstSeen: return first.firstSeen > second.firstSeen
+            case .maxAltitude: return first.maxAltitude > second.maxAltitude
+            case .maxSpeed: return first.maxSpeed > second.maxSpeed
+            }
+        }
     }
     
     var body: some View {
-        List {
-            ForEach(sortedEncounters) { encounter in
-                NavigationLink(destination: EncounterDetailView(encounter: encounter)) {
-                    EncounterRow(encounter: encounter)
+        NavigationStack {
+            List {
+                ForEach(sortedEncounters) { encounter in
+                    NavigationLink(destination: EncounterDetailView(encounter: encounter)) {
+                        EncounterRow(encounter: encounter)
+                    }
+                }
+                .onDelete { indexSet in
+                    for index in indexSet {
+                        storage.deleteEncounter(id: sortedEncounters[index].id)
+                    }
                 }
             }
-            .onDelete { indexSet in
-                for index in indexSet {
-                    storage.deleteEncounter(id: sortedEncounters[index].id)
+            .searchable(text: $searchText, prompt: "Search by ID or CAA Registration")
+            .navigationTitle("Encounter History")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Picker("Sort By", selection: $sortOrder) {
+                            Text("Last Seen").tag(SortOrder.lastSeen)
+                            Text("First Seen").tag(SortOrder.firstSeen)
+                            Text("Max Altitude").tag(SortOrder.maxAltitude)
+                            Text("Max Speed").tag(SortOrder.maxSpeed)
+                        }
+                        Button(role: .destructive) {
+                            showingDeleteConfirmation = true
+                        } label: {
+                            Label("Delete All", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
                 }
             }
-        }
-        .navigationTitle("Encounter History")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button(role: .destructive) {
-                    showingDeleteConfirmation = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
+            .alert("Delete All Encounters", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    storage.deleteAllEncounters()
                 }
+                Button("Cancel", role: .cancel) {}
             }
-        }
-        .alert("Delete Encounter", isPresented: $showingDeleteConfirmation) {
-            Button("Delete All", role: .destructive) {
-                storage.deleteAllEncounters()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Are you sure? This action cannot be undone.")
         }
     }
     
-}
-
-// Add the missing EncounterRow view
-struct EncounterRow: View {
-    let encounter: DroneEncounter
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Drone ID: \(encounter.id)")
-                .font(.appHeadline)
-            
-            Text("First Seen: \(encounter.firstSeen.formatted())")
-                .font(.appCaption)
-            
-            Text("Last Seen: \(encounter.lastSeen.formatted())")
-                .font(.appCaption)
-            
-            HStack {
-                Label("\(encounter.flightPath.count)", systemImage: "map")
-                Label(String(format: "%.0fm", encounter.maxAltitude), systemImage: "arrow.up")
-                Label(String(format: "%.0fm/s", encounter.maxSpeed), systemImage: "speedometer")
-                if encounter.averageRSSI != 0 {
-                    Label(String(format: "%.0fdB", encounter.averageRSSI),
-                          systemImage: "antenna.radiowaves.left.and.right")
+    struct EncounterRow: View {
+        let encounter: DroneEncounter
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(encounter.id)
+                        .font(.appHeadline)
+                    if let caaReg = encounter.metadata["caaRegistration"] {
+                        Text("CAA: \(caaReg)")
+                            .font(.appCaption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "airplane")
+                        .foregroundStyle(.blue)
                 }
-            }
-            .font(.appCaption)
-            .foregroundStyle(.secondary)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-struct EncounterDetailView: View {
-    let encounter: DroneEncounter
-    @Environment(\.dismiss) private var dismiss
-    @StateObject private var storage = DroneStorageManager.shared
-    @State private var showingDeleteConfirmation = false
-    
-    var body: some View {
-        VStack {
-            encounterMap
-            encounterStatistics
-            Spacer()
-        }
-        .navigationTitle("Encounter Details")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button(role: .destructive) {
-                    showingDeleteConfirmation = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
-        }
-        .alert("Delete Encounter", isPresented: $showingDeleteConfirmation) {
-            Button("Delete", role: .destructive) {
-                storage.deleteEncounter(id: encounter.id)
-                dismiss()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Are you sure you want to delete this encounter?")
-        }
-    }
-    
-    private var encounterMap: some View {
-        Map(initialPosition: .automatic) {
-            if !encounter.flightPath.isEmpty {
-                MapPolyline(coordinates: encounter.flightPath.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) })
-                    .stroke(.blue, lineWidth: 2)
                 
-                ForEach(Array(encounter.flightPath.enumerated()), id: \.offset) { index, point in
-                    Marker(
-                        encounter.id,
-                        coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
-                    )
+                if let mac = encounter.metadata["mac"] {
+                    Text("MAC: \(mac)")
+                        .font(.appCaption)
+                }
+                
+                HStack {
+                    Label("\(encounter.flightPath.count) points", systemImage: "map")
+                    Label(String(format: "%.0fm", encounter.maxAltitude), systemImage: "arrow.up")
+                    Label(String(format: "%.0fm/s", encounter.maxSpeed), systemImage: "speedometer")
+                    if encounter.averageRSSI != 0 {
+                        Label(String(format: "%.0fdB", encounter.averageRSSI),
+                              systemImage: "antenna.radiowaves.left.and.right")
+                    }
+                }
+                .font(.appCaption)
+                .foregroundStyle(.secondary)
+                
+                Text("Duration: \(formatDuration(encounter.totalFlightTime))")
+                    .font(.appCaption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 4)
+        }
+        
+        private func formatDuration(_ time: TimeInterval) -> String {
+            let hours = Int(time) / 3600
+            let minutes = Int(time) % 3600 / 60
+            let seconds = Int(time) % 60
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+    }
+    
+    struct EncounterDetailView: View {
+        let encounter: DroneEncounter
+        @Environment(\.dismiss) private var dismiss
+        @StateObject private var storage = DroneStorageManager.shared
+        @State private var showingDeleteConfirmation = false
+        @State private var selectedMapType: MapStyle = .standard
+        
+        enum MapStyle {
+            case standard, satellite, hybrid
+        }
+        
+        var body: some View {
+            ScrollView {
+                VStack(spacing: 16) {
+                    mapSection
+                    encounterStats
+                    metadataSection
+                    flightDataSection
+                }
+                .padding()
+            }
+            .navigationTitle("Encounter Details")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Picker("Map Style", selection: $selectedMapType) {
+                            Text("Standard").tag(MapStyle.standard)
+                            Text("Satellite").tag(MapStyle.satellite)
+                            Text("Hybrid").tag(MapStyle.hybrid)
+                        }
+                        Button(role: .destructive) {
+                            showingDeleteConfirmation = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
                 }
             }
         }
-        .frame(height: 300)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        
+        private var mapSection: some View {
+            Map {
+                if !encounter.flightPath.isEmpty {
+                    MapPolyline(coordinates: encounter.flightPath.map {
+                        CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+                    })
+                    .stroke(.blue, lineWidth: 2)
+                    
+                    // Start point
+                    if let start = encounter.flightPath.first {
+                        Annotation("Start", coordinate: start.coordinate) {
+                            Image(systemName: "airplane.departure")
+                                .foregroundStyle(.green)
+                        }
+                    }
+                    
+                    // End point
+                    if let end = encounter.flightPath.last {
+                        Annotation("End", coordinate: end.coordinate) {
+                            Image(systemName: "airplane.arrival")
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+            }
+            .frame(height: 300)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        
+        private var encounterStats: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("ENCOUNTER STATS")
+                    .font(.appHeadline)
+                
+                StatsGrid {
+                    StatItem(title: "Duration", value: formatDuration(encounter.totalFlightTime))
+                    StatItem(title: "Max Alt", value: String(format: "%.1fm", encounter.maxAltitude))
+                    StatItem(title: "Max Speed", value: String(format: "%.1fm/s", encounter.maxSpeed))
+                    StatItem(title: "Avg RSSI", value: String(format: "%.1fdBm", encounter.averageRSSI))
+                    StatItem(title: "Points", value: "\(encounter.flightPath.count)")
+                    StatItem(title: "Signatures", value: "\(encounter.signatures.count)")
+                }
+            }
+            .padding()
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+        }
+        
+        private var metadataSection: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("METADATA")
+                    .font(.appHeadline)
+                
+                ForEach(Array(encounter.metadata.sorted(by: { $0.key < $1.key })), id: \.key) { key, value in
+                    HStack {
+                        Text(key)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(value)
+                    }
+                    .font(.appCaption)
+                }
+            }
+            .padding()
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+        }
+        
+        private var flightDataSection: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("FLIGHT DATA")
+                    .font(.appHeadline)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 20) {
+                        FlightDataChart(title: "Altitude", data: encounter.flightPath.map { $0.altitude })
+                        FlightDataChart(title: "Speed", data: encounter.signatures.map { $0.speed })
+                        FlightDataChart(title: "RSSI", data: encounter.signatures.map { $0.rssi })
+                    }
+                }
+            }
+            .padding()
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+        }
     }
     
-    private var encounterStatistics: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("STATISTICS")
-                .font(.headline)
-            
-            Group {
-                DetailRow(title: "Flight Time", value: encounter.totalFlightTime.formatted())
-                DetailRow(title: "Max Altitude", value: String(format: "%.1fm", encounter.maxAltitude))
-                DetailRow(title: "Max Speed", value: String(format: "%.1fm/s", encounter.maxSpeed))
-                DetailRow(title: "Avg RSSI", value: String(format: "%.1fdBm", encounter.averageRSSI))
-                DetailRow(title: "Data Points", value: "\(encounter.flightPath.count)")
+    struct StatsGrid<Content: View>: View {
+        let content: Content
+        
+        init(@ViewBuilder content: () -> Content) {
+            self.content = content()
+        }
+        
+        var body: some View {
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 16) {
+                content
             }
         }
-        .padding()
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(12)
+    }
+    
+    struct StatItem: View {
+        let title: String
+        let value: String
+        
+        var body: some View {
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.appCaption)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.appHeadline)
+            }
+        }
+    }
+    
+    struct FlightDataChart: View {
+        let title: String
+        let data: [Double]
+        
+        var body: some View {
+            VStack {
+                Text(title)
+                    .font(.appCaption)
+                
+                GeometryReader { geometry in
+                    Path { path in
+                        let step = geometry.size.width / CGFloat(data.count - 1)
+                        let scale = geometry.size.height / (data.max()! - data.min()!)
+                        
+                        path.move(to: CGPoint(
+                            x: 0,
+                            y: geometry.size.height - (data[0] - data.min()!) * scale
+                        ))
+                        
+                        for i in 1..<data.count {
+                            path.addLine(to: CGPoint(
+                                x: CGFloat(i) * step,
+                                y: geometry.size.height - (data[i] - data.min()!) * scale
+                            ))
+                        }
+                    }
+                    .stroke(.blue, lineWidth: 2)
+                }
+            }
+            .frame(width: 200, height: 100)
+        }
     }
 }
 
-struct DetailRow: View {
-    let title: String
-    let value: String
-    
-    var body: some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Text(value)
-        }
-    }
+private func formatDuration(_ time: TimeInterval) -> String {
+    let hours = Int(time) / 3600
+    let minutes = Int(time) % 3600 / 60
+    let seconds = Int(time) % 60
+    return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
 }
