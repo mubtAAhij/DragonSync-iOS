@@ -170,6 +170,11 @@ struct StoredEncountersView: View {
                             Text("Satellite").tag(MapStyle.satellite)
                             Text("Hybrid").tag(MapStyle.hybrid)
                         }
+                        Button {
+                            exportKML()
+                        } label: {
+                            Label("Export KML", systemImage: "square.and.arrow.up")
+                        }
                         Button(role: .destructive) {
                             showingDeleteConfirmation = true
                         } label: {
@@ -341,4 +346,125 @@ private func formatDuration(_ time: TimeInterval) -> String {
     let minutes = Int(time) % 3600 / 60
     let seconds = Int(time) % 60
     return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+}
+
+extension StoredEncountersView.EncounterDetailView {
+    private func generateKML(for encounter: DroneEncounter) -> String {
+        let kml = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <kml xmlns="http://www.opengis.net/kml/2.2">
+          <Document>
+            <name>\(encounter.id) Flight Path</name>
+            <Style id="flightPath">
+              <LineStyle>
+                <color>ff0000ff</color>
+                <width>4</width>
+              </LineStyle>
+            </Style>
+            <Placemark>
+              <name>\(encounter.id) Track</name>
+              <styleUrl>#flightPath</styleUrl>
+              <LineString>
+                <altitudeMode>absolute</altitudeMode>
+                <coordinates>
+                    \(encounter.flightPath.map { point in
+                        "\(point.longitude),\(point.latitude),\(point.altitude)"
+                    }.joined(separator: "\n                    "))
+                </coordinates>
+              </LineString>
+            </Placemark>
+          </Document>
+        </kml>
+        """
+        return kml
+    }
+    
+    func exportKML(from viewController: UIViewController? = nil) {
+        // Generate KML content
+        let kmlContent = generateKML(for: encounter)
+        
+        // Ensure KML stuff is valid
+        guard let kmlData = kmlContent.data(using: .utf8) else {
+            print("Failed to convert KML content to NSData.")
+            return
+        }
+        
+        // Stamp the filename
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        let timestamp = dateFormatter.string(from: Date()).replacingOccurrences(of: ":", with: "_")
+        let filename = "\(encounter.id)_flightpath_\(timestamp).kml"
+        
+        // Create a temporary file URL to share it
+        let tempDirectory = FileManager.default.temporaryDirectory
+        let fileURL = tempDirectory.appendingPathComponent(filename)
+        
+        // Write KML data to the file
+        do {
+            try kmlData.write(to: fileURL)
+        } catch {
+            print("Failed to write KML data to file: \(error)")
+            return
+        }
+        
+        // Create the activity item source for sharing
+        let kmlDataItem = KMLDataItem(fileURL: fileURL, filename: filename)
+        
+        let activityVC = UIActivityViewController(
+            activityItems: [kmlDataItem],
+            applicationActivities: nil
+        )
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                activityVC.popoverPresentationController?.sourceView = window
+                activityVC.popoverPresentationController?.sourceRect = CGRect(
+                    x: window.bounds.midX,
+                    y: window.bounds.midY,
+                    width: 0,
+                    height: 0
+                )
+                activityVC.popoverPresentationController?.permittedArrowDirections = []
+            }
+            
+            DispatchQueue.main.async {
+                window.rootViewController?.present(activityVC, animated: true)
+            }
+        }
+    }
+    
+    // Workaround to prevent writing where we don't want to
+    class KMLDataItem: NSObject, UIActivityItemSource {
+        private let fileURL: URL
+        private let filename: String
+        
+        init(fileURL: URL, filename: String) {
+            self.fileURL = fileURL
+            self.filename = filename
+            super.init()
+        }
+        
+        func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+            return fileURL
+        }
+        
+        func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+            return fileURL
+        }
+        
+        func activityViewController(_ activityViewController: UIActivityViewController, dataTypeIdentifierForActivityType activityType: UIActivity.ActivityType?) -> String {
+            return "application/vnd.google-earth.kml+xml"
+        }
+        
+        func activityViewController(_ activityViewController: UIActivityViewController, subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
+            return filename
+        }
+        
+        func activityViewController(_ activityViewController: UIActivityViewController, filenameForActivityType activityType: UIActivity.ActivityType?) -> String {
+            return filename
+        }
+    }
+
 }
