@@ -62,6 +62,15 @@ struct StoredEncountersView: View {
                             Text("Max Altitude").tag(SortOrder.maxAltitude)
                             Text("Max Speed").tag(SortOrder.maxSpeed)
                         }
+                        Button {
+                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                               let window = windowScene.windows.first,
+                               let rootVC = window.rootViewController {
+                                storage.shareCSV(from: rootVC)
+                            }
+                        } label: {
+                            Label("Export CSV", systemImage: "square.and.arrow.up")
+                        }
                         Button(role: .destructive) {
                             showingDeleteConfirmation = true
                         } label: {
