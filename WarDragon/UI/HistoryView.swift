@@ -225,8 +225,21 @@ struct StoredEncountersView: View {
                     }
                 }
             }
+            .mapStyle(mapStyleForSelectedType())
             .frame(height: 300)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        
+        
+        private func mapStyleForSelectedType() -> MapKit.MapStyle {
+            switch selectedMapType {
+            case .standard:
+                return .standard
+            case .satellite:
+                return .imagery
+            case .hybrid:
+                return .hybrid
+            }
         }
         
         private var encounterStats: some View {
