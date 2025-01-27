@@ -355,8 +355,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
                 alt: String(describing: location?["geodetic_altitude"] ?? "0.0"),
                 height: String(describing: location?["height_agl"] ?? "0.0"),
-                pilotLat: String(describing: system?["operator_lat"] ?? "0.0"),
-                pilotLon: String(describing: system?["operator_lon"] ?? "0.0"),
+                pilotLat: String(describing: system?["operator_lat"] ?? system?["latitude"] ?? "0.0"),
+                pilotLon: String(describing: system?["operator_lon"] ?? system?["longitude"] ?? "0.0"),
                 description: selfId?["description"] as? String ?? "",
                 selfIDText: selfId?["text"] as? String ?? "",
                 uaType: mapUAType(basicId["ua_type"]),
@@ -398,12 +398,15 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             }
         }
         
-        if let system = json["System Message"] as? [String: Any],
-           let operatorLat = system["operator_lat"] as? Double,
-           let operatorLon = system["operator_lon"] as? Double,
-           operatorLat != 0.0 && operatorLon != 0.0 {
-            droneType += "-O"
+        if let system = json["System Message"] as? [String: Any] {
+            let operatorLat = system["operator_lat"] as? Double ?? system["latitude"] as? Double ?? 0.0
+            let operatorLon = system["operator_lon"] as? Double ?? system["longitude"] as? Double ?? 0.0
+            
+            if operatorLat != 0.0 && operatorLon != 0.0 {
+                droneType += "-O"
+            }
         }
+
         
         droneType += "-F"
         return droneType
@@ -988,8 +991,15 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         } else if let sysMsg = message["System Message"] as? [String: Any] {
                             system = sysMsg
                             if let pilotLocation = system?["PilotLocation"] as? [String: Any] {
-                                let pilotLat = pilotLocation["lat"] as? Double ?? 0.0
-                                let pilotLon = pilotLocation["lon"] as? Double ?? 0.0
+                                let pilotLat = pilotLocation["lat"] as? Double
+                                    ?? system?["operator_lat"] as? Double
+                                    ?? system?["latitude"] as? Double
+                                    ?? 0.0
+                                let pilotLon = pilotLocation["lon"] as? Double
+                                    ?? system?["operator_lon"] as? Double
+                                    ?? system?["longitude"] as? Double
+                                    ?? 0.0
+                                
                                 // Add pilot location to the message
                                 cotMessage?.pilotLat = String(pilotLat)
                                 cotMessage?.pilotLon = String(pilotLon)

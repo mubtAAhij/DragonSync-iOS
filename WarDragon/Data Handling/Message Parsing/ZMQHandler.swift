@@ -347,9 +347,15 @@ class ZMQHandler: ObservableObject {
         // Location Message Fields
         func extractDouble(_ dict: [String: Any]?, key: String) -> Double {
             guard let dict = dict else { return 0.0 }
+            
+            // Check if the value is a String and has units
             if let str = dict[key] as? String {
-                return Double(str.replacingOccurrences(of: " m/s", with: "").replacingOccurrences(of: " m", with: "")) ?? 0.0
+                // Check for known units and clean them up
+                return Double(str.replacingOccurrences(of: " m/s", with: "")
+                              .replacingOccurrences(of: " m", with: "")) ?? 0.0
             }
+            
+            // Directly return the value if it's already a Double
             return dict[key] as? Double ?? 0.0
         }
         
@@ -378,9 +384,10 @@ class ZMQHandler: ObservableObject {
         let speed_acc = location?["speed_acc"] as? Int ?? 0
         let timestamp = location?["timestamp"] as? Int ?? 0
         
-        // System Message Fields
-        let operator_lat = extractDouble(system, key: "operator_lat")
-        let operator_lon = extractDouble(system, key: "operator_lon")
+        // System Message Fields with fallback for pilot loc
+        let operator_lat = extractDouble(system, key: "operator_lat") != 0.0 ? extractDouble(system, key: "operator_lat") : extractDouble(system, key: "latitude")
+        let operator_lon = extractDouble(system, key: "operator_lon") != 0.0 ? extractDouble(system, key: "operator_lon") : extractDouble(system, key: "longitude")
+
         let operator_alt_geo = extractDouble(system, key: "operator_alt_geo")
         let classification = system?["classification"] as? Int ?? 0
         
