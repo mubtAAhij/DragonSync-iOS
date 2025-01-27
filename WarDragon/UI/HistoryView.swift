@@ -96,7 +96,7 @@ struct StoredEncountersView: View {
         var body: some View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(encounter.id)
+                    Text(ensureDronePrefix(encounter.id))
                         .font(.appHeadline)
                     if let caaReg = encounter.metadata["caaRegistration"] {
                         Text("CAA: \(caaReg)")
@@ -138,6 +138,10 @@ struct StoredEncountersView: View {
             let seconds = Int(time) % 60
             return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
         }
+        
+        private func ensureDronePrefix(_ id: String) -> String {
+                return id.hasPrefix("drone-") ? id : "drone-\(id)"
+            }
     }
     
     struct EncounterDetailView: View {

@@ -318,6 +318,8 @@ class DroneMessageGenerator:
 		latitude = round(random.uniform(*self.lat_range), 6)
 		longitude = round(random.uniform(*self.lon_range), 6)
 		speed = round(random.uniform(20, 50), 1)
+		alt = round(random.uniform(50, 400), 1)
+		rssi = random.randint(-90, -40)
 		
 		message = {
 			"index": 57,
@@ -329,14 +331,14 @@ class DroneMessageGenerator:
 #				"id": "112624150A",
 				"ua_type": 0,
 				"MAC": "18:65:6A:00:4B:5B",
-				"RSSI": "-30"
+				"RSSI": rssi
 			},
 			"Location/Vector Message": {
 				"latitude": latitude,
 				"longitude": longitude,
 				"speed": speed,
 				"vert_speed": 10,
-				"geodetic_altitude": 110,
+				"geodetic_altitude": alt,
 				"height_agl": 80,
 				"status": 2,
 				"op_status": "Ground",
