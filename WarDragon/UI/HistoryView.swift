@@ -189,6 +189,15 @@ struct StoredEncountersView: View {
                     }
                 }
             }
+            .alert("Delete Encounter", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    storage.deleteEncounter(id: encounter.id)
+                    dismiss() // Add this to return to list after deletion
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to delete this encounter? This action cannot be undone.")
+            }
         }
         
         private var mapSection: some View {
