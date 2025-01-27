@@ -165,7 +165,7 @@ struct SettingsView: View {
                                 TacDial(
                                     title: "PLUTO TEMP",
                                     value: $settings.plutoTempThreshold,
-                                    range: 40...85,
+                                    range: 40...100,
                                     step: 5,
                                     unit: "°C",
                                     color: .purple
@@ -174,7 +174,7 @@ struct SettingsView: View {
                                 TacDial(
                                     title: "ZYNQ TEMP",
                                     value: $settings.zynqTempThreshold,
-                                    range: 40...85,
+                                    range: 40...100,
                                     step: 5,
                                     unit: "°C",
                                     color: .orange

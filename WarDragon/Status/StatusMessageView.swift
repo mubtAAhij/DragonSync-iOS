@@ -228,7 +228,7 @@ struct SystemStatsView: View {
                 if antStats.plutoTemp > 0 {
                     CircularGauge(
                         value: antStats.plutoTemp,
-                        maxValue: 85,
+                        maxValue: 100,
                         title: "PLUTO",
                         unit: "°C",
                         color: antSdrTemperatureColor(antStats.plutoTemp)
@@ -238,7 +238,7 @@ struct SystemStatsView: View {
                 if antStats.zynqTemp > 0 {
                     CircularGauge(
                         value: antStats.zynqTemp,
-                        maxValue: 85,
+                        maxValue: 100,
                         title: "ZYNQ",
                         unit: "°C",
                         color: antSdrTemperatureColor(antStats.zynqTemp)
@@ -287,8 +287,8 @@ struct SystemStatsView: View {
     
     private func antSdrTemperatureColor(_ temp: Double) -> Color {
         switch temp {
-        case 0..<45: return .green
-        case 45..<65: return .yellow
+        case 0..<55: return .green
+        case 55..<75: return .yellow
         default: return .red
         }
     }
