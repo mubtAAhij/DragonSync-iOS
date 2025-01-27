@@ -504,7 +504,7 @@ class CoTViewModel: ObservableObject {
                    let jsonData = message.data(using: .utf8),
                    let parsedJson = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
                    parsedJson["Basic ID"] != nil {
-                    print("Processing json message")
+                    print("Processing json message: \(message)")
                     let parser = CoTMessageParser()
                     if let parsedMessage = parser.parseESP32Message(parsedJson) {
                         DispatchQueue.main.async {
@@ -516,7 +516,7 @@ class CoTViewModel: ObservableObject {
                 
                 // Finally check for regular XML drone message
                 if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
-//                    print("Processing XML Drone message: \(message)")
+                    print("Processing XML Drone message: \(message)")
                     let parser = XMLParser(data: data)
                     let cotParserDelegate = CoTMessageParser()
                     parser.delegate = cotParserDelegate
@@ -554,6 +554,14 @@ class CoTViewModel: ObservableObject {
         DispatchQueue.main.async {
             //            print("DEBUG: Raw message in: \(message)")
             
+            // Ensure ID has drone- prefix
+           let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
+           
+           // Get MAC from message sources
+           let mac = message.mac ??
+                    (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String ??
+                    (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
+           
             if message.idType == "CAA Assigned Registration ID" {
                 // Check if there's an existing drone with the same MAC address
                 if let mac = message.mac,
@@ -612,6 +620,8 @@ class CoTViewModel: ObservableObject {
             
             // Check for spoofing if enabled
             var updatedMessage = message
+            updatedMessage.uid = droneId
+            updatedMessage.mac = mac
             if Settings.shared.spoofDetectionEnabled,
                let monitorStatus = self.statusViewModel.statusMessages.last,
                let spoofResult = self.signatureGenerator.detectSpoof(signature, fromMonitor: monitorStatus) {

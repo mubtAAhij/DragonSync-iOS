@@ -260,8 +260,8 @@ class DroneMessageGenerator:
 		mac = "E0:4E:7A:9A:67:99"
 		rssi = random.randint(-90, -40)
 		protocol_version = "1.0"
-		desc = f"Test Drone DRONE{random.randint(100, 102)}"
-		speed = round(random.uniform(0, 30), 1)
+		desc = f"Test Drone DRONE{random.randint(100, 100)}"
+		speed = round(random.uniform(20, 50), 1)
 		vspeed = round(random.uniform(-5, 5), 1)
 		height_agl = round(random.uniform(20, 200), 1)
 		height_type = "AGL"
@@ -288,14 +288,14 @@ class DroneMessageGenerator:
 		operator_alt_geo = round(random.uniform(0, 100), 1)
 		classification = "Class A"
 		did = 1324
-		id_type = "CAA Assigned Registration ID"
+		id_type = "Serial Number (ANSI/CTA-2063-A)"
 		
 		return f"""
 		<event version="2.0" uid="drone-{desc.split()[-1]}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
 			<point lat="{lat}" lon="{lon}" hae="{alt}" ce="9999999" le="999999"/>
 			<detail>
-				<remarks>MAC: {mac}, RSSI: {rssi}dBm, CAA: 9328483489324, ID Type: {id_type}, Device ID: {did}, IDProtocol Version: {protocol_version}, Description: {desc}, 
-				Location/Vector Message: Speed: {speed} m/s, Vert Speed: {vspeed} m/s, Geodetic Altitude: {alt} m, 
+				<remarks>MAC: {mac}, RSSI: {rssi}dBm, CAA: 9328483489324, ID Type: {id_type}, Device ID: {did}, ID Protocol Version: {protocol_version}, Description: {desc}, 
+				Speed: {speed}, Vert Speed: {vspeed}, Geodetic Altitude: {alt}, 
 				Height AGL: {height_agl} m, Height Type: {height_type}, Pressure Altitude: {pressure_altitude} m, 
 				EW Direction Segment: {ew_dir_segment}, Speed Multiplier: {speed_multiplier}, Operational Status: {op_status}, 
 				Direction: {direction}, Timestamp: {timestamp}, Runtime: {runtime}, Index: {index}, Status: {status}, 
@@ -317,23 +317,24 @@ class DroneMessageGenerator:
 		now = datetime.now(timezone.utc)
 		latitude = round(random.uniform(*self.lat_range), 6)
 		longitude = round(random.uniform(*self.lon_range), 6)
+		speed = round(random.uniform(20, 50), 1)
 		
 		message = {
 			"index": 57,
 			"runtime": 11,
 			"Basic ID": {
-#				"id": "112624150A90E3AE1EC0",
-#				"id_type": "Serial Number (ANSI/CTA-2063-A)",
-				"id_type": "CAA Assigned Registration ID",
-				"id": "112624150A",
+				"id": "112624150A90E3AE1EC0",
+				"id_type": "Serial Number (ANSI/CTA-2063-A)",
+#				"id_type": "CAA Assigned Registration ID",
+#				"id": "112624150A",
 				"ua_type": 0,
 				"MAC": "18:65:6A:00:4B:5B",
-				"rssi": "-30"
+				"RSSI": "-30"
 			},
 			"Location/Vector Message": {
 				"latitude": latitude,
 				"longitude": longitude,
-				"speed": 3,
+				"speed": speed,
 				"vert_speed": 10,
 				"geodetic_altitude": 110,
 				"height_agl": 80,

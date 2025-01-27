@@ -156,7 +156,7 @@ struct StoredEncountersView: View {
                 VStack(spacing: 16) {
                     mapSection
                     encounterStats
-                    metadataSection
+//                    metadataSection
                     flightDataSection
                 }
                 .padding()
@@ -235,25 +235,25 @@ struct StoredEncountersView: View {
             .cornerRadius(12)
         }
         
-        private var metadataSection: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("METADATA")
-                    .font(.appHeadline)
-                
-                ForEach(Array(encounter.metadata.sorted(by: { $0.key < $1.key })), id: \.key) { key, value in
-                    HStack {
-                        Text(key)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(value)
-                    }
-                    .font(.appCaption)
-                }
-            }
-            .padding()
-            .background(Color(UIColor.secondarySystemBackground))
-            .cornerRadius(12)
-        }
+//        private var metadataSection: some View {
+//            VStack(alignment: .leading, spacing: 8) {
+//                Text("METADATA")
+//                    .font(.appHeadline)
+//                
+//                ForEach(Array(encounter.metadata.sorted(by: { $0.key < $1.key })), id: \.key) { key, value in
+//                    HStack {
+//                        Text(key)
+//                            .foregroundStyle(.secondary)
+//                        Spacer()
+//                        Text(value)
+//                    }
+//                    .font(.appCaption)
+//                }
+//            }
+//            .padding()
+//            .background(Color(UIColor.secondarySystemBackground))
+//            .cornerRadius(12)
+//        }
         
         private var flightDataSection: some View {
             VStack(alignment: .leading, spacing: 8) {

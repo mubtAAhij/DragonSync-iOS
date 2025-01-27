@@ -160,6 +160,15 @@ class DroneStorageManager: ObservableObject {
             metadata: [:]
         )
         
+        // Update metadata with any new information
+        if let mac = signature.transmissionInfo.macAddress {
+            encounter.metadata["mac"] = mac
+        }
+        
+        if let opID = signature.operatorId {
+            encounter.metadata["operatorID"] = opID
+        }
+        
         // Update data
         encounter.lastSeen = Date()
         

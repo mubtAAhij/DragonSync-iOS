@@ -756,7 +756,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private func parseRemarks(_ remarks: String) {
         let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         for component in components {
-            //            print("Processing component: \(component)")
+            
+            print("Processing component: \(component)")
+            
             if component.hasPrefix("CPU Usage:") {
                 cpuUsage = Double(component.replacingOccurrences(of: "CPU Usage: ", with: "").replacingOccurrences(of: "%", with: "")) ?? 0.0
             } else if component.hasPrefix("Memory Total:") {

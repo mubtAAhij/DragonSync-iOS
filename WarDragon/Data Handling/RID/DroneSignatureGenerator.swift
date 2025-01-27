@@ -116,7 +116,25 @@ public final class DroneSignatureGenerator {
         let now = Date().timeIntervalSince1970
         let primaryId = extractPrimaryId(message)
         let cacheInfo = signatureCache[primaryId.id]
+        // Get MAC from all possible sources
+        let mac = (message["mac"] as? String) ??
+        (message["Basic ID"] as? [String: Any])?["MAC"] as? String ??
+        (message["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String ??
+        (message["aext"] as? [String: Any])?["AdvA"] as? String ?? "Unknown"
         
+        // Create metadata including MAC
+        var metadata: [String: String] = [:]
+        if mac != "Unknown" {
+            metadata["mac"] = mac
+        }
+        if let caaReg = message["caa_registration"] as? String {
+            metadata["caaRegistration"] = caaReg
+        }
+        if let manufacturer = message["manufacturer"] as? String {
+            metadata["manufacturer"] = manufacturer
+        }
+        
+        // Add metadata to the storage save
         let signature = DroneSignature(
             primaryId: primaryId,
             secondaryId: extractSecondaryId(message),
@@ -673,7 +691,6 @@ public final class DroneSignatureGenerator {
         var expectedSignalStrength: Double?
         
         signalStrength = (message["rssi"] as? NSNumber)?.doubleValue ?? 0.0
-        
         
         // Ensure the message contains required keys and conform to the flat dictionary structure
         if let lat = Double(message["lat"] as? String ?? "0.0"),
