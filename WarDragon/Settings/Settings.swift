@@ -113,13 +113,13 @@ class Settings: ObservableObject {
         }
     }
 
-    @AppStorage("plutoTempThreshold") var plutoTempThreshold: Double = 75.0 {  // 75°C
+    @AppStorage("plutoTempThreshold") var plutoTempThreshold: Double = 85.0 {  // 85°C
         didSet {
             objectWillChange.send()
         }
     }
 
-    @AppStorage("zynqTempThreshold") var zynqTempThreshold: Double = 75.0 {  // 75°C
+    @AppStorage("zynqTempThreshold") var zynqTempThreshold: Double = 85.0 {  // 85°C
         didSet {
             objectWillChange.send()
         }
