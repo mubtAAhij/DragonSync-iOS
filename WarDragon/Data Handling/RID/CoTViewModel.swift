@@ -145,9 +145,7 @@ class CoTViewModel: ObservableObject {
         
         // Data store
         func saveToStorage() {
-            if let signature = DroneSignatureGenerator().createSignature(from: toDictionary()) {
-                DroneStorageManager.shared.saveEncounter(signature)
-            }
+            DroneStorageManager.shared.saveEncounter(self)
         }
         
         var formattedAltitude: String? {
@@ -593,11 +591,11 @@ class CoTViewModel: ObservableObject {
                                      existing.flightPath.last?.altitude != signature.position.altitude
 
                 if hasNewPosition {
-                    DroneStorageManager.shared.saveEncounter(signature)
+                    DroneStorageManager.shared.saveEncounter(message)
                     print("Updated existing encounter with new position")
                 }
             } else {
-                DroneStorageManager.shared.saveEncounter(signature)
+                DroneStorageManager.shared.saveEncounter(message)
                 print("Added new encounter to storage")
             }
 

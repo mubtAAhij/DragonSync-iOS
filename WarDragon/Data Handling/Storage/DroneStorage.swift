@@ -157,10 +157,8 @@ class DroneStorageManager: ObservableObject {
         loadFromStorage()
     }
     
-    func saveEncounter(_ signature: DroneSignature) {
-        let droneId = signature.primaryId.id
-        
-        // Get or create encounter
+    func saveEncounter(_ message: CoTViewModel.CoTMessage) {
+        let droneId = message.uid
         var encounter = encounters[droneId] ?? DroneEncounter(
             id: droneId,
             firstSeen: Date(),
@@ -169,37 +167,40 @@ class DroneStorageManager: ObservableObject {
             signatures: [],
             metadata: [:]
         )
-        
-        // Update metadata with any new information
-        if let mac = signature.transmissionInfo.macAddress {
-            encounter.metadata["mac"] = mac
-        }
-        
-        if let opID = signature.operatorId {
-            encounter.metadata["operatorID"] = opID
-        }
-        
-        // Update data
+
         encounter.lastSeen = Date()
-        
+
+        // Get coordinates including home location directly from message
         let point = FlightPathPoint(
-            latitude: signature.position.coordinate.latitude,
-            longitude: signature.position.coordinate.longitude,
-            altitude: signature.position.altitude,
-            timestamp: signature.timestamp,
-            homeLatitude: signature.position.homeLocation?.latitude,
-            homeLongitude: signature.position.homeLocation?.longitude
+            latitude: Double(message.lat) ?? 0.0,
+            longitude: Double(message.lon) ?? 0.0,
+            altitude: Double(message.alt) ?? 0.0,
+            timestamp: Date().timeIntervalSince1970,
+            homeLatitude: Double(message.homeLat),
+            homeLongitude: Double(message.homeLon)
         )
         encounter.flightPath.append(point)
-        
+
+        // Add signature data
         let sig = SignatureData(
-            timestamp: signature.timestamp,
-            rssi: signature.transmissionInfo.signalStrength ?? 0,
-            speed: signature.movement.groundSpeed,
-            height: signature.heightInfo.heightAboveGround
+            timestamp: Date().timeIntervalSince1970,
+            rssi: Double(message.rssi ?? 0),
+            speed: Double(message.speed) ?? 0.0,
+            height: Double(message.height ?? "0.0") ?? 0.0
         )
         encounter.signatures.append(sig)
-        
+
+        // Update metadata
+        if let mac = message.mac {
+            encounter.metadata["mac"] = mac
+        }
+        if let caaReg = message.caaRegistration {
+            encounter.metadata["caaRegistration"] = caaReg
+        }
+        if let manufacturer = message.manufacturer {
+            encounter.metadata["manufacturer"] = manufacturer
+        }
+
         encounters[droneId] = encounter
         saveToStorage()
     }

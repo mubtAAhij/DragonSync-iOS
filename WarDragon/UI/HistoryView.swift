@@ -224,10 +224,15 @@ struct StoredEncountersView: View {
                         }
                     }
                     
-                    // Takeoff location
+                    // Home location
                     if let firstPoint = encounter.flightPath.first,
-                       let homeLocation = firstPoint.homeLocation {
-                        Annotation("Home", coordinate: homeLocation) {
+                       let homeLat = firstPoint.homeLatitude,
+                       let homeLon = firstPoint.homeLongitude {
+                        let homeCoord = CLLocationCoordinate2D(
+                            latitude: homeLat,
+                            longitude: homeLon
+                        )
+                        Annotation("Home", coordinate: homeCoord) {
                             Image(systemName: "house.fill")
                                 .foregroundStyle(.orange)
                         }
