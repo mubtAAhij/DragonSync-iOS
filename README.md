@@ -20,9 +20,6 @@
 - **Instant System Alerts**  
   Stay informed with real-time status updates about your system’s performance & location. Memory, GPS, CPU, temp and more. WarDragon Pro also displays ANTSDR internal temperatures.
 
-  ![image](https://github.com/user-attachments/assets/daf1f020-b852-40e9-be95-dcc3d02371af)
-
-  
 - **Detect the Undetectable:**
 
   *SDR-Powered Drone Detection & Decoding with WarDragon Pro. Support for Ocusync and other difficult signals*
@@ -35,10 +32,29 @@
 - **Flexible Protocol Support**  
   Supports ZMQ and Multicast configurations to receive CoT and status messages, tailored to your operational needs.
 
+## Requirements
+
+**Option 1. [WarDragon/Pro](https://cemaxecuter.com/?post_type=product)**
+
+**Option 2. DIY**
+
+*Hardware*
+- ESP32
+- Sniffle compatible BT dongle
+- ANTSDR E200
+- GPS unit
+
+*Software*
+- [DroneID](https://github.com/alphafox02/DroneID)
+- [DragonSync Python](https://github.com/alphafox02/DragonSync)
+- [DJI Firmware - E200](https://github.com/alphafox02/antsdr_dji_droneid)
+- [DJI Firmware - ESP32](https://github.com/alphafox02/T-Halow/tree/wifi_rid/examples/DragonOS_RID_Scanner)
+
+
 ## Usage
 
 > [!NOTE]
-> It's important to be using the latest versions of @alphafox02 DroneID and DragonSync repos.
+> It's important to be using the latest versions of @alphafox02 DroneID and DragonSync repos listed above.
 >
 >To update, navigate to the folders in the `WarDragon` directory in the home directory of the dragon (or in your location) using the command line. Run `git pull` inside both. 
 
@@ -67,19 +83,30 @@ Needs additional script running and network setup for multicast.
 
   _**Refer to [dragonsync.py](https://github.com/alphafox02/DragonSync) for detailed instructions & commands**_
 
+  
+## Detection
+
+Once activated, detected drones appear in the Drones and History tabs. 
+
+**Drones View**
+- Tap the map to view a live feed of drone flight paths from the current session. Select the text to open the detail view, which displays collected data, including takeoff and operator locations when available.
+
+**Encounter History**
+- Swipe left on each row to delete it. To export a CSV file or delete the history, use the icon in the top right corner.
+- Select a row to visualize the flight data. To export a KML file or change the map style, use the icon in the top right corner. 
+
 ## Settings
 
-Warning dials will set value at which dashboard elements change/appear. These differ from the static defaults in status view. 
+Warning dials set the value at which dashboard elements change or appear. These differ from the static defaults in the status view. 
 
 ![image](https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0)
-
 
 - Temps and usage will show red when settings are exceeded
 - Drones nearby warning is based on the proximity warning value. 
 
-## Installation
+## Build/Install
 
-TestFlight is open: [Invite Link](https://testflight.apple.com/join/QKDKMSfA)
+***TestFlight is open: [Join the beta](https://testflight.apple.com/join/QKDKMSfA)***
 
 1. **Clone the Repository**  
    Clone the project repository to your local machine using the following command:  
