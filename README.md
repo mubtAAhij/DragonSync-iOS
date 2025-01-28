@@ -69,13 +69,13 @@ Requires conversion for ATAK integration.
 > - CoT feeds ATAK directly.
 Needs additional script running and network setup for multicast.
 
-#### **Using WarDragon Direct ZMQ**
+**Using WarDragon Direct ZMQ**
 - Ensure that your device is connected to the same network as your WarDragon or host system.
 - Launch the app & choose ZMQ from settings 
 - Tap the address and enter the IP of the WarDragon (use `arp -a` for example)
 - Start the listener & status and drone detection will happen automatically. 
 
-#### **Multicast**
+**Multicast**
 - Start dragonsync.py and wardragon-monitor.py from the DragonSync repo.
 - From the DroneId repo start zmq_decoder.py and WiFi/BT sniffer. 
 
@@ -84,7 +84,7 @@ Needs additional script running and network setup for multicast.
   _**Refer to [dragonsync.py](https://github.com/alphafox02/DragonSync) for detailed instructions & commands**_
 
   
-## Detection
+### Detection
 
 Once activated, detected drones appear in the Drones and History tabs. 
 
@@ -95,7 +95,7 @@ Once activated, detected drones appear in the Drones and History tabs.
 - Swipe left on each row to delete it. To export a CSV file or delete the history, use the icon in the top right corner.
 - Select a row to visualize the flight data. To export a KML file or change the map style, use the icon in the top right corner. 
 
-## Settings
+### Settings
 
 Warning dials set the value at which dashboard elements change or appear. These differ from the static defaults in the status view. 
 
@@ -127,9 +127,12 @@ Warning dials set the value at which dashboard elements change or appear. These 
    - Click the **Build and Run** button to install and launch the app on your device.
 
 ## Credits
-We extend our gratitude for their contributions to the open-source community, which have been instrumental in the development of this application.
+We extend our gratitude for their contributions to the open-source community, which have been instrumental in the laying the foundation for this app to exist. 
 
-Foundational: [DragonSync](https://github.com/alphafox02/DragonSync) and [DroneID](https://github.com/bkerler/DroneID). A big thanks to the devs at [Sniffle](https://github.com/nccgroup/Sniffle). And of course to [@alphafox02](https://github.com/alphafox02) for creating the WarDragon, DragonOS, the above scripts- and showing me how to make this work. Thanks to [@bkerler]((https://github.com/bkerler) for the work on `DroneID` and inspiring this project. 
+Foundational: [DragonSync](https://github.com/alphafox02/DragonSync) and [DroneID](https://github.com/bkerler/DroneID). 
+
+A big thanks to the devs at [Sniffle](https://github.com/nccgroup/Sniffle). 
+And of course to [@alphafox02](https://github.com/alphafox02) for creating the WarDragon, DragonOS, the above scripts- and showing me how to make this work. Thanks to [@bkerler](https://github.com/bkerler) for the work on `DroneID` repo. 
 
 ## Disclaimer
 
