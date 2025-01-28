@@ -35,7 +35,51 @@
 - **Flexible Protocol Support**  
   Supports ZMQ and Multicast configurations to receive CoT and status messages, tailored to your operational needs.
 
+## Usage
+
+> [!NOTE]
+> It's important to be using the latest versions of @alphafox02 DroneID and DragonSync repos.
+>
+>To update, navigate to the folders in the `WarDragon` directory in the home directory of the dragon (or in your location) using the command line. Run `git pull` inside both. 
+
+### Connection
+The app supports two connection formats:
+
+> **ZMQ Server (JSON)**
+> - Easy setup with direct ZMQ connection and minimal configuration.
+Requires conversion for ATAK integration.
+
+> **Multicast (CoT)**
+> - CoT feeds ATAK directly.
+Needs additional script running and network setup for multicast.
+
+#### **Using WarDragon Direct ZMQ**
+- Ensure that your device is connected to the same network as your WarDragon or host system.
+- Launch the app & choose ZMQ from settings 
+- Tap the address and enter the IP of the WarDragon (use `arp -a` for example)
+- Start the listener & status and drone detection will happen automatically. 
+
+#### **Multicast**
+- Start dragonsync.py and wardragon-monitor.py from the DragonSync repo.
+- From the DroneId repo start zmq_decoder.py and WiFi/BT sniffer. 
+
+(Default multicast address is pre-configured for `dragonsync.py`, adjust per network requirements.)
+
+  _**Refer to [dragonsync.py](https://github.com/alphafox02/DragonSync) for detailed instructions & commands**_
+
+## Settings
+
+Warning dials will set value at which dashboard elements change/appear. These differ from the static defaults in status view. 
+
+![image](https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0)
+
+
+- Temps and usage will show red when settings are exceeded
+- Drones nearby warning is based on the proximity warning value. 
+
 ## Installation
+
+TestFlight is open: [Invite Link](https://testflight.apple.com/join/QKDKMSfA)
 
 1. **Clone the Repository**  
    Clone the project repository to your local machine using the following command:  
@@ -54,21 +98,6 @@
    - Connect your iOS device to your computer.  
    - In Xcode, select your device from the build target options.  
    - Click the **Build and Run** button to install and launch the app on your device.
-
-## Usage
-**WarDragon Direct ZMQ**
-- Ensure that your device is connected to the same network as your WarDragon or host system.
-- Launch the app & choose ZMQ from settings 
-- Tap the address and enter the IP of the WarDragon (use `arp -a` for example)
-- Start the listener & status and drone detection will happen automatically. 
-
-**Multicast**
-- Start dragonsync.py and wardragon-monitor.py from the DragonSync repo.
-- From the DroneId repo start zmq_decoder.py and WiFi/BT sniffer. 
-
-(Default multicast address is pre-configured for `dragonsync.py`, adjust per network requirements.)
-
-  _**Refer to [dragonsync.py](https://github.com/alphafox02/DragonSync) for detailed instructions & commands**_
 
 ## Credits
 We extend our gratitude for their contributions to the open-source community, which have been instrumental in the development of this application.
