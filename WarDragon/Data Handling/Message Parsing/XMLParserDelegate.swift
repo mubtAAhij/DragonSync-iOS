@@ -22,6 +22,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private var height = "0.0"
     private var pilotLat = "0.0"
     private var pilotLon = "0.0"
+    private var pHomeLat = "0.0"
+    private var pHomeLon = "0.0"
     private var droneDescription = ""
     private var currentValue = ""
     private var messageContent = ""
@@ -242,6 +244,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             if let system = message["System Message"] as? [String: Any] {
                 droneData["pilot_lat"] = system["operator_lat"] ?? system["latitude"]
                 droneData["pilot_lon"] = system["operator_lon"] ?? system["longitude"]
+                droneData["home_lat"] = system["home_lat"]
+                droneData["home_lon"] = system["home_lon"]
                 droneData["area_count"] = system["area_count"]
                 droneData["area_radius"] = system["area_radius"]
                 droneData["area_ceiling"] = system["area_ceiling"]
@@ -262,6 +266,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 type: buildDroneType(droneData),
                 lat: String(describing: droneData["latitude"] ?? "0.0"),
                 lon: String(describing: droneData["longitude"] ?? "0.0"),
+                homeLat: String(describing: droneData["home_lat"] ?? "0.0"),
+                homeLon: String(describing: droneData["home_lon"] ?? "0.0"),
                 speed: String(describing: droneData["speed"] ?? "0.0"),
                 vspeed: String(describing: droneData["vert_speed"] ?? "0.0"),
                 alt: String(describing: droneData["geodetic_altitude"] ?? "0.0"),
@@ -351,6 +357,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 type: droneType,
                 lat: String(describing: location?["latitude"] ?? "0.0"),
                 lon: String(describing: location?["longitude"] ?? "0.0"),
+                homeLat: String(describing: system?["home_lat"] ?? "0.0"),
+                homeLon: String(describing: system?["home_lon"] ?? "0.0"),
                 speed: String(describing: location?["speed"] ?? "0.0"),
                 vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
                 alt: String(describing: location?["geodetic_altitude"] ?? "0.0"),
@@ -575,7 +583,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         deviceId: Int?,
         sequenceId: Int?,
         advAddress: String?,
-        timestampAdv: Double?
+        timestampAdv: Double?,
+        homeLat: Double?,
+        homeLon: Double?
 
     ) {
         var mac: String?
@@ -620,6 +630,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         var sequenceId: Int?
         var advAddress: String?
         var timestampAdv: Double?
+        var homeLat: Double?
+        var homeLon: Double?
         
         
         let components = remarks.components(separatedBy: ", ")
@@ -723,6 +735,16 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 operatorAltGeo = Double(trimmed.dropFirst(8).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
             } else if trimmed.hasPrefix("Classification:") {
                 classification = Int(trimmed.dropFirst(15).trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Home Lat:") {
+                if let latString = trimmed.dropFirst(9).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces),
+                   let latitude = Double(latString) {
+                    homeLat = latitude
+                }
+            } else if trimmed.hasPrefix("Home Lon:") {
+                if let lonString = trimmed.dropFirst(9).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces),
+                   let longitude = Double(lonString) {
+                    homeLon = longitude
+                }
             }
         }
         
@@ -753,7 +775,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType,
                 operatorLat, operatorLon, operatorAltGeo, classification,
                 channel, phy, accessAddress, advMode, deviceId, sequenceId, advAddress,
-                timestampAdv)
+                timestampAdv, homeLat, homeLon)
     }
     
     private func parseRemarks(_ remarks: String) {
@@ -814,7 +836,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                  vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType,
                  operatorLat, operatorLon, operatorAltGeo, classification,
                  channel, phy, accessAddress, advMode, deviceId, sequenceId, advAddress,
-                 timestampAdv) = parseDroneRemarks(remarks)
+                 timestampAdv, homeLat, homeLon) = parseDroneRemarks(remarks)
             
             let finalDescription = description?.isEmpty ?? true ? selfIDDesc : description ?? ""
             
@@ -825,6 +847,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     type: eventAttributes["type"] ?? "",
                     lat: pointAttributes["lat"] ?? "0.0",
                     lon: pointAttributes["lon"] ?? "0.0",
+                    homeLat: homeLat?.description ?? "0.0",
+                    homeLon: homeLon?.description ?? "0.0",
                     speed: speed?.description ?? "0.0",
                     vspeed: vspeed?.description ?? "0.0",
                     alt: alt?.description ?? "0.0",
@@ -1023,6 +1047,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             type: droneType,
                             lat: String(describing: location?["latitude"] ?? "0.0"),
                             lon: String(describing: location?["longitude"] ?? "0.0"),
+                            homeLat: String(describing: system?["home_lat"] ?? "0.0"),
+                            homeLon: String(describing: system?["home_lon"] ?? "0.0"),
                             speed: String(describing: location?["speed"] ?? "0.0"),
                             vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
                             alt: String(describing: pointAttributes["hae"] ?? "0.0"),
@@ -1073,6 +1099,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                             type: droneType,
                             lat: String(describing: location?["latitude"] ?? "0.0"),
                             lon: String(describing: location?["longitude"] ?? "0.0"),
+                            homeLat: String(describing: system?["home_lat"] ?? "0.0"),
+                            homeLon: String(describing: system?["home_lon"] ?? "0.0"),
                             speed: String(describing: location?["speed"] ?? "0.0"),
                             vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
                             alt: String(describing: pointAttributes["hae"] ?? "0.0"),
@@ -1110,7 +1138,11 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     ],
                     "System Message": [
                         "latitude": pilotLat,
-                        "longitude": pilotLon
+                        "longitude": pilotLon,
+                        "operator_lat": pilotLat,
+                        "operator_lon": pilotLon,
+                        "home_lat": pHomeLat,
+                        "home_lon": pHomeLon
                     ],
                     "Self-ID Message": [
                         "text": droneDescription,
@@ -1127,6 +1159,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     type: eventAttributes["type"] ?? "",
                     lat: pointAttributes["lat"] ?? "0.0",
                     lon: pointAttributes["lon"] ?? "0.0",
+                    homeLat: pHomeLat,
+                    homeLon: pHomeLon,
                     speed: speed,
                     vspeed: vspeed,
                     alt: pointAttributes["hae"] ?? "0.0",
@@ -1246,6 +1280,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     type: eventAttributes["type"] ?? "",
                     lat: pointAttributes["lat"] ?? "0.0",
                     lon: pointAttributes["lon"] ?? "0.0",
+                    homeLat: pHomeLat,
+                    homeLon: pHomeLon,
                     speed: speed,
                     vspeed: vspeed,
                     alt: String(describing: pointAttributes["hae"] ?? "0.0"),

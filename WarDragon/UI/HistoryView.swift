@@ -223,6 +223,15 @@ struct StoredEncountersView: View {
                                 .foregroundStyle(.red)
                         }
                     }
+                    
+                    // Takeoff location
+                    if let firstPoint = encounter.flightPath.first,
+                       let homeLocation = firstPoint.homeLocation {
+                        Annotation("Home", coordinate: homeLocation) {
+                            Image(systemName: "house.fill")
+                                .foregroundStyle(.orange)
+                        }
+                    }
                 }
             }
             .mapStyle(mapStyleForSelectedType())

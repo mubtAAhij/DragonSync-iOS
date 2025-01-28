@@ -80,6 +80,7 @@ public struct DroneSignature: Hashable {
         public let altitudeReference: AltitudeReference
         public let lastKnownGoodPosition: CLLocationCoordinate2D?
         public let operatorLocation: CLLocationCoordinate2D?
+        public let homeLocation: CLLocationCoordinate2D?
         public let horizontalAccuracy: Double?
         public let verticalAccuracy: Double?
         public let timestamp: TimeInterval
@@ -95,6 +96,7 @@ public struct DroneSignature: Hashable {
                     altitudeReference: AltitudeReference,
                     lastKnownGoodPosition: CLLocationCoordinate2D?,
                     operatorLocation: CLLocationCoordinate2D?,
+                    homeLocation: CLLocationCoordinate2D?,
                     horizontalAccuracy: Double?,
                     verticalAccuracy: Double?,
                     timestamp: TimeInterval) {
@@ -103,6 +105,7 @@ public struct DroneSignature: Hashable {
             self.altitudeReference = altitudeReference
             self.lastKnownGoodPosition = lastKnownGoodPosition
             self.operatorLocation = operatorLocation
+            self.homeLocation = homeLocation
             self.horizontalAccuracy = horizontalAccuracy
             self.verticalAccuracy = verticalAccuracy
             self.timestamp = timestamp
@@ -116,6 +119,7 @@ public struct DroneSignature: Hashable {
             lhs.timestamp == rhs.timestamp &&
             compareOptionalCoordinates(lhs.lastKnownGoodPosition, rhs.lastKnownGoodPosition) &&
             compareOptionalCoordinates(lhs.operatorLocation, rhs.operatorLocation) &&
+            compareOptionalCoordinates(lhs.homeLocation, rhs.homeLocation) &&
             lhs.horizontalAccuracy == rhs.horizontalAccuracy &&
             lhs.verticalAccuracy == rhs.verticalAccuracy
         }

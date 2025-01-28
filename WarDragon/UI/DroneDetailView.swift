@@ -51,12 +51,23 @@ struct DroneDetailView: View {
                                 .foregroundStyle(.green)
                         }
                     }
+                    
+                    if message.homeLat != "0.0" && message.homeLon != "0.0" {
+                        let homeCoord = CLLocationCoordinate2D(
+                            latitude: Double(message.homeLat) ?? 0,
+                            longitude: Double(message.homeLon) ?? 0
+                        )
+                        Annotation("Takeoff", coordinate: homeCoord) {
+                            Image(systemName: "house.fill")
+                                .foregroundStyle(.orange)
+                        }
+                    }
                 }
                 .frame(height: 300)
                 .cornerRadius(12)
                 .font(.appDefault)
                 Group {
-                    InfoRow(title: "Serial Number ID", value: message.uid)
+                    InfoRow(title: "ID", value: message.uid)
                     if message.caaRegistration != "" {
                         InfoRow(title: "CAA Registration", value: message.caaRegistration ?? "")
                     }
@@ -95,7 +106,12 @@ struct DroneDetailView: View {
                             InfoRow(title: "Manufacturer", value: message.manufacturer ?? "")
                         }
                         SectionHeader(title: "Operator")
-                        InfoRow(title: "ID", value: message.operator_id ?? "")
+                        if message.operator_id != "" {
+                            InfoRow(title: "ID", value: message.operator_id ?? "")
+                        }
+                        if message.homeLat != "0.0" {
+                            InfoRow(title: "Takeoff Location", value: "\(message.homeLat)/\(message.homeLon)")
+                        }
                         if message.pilotLat != "0.0" {
                             InfoRow(title: "Pilot Location", value: "\(message.pilotLat)/\(message.pilotLon)")
                         }
@@ -127,7 +143,7 @@ struct DroneDetailView: View {
                 Group {
                     if message.speed != "" {
                         SectionHeader(title: "Movement")
-                        InfoRow(title: "Direction", value: "\(message.ew_dir_segment ?? "")")
+                        InfoRow(title: "E/W Direction", value: "\(message.ew_dir_segment ?? "")")
                         InfoRow(title: "Speed", value: "\(message.speed)m/s")
                         InfoRow(title: "Vertical Speed", value: "\(message.vspeed)m/s")
                     }

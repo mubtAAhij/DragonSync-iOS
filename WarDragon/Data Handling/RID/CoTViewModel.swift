@@ -39,6 +39,8 @@ class CoTViewModel: ObservableObject {
         // Basic location and movement
         var lat: String
         var lon: String
+        var homeLat: String
+        var homeLon: String
         var speed: String
         var vspeed: String
         var alt: String

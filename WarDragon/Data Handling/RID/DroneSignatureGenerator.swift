@@ -229,7 +229,7 @@ public final class DroneSignatureGenerator {
             isApproaching: isApproaching
         )
     }
-
+    
     private func checkRSSITrend(_ droneId: String, rssi: Double) -> Bool {
         // Get previous readings and determine if signal is getting stronger
         let readings = previousRSSIReadings[droneId] ?? []
@@ -240,7 +240,7 @@ public final class DroneSignatureGenerator {
         let averagePrevious = readings.reduce(0.0, +) / Double(readings.count)
         return rssi > averagePrevious
     }
-
+    
     private func calculateDistance(_ rssi: Double) -> Double {
         // Free space path loss formula
         let frequency = 2400.0 // 2.4GHz for BLE/WiFi
@@ -248,7 +248,7 @@ public final class DroneSignatureGenerator {
         let distance = pow(10.0, pathLoss/20.0) / 1000.0 // Convert to meters
         return distance
     }
-
+    
     
     func detectSpoof(_ signature: DroneSignature, fromMonitor monitorStatus: StatusViewModel.StatusMessage) -> SpoofDetectionResult? {
         var reasons: [String] = []
@@ -261,9 +261,9 @@ public final class DroneSignatureGenerator {
         
         // Calculate actual vs expected signal strength
         let monitorPoint = CLLocation(latitude: monitorStatus.gpsData.latitude,
-                                  longitude: monitorStatus.gpsData.longitude)
+                                      longitude: monitorStatus.gpsData.longitude)
         let dronePoint = CLLocation(latitude: signature.position.coordinate.latitude,
-                                  longitude: signature.position.coordinate.longitude)
+                                    longitude: signature.position.coordinate.longitude)
         let distance = monitorPoint.distance(from: dronePoint)
         
         // Calculate expected RSSI using improved path loss formula
@@ -278,7 +278,7 @@ public final class DroneSignatureGenerator {
             reasons.append(String(format: "Signal strength deviation: %.1f dB", rssiDelta))
             confidenceScore += min(rssiDelta / 30.0, 0.6)  // Increased weight
         }
-
+        
         // Add historical analysis
         if let history = signatureCache[signature.primaryId.id] {
             // Check for impossible speeds
@@ -601,18 +601,27 @@ public final class DroneSignatureGenerator {
     }
     
     private func extractPositionInfo(_ message: [String: Any]) -> DroneSignature.PositionInfo {
+        let system = message["System Message"] as? [String: Any] ?? [:]
+        
+        // Get home location from System Message properly
+        let homeLat = Double(message["homeLat"] as? String ?? "0.0") ?? 0.0
+        let homeLon = Double(message["homeLon"] as? String ?? "0.0") ?? 0.0
+        let homeLocation = (homeLat != 0.0 && homeLon != 0.0) ?
+        CLLocationCoordinate2D(latitude: homeLat, longitude: homeLon) : nil
+        
+        
         var lat = 0.0
         var lon = 0.0
         var alt = 0.0
         var operatorLocation: CLLocationCoordinate2D?
-
+        
         // Handle XML point attributes
-        if let pointLat = message["lat"] as? String,
-           let pointLon = message["lon"] as? String {
+        if let pointLat = message["latitude"] as? String,
+           let pointLon = message["longitude"] as? String {
             lat = Double(pointLat) ?? 0.0
             lon = Double(pointLon) ?? 0.0
         }
-
+        
         // Handle geodetic altitude from hae attribute
         if let haeAlt = message["hae"] as? String {
             alt = Double(haeAlt) ?? 0.0
@@ -621,7 +630,7 @@ public final class DroneSignatureGenerator {
         } else if let mAlt = message["geodetic_altitude"] as? String {
             alt = Double(mAlt) ?? 0.0
         }
-
+        
         // Handle operator location
         if let pilotLat = message["pilotLat"] as? String,
            let pilotLon = message["pilotLon"] as? String,
@@ -630,13 +639,14 @@ public final class DroneSignatureGenerator {
            latDouble != 0 && lonDouble != 0 {
             operatorLocation = CLLocationCoordinate2D(latitude: latDouble, longitude: lonDouble)
         }
-
+        
         return DroneSignature.PositionInfo(
             coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
             altitude: alt,
             altitudeReference: .wgs84,
             lastKnownGoodPosition: lat == 0 && lon == 0 ? nil : CLLocationCoordinate2D(latitude: lat, longitude: lon),
             operatorLocation: operatorLocation,
+            homeLocation: homeLocation,
             horizontalAccuracy: nil,
             verticalAccuracy: nil,
             timestamp: Date().timeIntervalSince1970
@@ -647,7 +657,7 @@ public final class DroneSignatureGenerator {
         let speed = Double(message["speed"] as? String ?? "0.0") ?? 0.0
         let vspeed = Double(message["vspeed"] as? String ?? "0.0") ?? 0.0
         let direction = Double(message["direction"] as? String ?? "0.0") ?? 0.0
-
+        
         return DroneSignature.MovementVector(
             groundSpeed: speed,
             verticalSpeed: vspeed,
@@ -702,7 +712,7 @@ public final class DroneSignatureGenerator {
         } else {
             print("DEBUG: Missing or invalid latitude/longitude in message")
         }
-
+        
         
         // Check multiple sources for RSSI
         if let auxAdvInd = message["AUX_ADV_IND"] as? [String: Any],

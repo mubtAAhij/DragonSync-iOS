@@ -64,9 +64,19 @@ struct FlightPathPoint: Codable, Hashable {
     let longitude: Double
     let altitude: Double
     let timestamp: TimeInterval
+    let homeLatitude: Double?
+    let homeLongitude: Double?
     
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+    
+    var homeLocation: CLLocationCoordinate2D? {
+        guard let homeLat = homeLatitude,
+              let homeLon = homeLongitude else {
+            return nil
+        }
+        return CLLocationCoordinate2D(latitude: homeLat, longitude: homeLon)
     }
 }
 
@@ -176,7 +186,9 @@ class DroneStorageManager: ObservableObject {
             latitude: signature.position.coordinate.latitude,
             longitude: signature.position.coordinate.longitude,
             altitude: signature.position.altitude,
-            timestamp: signature.timestamp
+            timestamp: signature.timestamp,
+            homeLatitude: signature.position.homeLocation?.latitude,
+            homeLongitude: signature.position.homeLocation?.longitude
         )
         encounter.flightPath.append(point)
         

@@ -20,8 +20,8 @@ class Config:
 		
 class DroneMessageGenerator:
 	def __init__(self):
-		self.lat_range = (41.05, 41.07)
-		self.lon_range = (-75.05, -75.09)
+		self.lat_range = (39.724129, 39.764129)
+		self.lon_range = (-105.060828, -104.980828)  
 		self.msg_index = 0
 		self.start_time = time.time()
 		
@@ -256,6 +256,8 @@ class DroneMessageGenerator:
 		time_str, start_str, stale_str = self.get_timestamps()
 		lat = round(random.uniform(*self.lat_range), 6)
 		lon = round(random.uniform(*self.lon_range), 6)
+		homeLat = round(random.uniform(*self.lat_range), 6)
+		homeLon = round(random.uniform(*self.lon_range), 6)
 		alt = round(random.uniform(50, 400), 1)
 		mac = "E0:4E:7A:9A:67:99"
 		rssi = random.randint(-90, -40)
@@ -302,7 +304,7 @@ class DroneMessageGenerator:
 				Alt Pressure: {alt_pressure} m, Horizontal Accuracy: {horiz_acc}, Vertical Accuracy: {vert_acc}, 
 				Baro Accuracy: {baro_acc}, Speed Accuracy: {speed_acc}, Self-ID Message: Text: {selfIDtext}, 
 				Description: {selfIDDesc}, Operator ID: {opID}, UA Type: {uaType}, Operator Location: Lat {operator_lat},
-				Operator Location: Lon {operator_lon}, Altitude {operator_alt_geo} m, Classification: {classification}</remarks>
+				Operator Location: Lon {operator_lon}, Altitude {operator_alt_geo} m, Classification: {classification}, Home Lat: {homeLat}, Home Lon: {homeLon}</remarks>
 				<contact endpoint="" phone="" callsign="drone-{desc.split()[-1]}"/>
 				<precisionlocation geopointsrc="GPS" altsrc="GPS"/>
 				<color argb="-256"/>
@@ -365,10 +367,12 @@ class DroneMessageGenerator:
 				"longitude": -145.0013,
 				"operator_lat": 51.4391,
 				"operator_lon": -145.0113,
-				"area_count": 1,
-				"area_radius": 0,
-				"area_ceiling": 0,
-				"area_floor": 0,
+				"home_lat": 51.5391,
+				"home_lon": -145.1113,
+#				"area_count": 1,
+#				"area_radius": 0,
+#				"area_ceiling": 0,
+#				"area_floor": 0,
 				"operator_alt_geo": 20,
 				"classification": 1,
 				"timestamp": 28056789
