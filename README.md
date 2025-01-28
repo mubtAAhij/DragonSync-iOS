@@ -6,6 +6,8 @@
 
 > *Revolutionize your airspace awareness. Bridge the power of WarDragon to your iOS device. Stay ahead with real-time monitoring, instant alerts, and robust protocol support.*
 
+***TestFlight is open: [Join the beta](https://testflight.apple.com/join/QKDKMSfA)***
+
 ## Features
 
 - **Real-Time Airspace Monitoring**  
@@ -105,8 +107,6 @@ Warning dials set the value at which dashboard elements change or appear. These 
 - Drones nearby warning is based on the proximity warning value. 
 
 ## Build/Install
-
-***TestFlight is open: [Join the beta](https://testflight.apple.com/join/QKDKMSfA)***
 
 1. **Clone the Repository**  
    Clone the project repository to your local machine using the following command:  
