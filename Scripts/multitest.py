@@ -2,6 +2,7 @@
 
 import socket
 import time
+import math
 import os
 import random
 import json
@@ -254,64 +255,82 @@ class DroneMessageGenerator:
 	
 	def generate_original_format(self):
 		time_str, start_str, stale_str = self.get_timestamps()
-		lat = round(random.uniform(*self.lat_range), 6)
-		lon = round(random.uniform(*self.lon_range), 6)
-		homeLat = round(random.uniform(*self.lat_range), 6)
-		homeLon = round(random.uniform(*self.lon_range), 6)
-		alt = round(random.uniform(50, 400), 1)
+		
+		# Use time to generate smooth flight pattern
+		t = time.time() * 0.1  # Scale time for reasonable movement speed
+		
+		# Center point of flight area 
+		center_lat = (self.lat_range[0] + self.lat_range[1]) / 2
+		center_lon = (self.lon_range[0] + self.lon_range[1]) / 2
+		
+		# Radius of flight pattern
+		radius_lat = (self.lat_range[1] - self.lat_range[0]) / 3
+		radius_lon = (self.lon_range[1] - self.lon_range[0]) / 3
+		
+		# Figure-8 pattern
+		lat = center_lat + radius_lat * math.sin(t)
+		lon = center_lon + radius_lon * math.sin(t * 2)
+		
+		# Home position stays fixed
+		homeLat = center_lat 
+		homeLon = center_lon
+		
+		# Smooth altitude changes
+		alt = 300 + 50 * math.sin(t * 0.5)  # Base 300m with 50m variation
+		height_agl = alt - 100  # AGL is altitude minus ground level
+		pressure_altitude = alt - 2  # Slightly different from true altitude
+		alt_pressure = pressure_altitude
+		
+		# Speed and direction calculations based on movement
+		dx = math.cos(t * 2) * radius_lon  # Rate of longitude change
+		dy = math.cos(t) * radius_lat      # Rate of latitude change
+		speed = 15 + 5 * math.cos(t)       # Speed varies 10-20 m/s
+		vspeed = 2.5 * math.cos(t * 0.5)   # Vertical speed follows altitude
+		direction = math.degrees(math.atan2(dx, dy)) % 360
+		
+		# Fixed values
 		mac = "E0:4E:7A:9A:67:99"
-		rssi = random.randint(-90, -40)
+		rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
 		protocol_version = "1.0"
-		desc = f"Test Drone DRONE{random.randint(100, 100)}"
-		speed = round(random.uniform(20, 50), 1)
-		vspeed = round(random.uniform(-5, 5), 1)
-		height_agl = round(random.uniform(20, 200), 1)
+		desc = f"Test Drone DRONE{100}"
 		height_type = "AGL"
-		pressure_altitude = round(random.uniform(50, 400), 1)
 		ew_dir_segment = "N"
 		speed_multiplier = 1.0
 		op_status = "Operational"
-		direction = round(random.uniform(0, 360), 1)
 		timestamp = time_str
 		runtime = "5h 12m"
-		index = random.randint(1, 100)
+		index = int(t * 10) % 100 + 1
 		status = "Active"
-		alt_pressure = pressure_altitude
 		horiz_acc = 5
 		vert_acc = 10
-		baro_acc = 3
+		baro_acc = 3 
 		speed_acc = 2
 		selfIDtext = "Self-ID Text Stuff"
 		selfIDDesc = desc
 		opID = "Operator123"
 		uaType = "Quadcopter"
-		operator_lat = lat + random.uniform(-0.001, 0.001)
-		operator_lon = lon + random.uniform(-0.001, 0.001)
-		operator_alt_geo = round(random.uniform(0, 100), 1)
+		
+		# Operator follows drone with slight delay
+		operator_lat = center_lat + radius_lat * math.sin(t - 0.5)
+		operator_lon = center_lon + radius_lon * math.sin((t - 0.5) * 2)
+		operator_alt_geo = 50  # Operator stays at ground level
+		
 		classification = "Class A"
 		did = 1324
 		id_type = "Serial Number (ANSI/CTA-2063-A)"
 		
 		return f"""
-		<event version="2.0" uid="drone-{desc.split()[-1]}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
-			<point lat="{lat}" lon="{lon}" hae="{alt}" ce="9999999" le="999999"/>
-			<detail>
-				<remarks>MAC: {mac}, RSSI: {rssi}dBm, CAA: 9328483489324, ID Type: {id_type}, Device ID: {did}, ID Protocol Version: {protocol_version}, Description: {desc}, 
-				Speed: {speed}, Vert Speed: {vspeed}, Geodetic Altitude: {alt}, 
-				Height AGL: {height_agl} m, Height Type: {height_type}, Pressure Altitude: {pressure_altitude} m, 
-				EW Direction Segment: {ew_dir_segment}, Speed Multiplier: {speed_multiplier}, Operational Status: {op_status}, 
-				Direction: {direction}, Timestamp: {timestamp}, Runtime: {runtime}, Index: {index}, Status: {status}, 
-				Alt Pressure: {alt_pressure} m, Horizontal Accuracy: {horiz_acc}, Vertical Accuracy: {vert_acc}, 
-				Baro Accuracy: {baro_acc}, Speed Accuracy: {speed_acc}, Self-ID Message: Text: {selfIDtext}, 
-				Description: {selfIDDesc}, Operator ID: {opID}, UA Type: {uaType}, Operator Location: Lat {operator_lat},
-				Operator Location: Lon {operator_lon}, Altitude {operator_alt_geo} m, Classification: {classification}, Home Lat: {homeLat}, Home Lon: {homeLon}</remarks>
-				<contact endpoint="" phone="" callsign="drone-{desc.split()[-1]}"/>
-				<precisionlocation geopointsrc="GPS" altsrc="GPS"/>
-				<color argb="-256"/>
-				<usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
-			</detail>
-		</event>
-		"""
+	<event version="2.0" uid="drone-{desc.split()[-1]}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
+	<point lat="{lat:.6f}" lon="{lon:.6f}" hae="{alt:.1f}" ce="9999999" le="999999"/>
+	<detail>
+	<remarks>MAC: {mac}, RSSI: {rssi}dBm, ID Type: {id_type}, Device ID: {did}, Protocol Version: {protocol_version}, Description: {desc}, Speed: {speed:.1f} m/s, Vert Speed: {vspeed:.1f} m/s, Geodetic Altitude: {alt:.1f} m, Height AGL: {height_agl:.1f} m, Height Type: {height_type}, Pressure Altitude: {pressure_altitude:.1f} m, EW Direction Segment: {ew_dir_segment}, Speed Multiplier: {speed_multiplier}, Operational Status: {op_status}, Direction: {direction:.1f}, Timestamp: {timestamp}, Runtime: {runtime}, Index: {index}, Status: {status}, Alt Pressure: {alt_pressure:.1f} m, Horizontal Accuracy: {horiz_acc}, Vertical Accuracy: {vert_acc}, Baro Accuracy: {baro_acc}, Speed Accuracy: {speed_acc}, Self-ID Message: Text: {selfIDtext}, Description: {selfIDDesc}, Operator ID: {opID}, UA Type: {uaType}, Operator Location: Lat {operator_lat:.6f}, Operator Location: Lon {operator_lon:.6f}, Altitude {operator_alt_geo:.1f} m, Classification: {classification}, Home Lat: {homeLat:.6f}, Home Lon: {homeLon:.6f}</remarks>
+	<contact endpoint="" phone="" callsign="drone-{desc.split()[-1]}"/>
+	<precisionlocation geopointsrc="GPS" altsrc="GPS"/>
+	<color argb="-256"/>
+	<usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
+	</detail>
+	</event>
+	"""
 	
 	
 	def generate_esp32_format(self):
@@ -322,6 +341,8 @@ class DroneMessageGenerator:
 		speed = round(random.uniform(20, 50), 1)
 		alt = round(random.uniform(50, 400), 1)
 		rssi = random.randint(-90, -40)
+		homeLat = round(random.uniform(*self.lat_range), 6)
+		homeLon = round(random.uniform(*self.lon_range), 6)
 		
 		message = {
 			"index": 57,
@@ -367,8 +388,8 @@ class DroneMessageGenerator:
 				"longitude": -145.0013,
 				"operator_lat": 51.4391,
 				"operator_lon": -145.0113,
-				"home_lat": 51.5391,
-				"home_lon": -145.1113,
+				"home_lat": homeLat,
+				"home_lon": homeLon,
 #				"area_count": 1,
 #				"area_radius": 0,
 #				"area_ceiling": 0,
