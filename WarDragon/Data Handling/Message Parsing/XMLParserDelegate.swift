@@ -735,40 +735,63 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 operatorAltGeo = Double(trimmed.dropFirst(8).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
             } else if trimmed.hasPrefix("Classification:") {
                 classification = Int(trimmed.dropFirst(15).trimmingCharacters(in: .whitespaces))
-            } else if trimmed.hasPrefix("Home Lat:") {
-                if let latString = trimmed.dropFirst(9).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces),
-                   let latitude = Double(latString) {
-                    homeLat = latitude
+            } else if trimmed.contains("Location/Vector:") {
+                let content = trimmed.components(separatedBy: "[").last?.replacingOccurrences(of: "]", with: "") ?? ""
+                let vectorParts = content.components(separatedBy: ",")
+                for part in vectorParts {
+                    let clean = part.trimmingCharacters(in: .whitespaces)
+                    if clean.hasPrefix("Speed:") {
+                        speed = Double(clean.dropFirst(6).replacingOccurrences(of: "m/s", with: "").trimmingCharacters(in: .whitespaces))
+                    } else if clean.hasPrefix("Vert Speed:") {
+                        vspeed = Double(clean.dropFirst(11).replacingOccurrences(of: "m/s", with: "").trimmingCharacters(in: .whitespaces))
+                    } else if clean.hasPrefix("Geodetic Altitude:") {
+                        alt = Double(clean.dropFirst(18).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
+                    } else if clean.hasPrefix("Height AGL:") {
+                        heightAGL = Double(clean.dropFirst(11).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
+                    }
                 }
-            } else if trimmed.hasPrefix("Home Lon:") {
-                if let lonString = trimmed.dropFirst(9).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces),
-                   let longitude = Double(lonString) {
-                    homeLon = longitude
+            } else if trimmed.contains("System:") {
+                let content = trimmed.components(separatedBy: "[").last?.replacingOccurrences(of: "]", with: "") ?? ""
+                let systemParts = content.components(separatedBy: ",")
+                for part in systemParts {
+                    let clean = part.trimmingCharacters(in: .whitespaces)
+                    if clean.hasPrefix("Operator Lat:") {
+                        operatorLat = Double(clean.dropFirst(13).trimmingCharacters(in: .whitespaces))
+                    } else if clean.hasPrefix("Operator Lon:") {
+                        operatorLon = Double(clean.dropFirst(13).trimmingCharacters(in: .whitespaces))
+                    } else if clean.hasPrefix("Home Lat:") {
+                        if let latitude = Double(clean.dropFirst(9).trimmingCharacters(in: .whitespaces)) {
+                            homeLat = latitude
+                        }
+                    } else if clean.hasPrefix("Home Lon:") {
+                        if let longitude = Double(clean.dropFirst(9).trimmingCharacters(in: .whitespaces)) {
+                            homeLon = longitude
+                        }
+                    }
                 }
+            } else if trimmed.hasPrefix("Self-ID:") {
+                description = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
             }
         }
-        
+
         if manufacturer == "Unknown", let mac = mac {
             print("MAC is \(mac)")
             let cleanMac = mac.replacingOccurrences(of: ":", with: "").uppercased()  // Normalize MAC address
             for (brand, prefixes) in macPrefixesByManufacturer {
                 for prefix in prefixes {
                     let cleanPrefix = prefix.replacingOccurrences(of: ":", with: "").uppercased()  // Normalize prefix
-//                    print("Checking prefix: \(cleanPrefix) against MAC: \(cleanMac)")
                     if cleanMac.hasPrefix(cleanPrefix) {
                         manufacturer = brand
                         print("Match found! Manufacturer: \(manufacturer)")
                         break
                     }
                 }
-                if manufacturer != "Unknown" { break }  // Exit loop once manufacturer is found
+                if manufacturer != "Unknown" { break }
             }
         }
 
-        print("Manufacturer: \(String(describing: manufacturer))")  // Final result
+        print("Manufacturer: \(String(describing: manufacturer))") 
 
-            
-        
         return (mac, rssi, caaReg, idRegType, manufacturer, protocolVersion, description, speed, vspeed, alt, heightAGL,
                 heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus,
                 direction, timestamp, runtime, index, status, altPressure, horizAcc,

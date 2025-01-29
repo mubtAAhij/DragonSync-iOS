@@ -320,17 +320,17 @@ class DroneMessageGenerator:
 		id_type = "Serial Number (ANSI/CTA-2063-A)"
 		
 		return f"""
-	<event version="2.0" uid="drone-{desc.split()[-1]}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
-	<point lat="{lat:.6f}" lon="{lon:.6f}" hae="{alt:.1f}" ce="9999999" le="999999"/>
-	<detail>
-	<remarks>MAC: {mac}, RSSI: {rssi}dBm, ID Type: {id_type}, Device ID: {did}, Protocol Version: {protocol_version}, Description: {desc}, Speed: {speed:.1f} m/s, Vert Speed: {vspeed:.1f} m/s, Geodetic Altitude: {alt:.1f} m, Height AGL: {height_agl:.1f} m, Height Type: {height_type}, Pressure Altitude: {pressure_altitude:.1f} m, EW Direction Segment: {ew_dir_segment}, Speed Multiplier: {speed_multiplier}, Operational Status: {op_status}, Direction: {direction:.1f}, Timestamp: {timestamp}, Runtime: {runtime}, Index: {index}, Status: {status}, Alt Pressure: {alt_pressure:.1f} m, Horizontal Accuracy: {horiz_acc}, Vertical Accuracy: {vert_acc}, Baro Accuracy: {baro_acc}, Speed Accuracy: {speed_acc}, Self-ID Message: Text: {selfIDtext}, Description: {selfIDDesc}, Operator ID: {opID}, UA Type: {uaType}, Operator Location: Lat {operator_lat:.6f}, Operator Location: Lon {operator_lon:.6f}, Altitude {operator_alt_geo:.1f} m, Classification: {classification}, Home Lat: {homeLat:.6f}, Home Lon: {homeLon:.6f}</remarks>
-	<contact endpoint="" phone="" callsign="drone-{desc.split()[-1]}"/>
-	<precisionlocation geopointsrc="GPS" altsrc="GPS"/>
-	<color argb="-256"/>
-	<usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
-	</detail>
-	</event>
-	"""
+		<event version="2.0" uid="drone-{desc.split()[-1]}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
+			<point lat="{lat:.6f}" lon="{lon:.6f}" hae="{alt:.1f}" ce="35.0" le="999999"/>
+			<detail>
+				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Self-ID: {desc}, Location/Vector: [Speed: {speed:.1f} m/s, Vert Speed: {vspeed:.1f} m/s, Geodetic Altitude: {alt:.1f} m, Height AGL: {height_agl:.1f} m], System: [Operator Lat: {operator_lat:.6f}, Operator Lon: {operator_lon:.6f}, Home Lat: {homeLat:.6f}, Home Lon: {homeLon:.6f}]</remarks>
+				<contact endpoint="" phone="" callsign="drone-{desc.split()[-1]}"/>
+				<precisionlocation geopointsrc="gps" altsrc="gps"/>
+				<color argb="-256"/>
+				<usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
+			</detail>
+		</event>
+		"""
 	
 	
 	def generate_esp32_format(self):
