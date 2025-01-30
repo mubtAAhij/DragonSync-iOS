@@ -29,6 +29,10 @@ class CoTViewModel: ObservableObject {
     public var macIdHistory: [String: Set<String>] = [:]
     public var macProcessing: [String: Bool] = [:]
     private var lastNotificationTime: Date?
+    private var macToCAA: [String: String] = [:]
+    private var macToHomeLoc: [String: (lat: Double, lon: Double)] = [:]
+
+    
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
@@ -554,26 +558,38 @@ class CoTViewModel: ObservableObject {
         DispatchQueue.main.async {
             let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
             let mac = message.mac ??
-                     (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String ??
-                     (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
-
-            if message.idType.contains("CAA") {
-                // Check for an existing message with the same MAC
-                if let mac = mac, let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
+            (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String ??
+            (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
+            
+            // Store CAA registration if present
+            if message.idType.contains("CAA"), let mac = mac {
+                self.macToCAA[mac] = message.uid
+                
+                // Update existing message with same MAC
+                if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
                     var updatedDrone = self.parsedMessages[existingIndex]
                     updatedDrone.caaRegistration = message.uid
                     self.parsedMessages[existingIndex] = updatedDrone
                     self.objectWillChange.send()
                     return
                 }
-                // If no matching MAC is found, skip adding a new message
-                return
+                return // Skip adding new message if it's just a CAA registration
             }
-
+            
+            // Store home location if valid
+            if let mac = mac,
+               let homeLat = Double(message.homeLat),
+               let homeLon = Double(message.homeLon),
+               homeLat != 0 && homeLon != 0 {
+                self.macToHomeLoc[mac] = (lat: homeLat, lon: homeLon)
+            }
+            
+            // Create signature and continue with existing signature handling...
             guard let signature = self.signatureGenerator.createSignature(from: message.toDictionary()) else {
                 print("DEBUG: Failed to generate signature")
                 return
             }
+            
 
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
                 self.droneSignatures[index] = signature
@@ -602,6 +618,18 @@ class CoTViewModel: ObservableObject {
             var updatedMessage = message
             updatedMessage.uid = droneId
             updatedMessage.mac = mac
+            // Add stored CAA registration if available
+            if let mac = mac {
+                updatedMessage.caaRegistration = self.macToCAA[mac] ?? message.caaRegistration
+                
+                // Add stored home location if current message doesn't have one
+                if Double(updatedMessage.homeLat) == 0 || Double(updatedMessage.homeLon) == 0,
+                   let homeLoc = self.macToHomeLoc[mac] {
+                    updatedMessage.homeLat = String(homeLoc.lat)
+                    updatedMessage.homeLon = String(homeLoc.lon)
+                }
+            }
+            
             if Settings.shared.spoofDetectionEnabled,
                let monitorStatus = self.statusViewModel.statusMessages.last,
                let spoofResult = self.signatureGenerator.detectSpoof(signature, fromMonitor: monitorStatus) {

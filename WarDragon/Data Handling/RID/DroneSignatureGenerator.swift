@@ -602,26 +602,21 @@ public final class DroneSignatureGenerator {
     
     private func extractPositionInfo(_ message: [String: Any]) -> DroneSignature.PositionInfo {
         let system = message["System Message"] as? [String: Any] ?? [:]
-        
-        // Get home location from System Message properly
-        let homeLat = Double(message["homeLat"] as? String ?? "0.0") ?? 0.0
-        let homeLon = Double(message["homeLon"] as? String ?? "0.0") ?? 0.0
-        let homeLocation = (homeLat != 0.0 && homeLon != 0.0) ?
-        CLLocationCoordinate2D(latitude: homeLat, longitude: homeLon) : nil
-        
+        let location = message["Location/Vector Message"] as? [String: Any] ?? [:]
         
         var lat = 0.0
         var lon = 0.0
         var alt = 0.0
+        var homeLocation: CLLocationCoordinate2D?
         var operatorLocation: CLLocationCoordinate2D?
-        
+
         // Handle XML point attributes
         if let pointLat = message["latitude"] as? String,
            let pointLon = message["longitude"] as? String {
             lat = Double(pointLat) ?? 0.0
             lon = Double(pointLon) ?? 0.0
         }
-        
+
         // Handle geodetic altitude from hae attribute
         if let haeAlt = message["hae"] as? String {
             alt = Double(haeAlt) ?? 0.0
@@ -631,6 +626,23 @@ public final class DroneSignatureGenerator {
             alt = Double(mAlt) ?? 0.0
         }
         
+        // Handle DJI home location - try multiple possible field names
+        if let system = message["System Message"] as? [String: Any] {
+            // Try home_lat/home_lon first
+            if let homeLat = system["home_lat"] as? Double,
+               let homeLon = system["home_lon"] as? Double,
+               homeLat != 0 && homeLon != 0 {
+                homeLocation = CLLocationCoordinate2D(latitude: homeLat, longitude: homeLon)
+            }
+            // If not found, try latitude/longitude
+            else if let opLat = system["latitude"] as? Double,
+                    let opLon = system["longitude"] as? Double,
+                    opLat != 0 && opLon != 0 {
+                operatorLocation = CLLocationCoordinate2D(latitude: opLat, longitude: opLon)
+            }
+            
+        }
+
         // Handle operator location
         if let pilotLat = message["pilotLat"] as? String,
            let pilotLon = message["pilotLon"] as? String,
@@ -639,7 +651,7 @@ public final class DroneSignatureGenerator {
            latDouble != 0 && lonDouble != 0 {
             operatorLocation = CLLocationCoordinate2D(latitude: latDouble, longitude: lonDouble)
         }
-        
+
         return DroneSignature.PositionInfo(
             coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
             altitude: alt,
