@@ -83,7 +83,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private var isStatusMessage = false
     
     private let macPrefixesByManufacturer = ZMQHandler().macPrefixesByManufacturer
-
+    
     
     // MARK: - XMLParserDelegate
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName: String?, attributes: [String : String] = [:]) {
@@ -220,52 +220,67 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     
     func parseESP32Message(_ jsonData: [String: Any]) -> CoTViewModel.CoTMessage? {
         if let basicId = jsonData["Basic ID"] as? [String: Any] {
-            let droneId = basicId["id"] as? String ?? UUID().uuidString
+            let id = basicId["id"] as? String ?? UUID().uuidString
+            let droneId = id.hasPrefix("drone-") ? id : "drone-\(id)"
+            let idType = basicId["id_type"] as? String ?? ""
+            var caaReg: String?
+            if idType.contains("CAA") {
+                caaReg = id
+                print("CAA IN XML CONVERSION")
+            }
+            
             let droneType = buildDroneType(jsonData)
             
             let location = jsonData["Location/Vector Message"] as? [String: Any]
             let system = jsonData["System Message"] as? [String: Any]
             let selfId = jsonData["Self-ID Message"] as? [String: Any]
             
-            // Extract the MAC address and determine the manufacturer
-               var mac = basicId["MAC"] as? String ?? ""
-               var manufacturer = "Unknown"
-
-               // Check if MAC exists and match it against prefixes
-               if !mac.isEmpty {
-                   let normalizedMac = mac.uppercased()
-                   for (key, prefixes) in macPrefixesByManufacturer {
-                       for prefix in prefixes {
-                           let normalizedPrefix = prefix.uppercased()
-                           if normalizedMac.hasPrefix(normalizedPrefix) {
-                               manufacturer = key
-                               break
-                           }
-                       }
-                       if manufacturer != "Unknown" { break }
-                   }
-               }
-
-               // Fallback to extract MAC and manufacturer from Self-ID Message
-               if mac.isEmpty, let selfIDtext = selfId?["text"] as? String {
-                   mac = selfIDtext
-                       .replacingOccurrences(of: "UAV ", with: "")
-                       .replacingOccurrences(of: " operational", with: "")
-                   
-                   let normalizedMac = mac.uppercased()
-                   for (key, prefixes) in macPrefixesByManufacturer {
-                       for prefix in prefixes {
-                           let normalizedPrefix = prefix.uppercased()
-                           if normalizedMac.hasPrefix(normalizedPrefix) {
-                               manufacturer = key
-                               break
-                           }
-                       }
-                       if manufacturer != "Unknown" { break }
-                   }
-               }
+            // Get MAC from all possible sources
+            var mac = basicId["MAC"] as? String ?? ""
+            var manufacturer = "Unknown"
+            
+            // Check if MAC exists and match it against prefixes
+            if !mac.isEmpty {
+                let normalizedMac = mac.uppercased()
+                for (key, prefixes) in macPrefixesByManufacturer {
+                    for prefix in prefixes {
+                        let normalizedPrefix = prefix.uppercased()
+                        if normalizedMac.hasPrefix(normalizedPrefix) {
+                            manufacturer = key
+                            break
+                        }
+                    }
+                    if manufacturer != "Unknown" { break }
+                }
+            }
+            
+            // Fallback to extract MAC from Self-ID Message
+            if mac.isEmpty, let selfIDtext = selfId?["text"] as? String {
+                mac = selfIDtext
+                    .replacingOccurrences(of: "UAV ", with: "")
+                    .replacingOccurrences(of: " operational", with: "")
+                
+                let normalizedMac = mac.uppercased()
+                for (key, prefixes) in macPrefixesByManufacturer {
+                    for prefix in prefixes {
+                        let normalizedPrefix = prefix.uppercased()
+                        if normalizedMac.hasPrefix(normalizedPrefix) {
+                            manufacturer = key
+                            break
+                        }
+                    }
+                    if manufacturer != "Unknown" { break }
+                }
+            }
+            
+            // Skip if "None" Registration ID
+            if idType == "None" {
+                print("Skipping message with ID type: \(idType)")
+                return nil
+            }
             
             return CoTViewModel.CoTMessage(
+                caaRegistration: caaReg,
                 uid: droneId,
                 type: droneType,
                 lat: String(describing: location?["latitude"] ?? "0.0"),
@@ -280,10 +295,10 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 pilotLon: String(describing: system?["operator_lon"] ?? system?["longitude"] ?? "0.0"),
                 description: selfId?["description"] as? String ?? "",
                 selfIDText: selfId?["text"] as? String ?? "",
-                uaType: mapUAType(basicId["ua_type"]),
-                idType: basicId["id_type"] as? String ?? "Unknown",
-                mac: basicId["MAC"] as? String,
-                rssi: basicId["RSSI"] as? Int,
+                uaType: mapUAType(basicId["ua_type"] as? String),
+                idType: idType,
+                mac: mac,
+                rssi: basicId["RSSI"] as? Int ?? 0,
                 manufacturer: manufacturer,
                 location_protocol: location?["protocol_version"] as? String,
                 op_status: location?["op_status"] as? String,
@@ -327,7 +342,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 droneType += "-O"
             }
         }
-
+        
         
         droneType += "-F"
         return droneType
@@ -499,7 +514,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         timestampAdv: Double?,
         homeLat: Double?,
         homeLon: Double?
-
+        
     ) {
         var mac: String?
         var rssi: Int?
@@ -548,6 +563,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         
         
         let components = remarks.components(separatedBy: ", ")
+        
+        print("DEBUG: REMARKS COMPONENTS: \(components)")
         
         for component in components {
             let trimmed = component.trimmingCharacters(in: .whitespaces)
@@ -630,63 +647,59 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 uaType = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
             } else if trimmed.hasPrefix("Manufacturer:") {
                 manufacturer = trimmed.dropFirst(13).trimmingCharacters(in: .whitespaces)
-            } else if trimmed.hasPrefix("Operator Location: Lat") {
-                if let latString = trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces),
-                   let latitude = Double(latString) {
-                    operatorLat = latitude
-                } else {
-                    print("Failed to parse operator latitude.")
+            } else if trimmed.hasPrefix("System:") {
+                // Since components are already split, need to reconstruct full System string first
+                let systemComponents = components.filter { $0.contains("System:") || $0.contains("Operator") || $0.contains("Home") }
+                let fullSystemString = systemComponents.joined(separator: ", ")
+                
+                let content = fullSystemString.components(separatedBy: "[").last?
+                    .replacingOccurrences(of: "]", with: "") ?? ""
+                let systemParts = content.components(separatedBy: ", ")
+                for part in systemParts {
+                    let clean = part.trimmingCharacters(in: .whitespaces)
+                    if clean.hasPrefix("Operator Lat:") {
+                        operatorLat = Double(clean.dropFirst(13)
+                            .trimmingCharacters(in: .whitespaces))
+                    } else if clean.hasPrefix("Operator Lon:") {
+                        operatorLon = Double(clean.dropFirst(13)
+                            .trimmingCharacters(in: .whitespaces))
+                    } else if clean.hasPrefix("Home Lat:") {
+                        homeLat = Double(clean.dropFirst(9)
+                            .trimmingCharacters(in: .whitespaces))
+                    } else if clean.hasPrefix("Home Lon:") {
+                        homeLon = Double(clean.dropFirst(9)
+                            .trimmingCharacters(in: .whitespaces))
+                    }
                 }
-            } else if trimmed.hasPrefix("Operator Location: Lon") {
-                if let lonString = trimmed.dropFirst(22).components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces),
-                   let longitude = Double(lonString) {
-                    operatorLon = longitude
-                } else {
-                    print("Failed to parse operator longitude.")
-                }
-            } else if trimmed.hasPrefix("Altitude") {
-                operatorAltGeo = Double(trimmed.dropFirst(8).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
-            } else if trimmed.hasPrefix("Classification:") {
-                classification = Int(trimmed.dropFirst(15).trimmingCharacters(in: .whitespaces))
             } else if trimmed.contains("Location/Vector:") {
-                let content = trimmed.components(separatedBy: "[").last?.replacingOccurrences(of: "]", with: "") ?? ""
+                let content = trimmed.components(separatedBy: "[").last?
+                    .replacingOccurrences(of: "]", with: "") ?? ""
                 let vectorParts = content.components(separatedBy: ",")
                 for part in vectorParts {
                     let clean = part.trimmingCharacters(in: .whitespaces)
                     if clean.hasPrefix("Speed:") {
-                        speed = Double(clean.dropFirst(6).replacingOccurrences(of: "m/s", with: "").trimmingCharacters(in: .whitespaces))
+                        speed = Double(clean.dropFirst(6)
+                            .replacingOccurrences(of: "m/s", with: "")
+                            .trimmingCharacters(in: .whitespaces))
                     } else if clean.hasPrefix("Vert Speed:") {
-                        vspeed = Double(clean.dropFirst(11).replacingOccurrences(of: "m/s", with: "").trimmingCharacters(in: .whitespaces))
+                        vspeed = Double(clean.dropFirst(11)
+                            .replacingOccurrences(of: "m/s", with: "")
+                            .trimmingCharacters(in: .whitespaces))
                     } else if clean.hasPrefix("Geodetic Altitude:") {
-                        alt = Double(clean.dropFirst(18).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
+                        alt = Double(clean.dropFirst(18)
+                            .replacingOccurrences(of: "m", with: "")
+                            .trimmingCharacters(in: .whitespaces))
                     } else if clean.hasPrefix("Height AGL:") {
-                        heightAGL = Double(clean.dropFirst(11).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
-                    }
-                }
-            } else if trimmed.contains("System:") {
-                let content = trimmed.components(separatedBy: "[").last?.replacingOccurrences(of: "]", with: "") ?? ""
-                let systemParts = content.components(separatedBy: ",")
-                for part in systemParts {
-                    let clean = part.trimmingCharacters(in: .whitespaces)
-                    if clean.hasPrefix("Operator Lat:") {
-                        operatorLat = Double(clean.dropFirst(13).trimmingCharacters(in: .whitespaces))
-                    } else if clean.hasPrefix("Operator Lon:") {
-                        operatorLon = Double(clean.dropFirst(13).trimmingCharacters(in: .whitespaces))
-                    } else if clean.hasPrefix("Home Lat:") {
-                        if let latitude = Double(clean.dropFirst(9).trimmingCharacters(in: .whitespaces)) {
-                            homeLat = latitude
-                        }
-                    } else if clean.hasPrefix("Home Lon:") {
-                        if let longitude = Double(clean.dropFirst(9).trimmingCharacters(in: .whitespaces)) {
-                            homeLon = longitude
-                        }
+                        heightAGL = Double(clean.dropFirst(11)
+                            .replacingOccurrences(of: "m", with: "")
+                            .trimmingCharacters(in: .whitespaces))
                     }
                 }
             } else if trimmed.hasPrefix("Self-ID:") {
                 description = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
             }
         }
-
+        
         if manufacturer == "Unknown", let mac = mac {
             print("MAC is \(mac)")
             let cleanMac = mac.replacingOccurrences(of: ":", with: "").uppercased()  // Normalize MAC address
@@ -702,9 +715,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 if manufacturer != "Unknown" { break }
             }
         }
-
-        print("Manufacturer: \(String(describing: manufacturer))") 
-
+        
+        print("Manufacturer: \(String(describing: manufacturer))")
+        
         return (mac, rssi, caaReg, idRegType, manufacturer, protocolVersion, description, speed, vspeed, alt, heightAGL,
                 heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus,
                 direction, timestamp, runtime, index, status, altPressure, horizAcc,
@@ -773,6 +786,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                  operatorLat, operatorLon, operatorAltGeo, classification,
                  channel, phy, accessAddress, advMode, deviceId, sequenceId, advAddress,
                  timestampAdv, homeLat, homeLon) = parseDroneRemarks(remarks)
+            
+            print("DEBUG - Parsing Remarks: \(remarks) and op lon is \(operatorLon) and home is \(homeLat) / \(homeLon)")
             
             let finalDescription = description?.isEmpty ?? true ? selfIDDesc : description ?? ""
             
@@ -875,185 +890,14 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             "aa", "adv_mode", "adv_mac", "did", "sid":
             handleTransmissionFields(elementName)
         case "message":
-            if let jsonData = messageContent.data(using: .utf8) {
-                // Try to parse as array first
-                if let jsonArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
-                    
-                    // Store complete array for signature generation
-                    rawMessage = ["messages": jsonArray]
-                    
-                    // Store BLE data if present
-                    if let firstMessage = jsonArray.first {
-                        if let aux = firstMessage["AUX_ADV_IND"] as? [String: Any] {
-                            auxAdvInd = aux
-                            rawMessage?["AUX_ADV_IND"] = aux
-                        }
-                        if let adtype = firstMessage["adtype"] as? [String: Any] {
-                            adType = adtype
-                            rawMessage?["adtype"] = adtype
-                        }
-                        if let aextData = firstMessage["aext"] as? [String: Any] {
-                            aext = aextData
-                            rawMessage?["aext"] = aextData
-                        }
-                    }
-                    
-                    // Define what to grab
-                    var droneId: String?
-                    var droneMAC: String?
-                    var droneRSSI: Int?
-                    var description = ""
-                    var text = ""
-                    var location: [String: Any]?
-                    var system: [String: Any]?
-                    var droneType = "a-f-G-U"
-                    var idType = "Unknown"
-                    var uaType: DroneSignature.IdInfo.UAType = .helicopter
-                    
-                    // First pass - collect Basic ID info
-                    for message in jsonArray {
-                        if let basicId = message["Basic ID"] as? [String: Any],
-                           let id = basicId["id"] as? String,
-                           !id.isEmpty {
-                            idType = basicId["id_type"] as? String ?? "Unknown"
-                            
-                            // Skip if this is a CAA registration message
-                            if idType == "CAA Assigned Registration ID" {
-                                print("Skipping message creation for CAA Registration")
-                                break
-                            }
-                    
-                            droneId = id
-                            droneMAC = basicId["MAC"] as? String ??
-                            (aext?["AdvA"] as? String)?.components(separatedBy: " ").first
-                            idType = basicId["id_type"] as? String ?? "Unknown"
-                            
-                            if let uaTypeStr = basicId["ua_type"] as? String {
-                                uaType = mapUAType(uaTypeStr)
-                            }
-                            droneRSSI = basicId["RSSI"] as? Int
-                            
-                            if idType == "Serial Number (ANSI/CTA-2063-A)" {
-                                droneType += "-S"
-                            } else if idType == "CAA Registration ID" {
-                                droneType += "-R"
-                            } else {
-                                droneType += "-U"
-                            }
-                            break
-                        }
-                    }
-                    
-                    // Second pass - collect additional data
-                    for message in jsonArray {
-                        if let locMsg = message["Location/Vector Message"] as? [String: Any] {
-                            location = locMsg
-                        } else if let sysMsg = message["System Message"] as? [String: Any] {
-                            system = sysMsg
-                            if let pilotLocation = system?["PilotLocation"] as? [String: Any] {
-                                let pilotLat = pilotLocation["lat"] as? Double
-                                    ?? system?["operator_lat"] as? Double
-                                    ?? system?["latitude"] as? Double
-                                    ?? 0.0
-                                let pilotLon = pilotLocation["lon"] as? Double
-                                    ?? system?["operator_lon"] as? Double
-                                    ?? system?["longitude"] as? Double
-                                    ?? 0.0
-                                
-                                // Add pilot location to the message
-                                cotMessage?.pilotLat = String(pilotLat)
-                                cotMessage?.pilotLon = String(pilotLon)
-                            }
-                            if system?["operator_lat"] != nil || system?["operator_lon"] != nil {
-                                droneType += "-O"
-                            }
-                        } else if let selfId = message["Self-ID Message"] as? [String: Any] {
-                            description = selfId["description"] as? String ?? ""
-                            text = selfId["text"] as? String ?? ""
-                            
-                        }
-                    }
-                    
-                    droneType += "-F"
-                    
-                    if let droneId = droneId {
-                        // Create message with all available data
-                        cotMessage = CoTViewModel.CoTMessage(
-                            uid: droneId,
-                            type: droneType,
-                            lat: String(describing: location?["latitude"] ?? "0.0"),
-                            lon: String(describing: location?["longitude"] ?? "0.0"),
-                            homeLat: String(describing: system?["home_lat"] ?? "0.0"),
-                            homeLon: String(describing: system?["home_lon"] ?? "0.0"),
-                            speed: String(describing: location?["speed"] ?? "0.0"),
-                            vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
-                            alt: String(describing: pointAttributes["hae"] ?? "0.0"),
-                            height: String(describing: location?["height_agl"] ?? "0.0"),
-                            pilotLat: String(describing: system?["operator_lat"] ?? "0.0"),
-                            pilotLon: String(describing: system?["operator_lon"] ?? "0.0"),
-                            description: description,
-                            selfIDText: text,
-                            uaType: uaType,
-                            idType: idType,
-                            mac: droneMAC ?? "",
-                            rssi: droneRSSI,
-                            // Include all BLE/transmission data
-                            rawMessage: [
-                                "messages": jsonArray,
-                                "AUX_ADV_IND": auxAdvInd as Any,
-                                "adtype": adType as Any,
-                                "aext": aext as Any
-                            ]
-                        )
-                        print("RAW MESSAGE ZMQ STUFF: \(String(describing: rawMessage))")
-                    }
-                }
-                // Single object parsing
-                else if let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-                    rawMessage = json
-                    print("Found single objects.. \(String(describing: rawMessage))")
-                    
-                    if let basicId = json["Basic ID"] as? [String: Any],
-                       let id = basicId["id"] as? String {
-                        let idType = basicId["id_type"] as? String ?? "Unknown"
-                        let droneType = buildDroneType(json)
-                        let location = json["Location/Vector Message"] as? [String: Any]
-                        let system = json["System Message"] as? [String: Any]
-                        let pilotLocation = system?["PilotLocation"] as? [String: Any]
-                        let selfId = json["Self-ID Message"] as? [String: Any]
-                        let pilotLat = String(describing: pilotLocation?["lat"] ?? "Unknown")
-                        let pilotLon = String(describing: pilotLocation?["lon"] ?? "Unknown")
-                        
-                        // Skip if "None" Registration ID
-                        guard idType != "None" else {
-                            print("Skipping message with ID type: \(idType)")
-                            return
-                        }
-                        
-                        cotMessage = CoTViewModel.CoTMessage(
-                            uid: id,
-                            type: droneType,
-                            lat: String(describing: location?["latitude"] ?? "0.0"),
-                            lon: String(describing: location?["longitude"] ?? "0.0"),
-                            homeLat: String(describing: system?["home_lat"] ?? "0.0"),
-                            homeLon: String(describing: system?["home_lon"] ?? "0.0"),
-                            speed: String(describing: location?["speed"] ?? "0.0"),
-                            vspeed: String(describing: location?["vert_speed"] ?? "0.0"),
-                            alt: String(describing: pointAttributes["hae"] ?? "0.0"),
-                            height: String(describing: location?["height_agl"] ?? "0.0"),
-                            pilotLat: pilotLat,
-                            pilotLon: pilotLon,
-                            description: selfId?["description"] as? String ?? "",
-                            selfIDText: selfId?["text"] as? String ?? "",
-                            uaType: mapUAType(basicId["ua_type"] as? String),
-                            idType: basicId["id_type"] as? String ?? "Unknown",
-                            mac: basicId["MAC"] as? String ?? "",
-                            rssi: basicId["RSSI"] as? Int ?? 0,
-                            rawMessage: json
-                        )
-                    }
+            if let data = messageContent.data(using: .utf8) {
+                if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                    processJSONArray(jsonArray)
+                } else if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    processSingleJSON(json)
                 }
             }
+            
         case "event":
             if cotMessage == nil {
                 let jsonFormat: [String: Any] = [
@@ -1082,16 +926,44 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     ],
                     "Self-ID Message": [
                         "text": droneDescription,
+                        
                     ],
                     "AUX_ADV_IND": auxAdvInd ?? [:],
                     "adtype": adType ?? [:],
                     "aext": aext ?? [:]
-                    
                 ]
                 rawMessage = jsonFormat
+                let id = eventAttributes["uid"] ?? ""
+                let droneId = id.hasPrefix("drone-") ? id : "drone-\(id)"
+                
+                var mac = eventAttributes["MAC"] ?? ""
+                var manufacturer = "Unknown"
+                
+                if !mac.isEmpty {
+                    let normalizedMac = mac.uppercased()
+                    for (key, prefixes) in macPrefixesByManufacturer {
+                        for prefix in prefixes {
+                            let normalizedPrefix = prefix.uppercased()
+                            if normalizedMac.hasPrefix(normalizedPrefix) {
+                                manufacturer = key
+                                break
+                            }
+                        }
+                        if manufacturer != "Unknown" { break }
+                    }
+                }
+                
+                let idType = ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
+                ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None"
+                
+                var caaReg: String?
+                if idType == "CAA Registration ID" {
+                    caaReg = droneId.replacingOccurrences(of: "drone-", with: "")
+                }
                 
                 cotMessage = CoTViewModel.CoTMessage(
-                    uid: eventAttributes["uid"] ?? "",
+                    caaRegistration: caaReg,
+                    uid: droneId,
                     type: eventAttributes["type"] ?? "",
                     lat: pointAttributes["lat"] ?? "0.0",
                     lon: pointAttributes["lon"] ?? "0.0",
@@ -1106,153 +978,38 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     description: droneDescription,
                     selfIDText: "",
                     uaType: .helicopter,
-                    idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
-                        ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
-                    mac: eventAttributes["MAC"] ?? "",
+                    idType: idType,
+                    mac: mac,
                     rssi: Int(eventAttributes["RSSI"] ?? "") ?? 0,
+                    manufacturer: manufacturer,
+                    location_protocol: location_protocol,
+                    op_status: op_status,
+                    height_type: height_type,
+                    ew_dir_segment: ew_dir_segment,
+                    speed_multiplier: speed_multiplier,
+//                    direction: direction,
+                    vertical_accuracy: vertical_accuracy,
+                    horizontal_accuracy: horizontal_accuracy,
+                    baro_accuracy: baro_accuracy,
+                    speed_accuracy: speed_accuracy,
+                    timestamp: timestamp,
+                    timestamp_accuracy: timestamp_accuracy,
+                    operator_id: operator_id,
+                    operator_id_type: operator_id_type,
+                    classification_type: nil,
+                    operator_location_type: nil,
+                    area_count: nil,
+                    area_radius: nil,
+                    area_ceiling: nil,
+                    area_floor: nil,
+                    advMode: nil,
+                    txAdd: nil,
+                    rxAdd: nil,
+                    adLength: nil,
+                    accessAddress: nil,
+//                    operatorAltGeo: operatorAltGeo,
                     rawMessage: jsonFormat
                 )
-            }
-        case "Speed", "VerticalSpeed", "Altitude", "Height":
-            if parentElement == "LocationVector" {
-                switch elementName {
-                case "Speed":
-                    cotMessage?.speed = currentValue
-                case "VerticalSpeed":
-                    cotMessage?.vspeed = currentValue
-                case "Altitude":
-                    cotMessage?.alt = currentValue
-                case "Height":
-                    cotMessage?.height = currentValue
-                case _:
-                    break
-                }
-            } else {
-                switch elementName {
-                case "Speed":
-                    speed = currentValue
-                case "VerticalSpeed":
-                    vspeed = currentValue
-                case "Altitude":
-                    alt = currentValue
-                case "Height":
-                    height = currentValue
-                case _:
-                    break
-                }
-            }
-        case "TimeSpeed", "status", "direction", "altPressure", "heightType",
-            "horizAcc", "vertAcc", "baroAcc", "speedAcc":
-            if parentElement == "LocationVector" {
-                switch elementName {
-                case "TimeSpeed":
-                    cotMessage?.timeSpeed = currentValue
-                case "status":
-                    cotMessage?.status = currentValue
-                case "direction":
-                    cotMessage?.direction = currentValue
-                case "ew_dir_segment":
-                    cotMessage?.direction = currentValue
-                case "altPressure":
-                    cotMessage?.altPressure = currentValue
-                case "heightType":
-                    cotMessage?.heightType = currentValue
-                case "horizAcc":
-                    cotMessage?.horizAcc = currentValue
-                case "vertAcc":
-                    cotMessage?.vertAcc = currentValue
-                case "baroAcc":
-                    cotMessage?.baroAcc = currentValue
-                case "speedAcc":
-                    cotMessage?.speedAcc = currentValue
-                case _:
-                    break
-                }
-            }
-        case "Description":
-            droneDescription = currentValue
-        case "lat":
-            switch parent {
-            case "PilotLocation":
-                pilotLat = currentValue
-            default:
-                break
-            }
-        case "lon":
-            switch parent {
-            case "PilotLocation":
-                pilotLon = currentValue
-            default:
-                break
-            }
-        case "operatorAltGeo":
-            cotMessage?.operatorAltGeo = currentValue
-        case "areaCount":
-            cotMessage?.areaCount = currentValue
-        case "areaRadius":
-            cotMessage?.areaRadius = currentValue
-        case "areaCeiling":
-            cotMessage?.areaCeiling = currentValue
-        case "areaFloor":
-            cotMessage?.areaFloor = currentValue
-        case "classification":
-            cotMessage?.classification = currentValue
-        case "selfIdType":
-            cotMessage?.selfIdType = currentValue
-        case "authType":
-            cotMessage?.authType = currentValue
-        case "authPage":
-            cotMessage?.authPage = currentValue
-        case "authLength":
-            cotMessage?.authLength = currentValue
-        case "authTimestamp":
-            cotMessage?.authTimestamp = currentValue
-        case "authData":
-            cotMessage?.authData = currentValue
-        case "DeviceID":
-            if cotMessage == nil {
-                cotMessage = CoTViewModel.CoTMessage(
-                    uid: currentValue,
-                    type: eventAttributes["type"] ?? "",
-                    lat: pointAttributes["lat"] ?? "0.0",
-                    lon: pointAttributes["lon"] ?? "0.0",
-                    homeLat: pHomeLat,
-                    homeLon: pHomeLon,
-                    speed: speed,
-                    vspeed: vspeed,
-                    alt: String(describing: pointAttributes["hae"] ?? "0.0"),
-                    height: height,
-                    pilotLat: pilotLat,
-                    pilotLon: pilotLon,
-                    description: droneDescription,
-                    selfIDText: "",
-                    uaType: .helicopter,
-                    idType: ((eventAttributes["type"]?.contains("-S")) != nil) ? "Serial Number (ANSI/CTA-2063-A)" :
-                        ((eventAttributes["type"]?.contains("-R")) != nil) ? "CAA Registration ID" : "None",
-                    mac: eventAttributes["MAC"],
-                    rssi: 0,
-                    rawMessage: [:]
-                )
-            } else {
-                cotMessage?.uid = currentValue
-            }
-            
-        case "MAC":
-            if parent == "BasicID" {
-                cotMessage?.mac = currentValue
-                if var rawMessage = cotMessage?.rawMessage {
-                    rawMessage["MAC"] = currentValue
-                    cotMessage?.rawMessage = rawMessage
-                }
-            }
-            
-        case "RSSI":
-            if parent == "BasicID" {
-                cotMessage?.rssi = Int(currentValue)
-                if var rawMessage = cotMessage?.rawMessage {
-                    rawMessage["RSSI"] = currentValue
-                    cotMessage?.rawMessage = rawMessage
-                }
             }
         default:
             break
@@ -1274,64 +1031,289 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     }
     
     private func handleLocationFields(_ elementName: String) {
+        if cotMessage == nil { return }
+
         switch elementName {
-        case "location_protocol": location_protocol = currentValue
-        case "op_status": op_status = currentValue
-        case "height_type": height_type = currentValue
-        case "ew_dir_segment": ew_dir_segment = currentValue
-        case "speed_multiplier": speed_multiplier = currentValue
-        case "vertical_accuracy": vertical_accuracy = currentValue
-        case "horizontal_accuracy": horizontal_accuracy = currentValue
-        case "baro_accuracy": baro_accuracy = currentValue
-        case "speed_accuracy": speed_accuracy = currentValue
-        case "timestamp": timestamp = currentValue
-        case "timestamp_accuracy": timestamp_accuracy = currentValue
+        case "location_protocol":
+            cotMessage?.location_protocol = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["protocol_version"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "op_status":
+            cotMessage?.op_status = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["op_status"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "height_type":
+            cotMessage?.height_type = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["height_type"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "ew_dir_segment":
+            cotMessage?.ew_dir_segment = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["ew_dir_segment"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "speed_multiplier":
+            cotMessage?.speed_multiplier = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["speed_multiplier"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "vertical_accuracy":
+            cotMessage?.vertical_accuracy = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["vertical_accuracy"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "horizontal_accuracy":
+            cotMessage?.horizontal_accuracy = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["horizontal_accuracy"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "baro_accuracy":
+            cotMessage?.baro_accuracy = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["baro_accuracy"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "speed_accuracy":
+            cotMessage?.speed_accuracy = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["speed_accuracy"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "timestamp":
+            cotMessage?.timestamp = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["timestamp"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "timestamp_accuracy":
+            cotMessage?.timestamp_accuracy = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var location = raw["Location/Vector Message"] as? [String: Any] {
+                    location["timestamp_accuracy"] = currentValue
+                    raw["Location/Vector Message"] = location
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
         default: break
         }
     }
     
     private func handleTransmissionFields(_ elementName: String) {
+        if cotMessage == nil { return }
+        
         switch elementName {
-        case "operator_id": operator_id = currentValue
-        case "operator_id_type": operator_id_type = currentValue
-        case "aux_rssi": aux_rssi = Int(currentValue)
-        case "channel": channel = Int(currentValue)
-        case "phy": phy = Int(currentValue)
-        case "aa": aa = Int(currentValue)
-        case "adv_mode": adv_mode = currentValue
-        case "adv_mac": adv_mac = currentValue
-        case "did": did = Int(currentValue)
-        case "sid": sid = Int(currentValue)
+        case "operator_id":
+            cotMessage?.operator_id = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var opMsg = raw["Operator ID Message"] as? [String: Any] {
+                    opMsg["operator_id"] = currentValue
+                    raw["Operator ID Message"] = opMsg
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "operator_id_type":
+            cotMessage?.operator_id_type = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var opMsg = raw["Operator ID Message"] as? [String: Any] {
+                    opMsg["operator_id_type"] = currentValue
+                    raw["Operator ID Message"] = opMsg
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "aux_rssi":
+            aux_rssi = Int(currentValue)
+            if var raw = cotMessage?.rawMessage {
+                if var auxData = raw["AUX_ADV_IND"] as? [String: Any] {
+                    auxData["rssi"] = aux_rssi
+                    raw["AUX_ADV_IND"] = auxData
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "channel":
+            channel = Int(currentValue)
+            if var raw = cotMessage?.rawMessage {
+                if var auxData = raw["AUX_ADV_IND"] as? [String: Any] {
+                    auxData["chan"] = channel
+                    raw["AUX_ADV_IND"] = auxData
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "phy":
+            phy = Int(currentValue)
+            if var raw = cotMessage?.rawMessage {
+                if var auxData = raw["AUX_ADV_IND"] as? [String: Any] {
+                    auxData["phy"] = phy
+                    raw["AUX_ADV_IND"] = auxData
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "aa":
+            aa = Int(currentValue)
+            if var raw = cotMessage?.rawMessage {
+                if var auxData = raw["AUX_ADV_IND"] as? [String: Any] {
+                    auxData["aa"] = aa
+                    raw["AUX_ADV_IND"] = auxData
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "adv_mode":
+            adv_mode = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var aextData = raw["aext"] as? [String: Any] {
+                    aextData["AdvMode"] = adv_mode
+                    raw["aext"] = aextData
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "adv_mac":
+            adv_mac = currentValue
+            if var raw = cotMessage?.rawMessage {
+                if var aextData = raw["aext"] as? [String: Any] {
+                    aextData["AdvA"] = adv_mac
+                    raw["aext"] = aextData
+                    cotMessage?.rawMessage = raw
+                }
+            }
+
+        case "did":
+            did = Int(currentValue)
+            if var raw = cotMessage?.rawMessage {
+                if var aextData = raw["aext"] as? [String: Any] {
+                    if var advInfo = aextData["AdvDataInfo"] as? [String: Any] {
+                        advInfo["did"] = did
+                        aextData["AdvDataInfo"] = advInfo
+                        raw["aext"] = aextData
+                        cotMessage?.rawMessage = raw
+                    }
+                }
+            }
+
+        case "sid":
+            sid = Int(currentValue)
+            if var raw = cotMessage?.rawMessage {
+                if var aextData = raw["aext"] as? [String: Any] {
+                    if var advInfo = aextData["AdvDataInfo"] as? [String: Any] {
+                        advInfo["sid"] = sid
+                        aextData["AdvDataInfo"] = advInfo
+                        raw["aext"] = aextData
+                        cotMessage?.rawMessage = raw
+                    }
+                }
+            }
+
         default: break
         }
     }
     
     private func buildRawMessage(_ mac: String?, _ rssi: Int?, _ desc: String?) -> [String: Any] {
-        let raw: [String: Any] = [
-            "mac": mac ?? "",
-            "rssi": rssi ?? 0,
-            "location_protocol": location_protocol ?? "",
-            "op_status": op_status ?? "",
-            "height_type": height_type ?? "",
-            "ew_dir_segment": ew_dir_segment ?? "",
-            "speed_multiplier": speed_multiplier ?? "",
-            "vertical_accuracy": vertical_accuracy ?? "",
-            "horizontal_accuracy": horizontal_accuracy ?? "",
-            "baro_accuracy": baro_accuracy ?? "",
-            "speed_accuracy": speed_accuracy ?? "",
-            "timestamp": timestamp ?? "",
-            "timestamp_accuracy": timestamp_accuracy ?? "",
-            "operator_id": operator_id ?? "",
-            "operator_id_type": operator_id_type ?? "",
-            "aux_rssi": aux_rssi ?? 0,
-            "channel": channel ?? 0,
-            "phy": phy ?? 0,
-            "aa": aa ?? 0,
-            "adv_mode": adv_mode ?? "",
-            "adv_mac": adv_mac ?? "",
-            "did": did ?? 0,
-            "sid": sid ?? 0
-        ]
+        var raw: [String: Any] = [:]
+        
+        // Basic ID section
+        var basicId: [String: Any] = [:]
+        if let mac = mac { basicId["MAC"] = mac }
+        if let rssi = rssi { basicId["RSSI"] = rssi }
+        if let desc = desc { basicId["description"] = desc }
+        if !basicId.isEmpty { raw["Basic ID"] = basicId }
+        
+        // Location/Vector section
+        var location: [String: Any] = [:]
+        if let protocol_version = location_protocol { location["protocol_version"] = protocol_version }
+        if let op_status = op_status { location["op_status"] = op_status }
+        if let height_type = height_type { location["height_type"] = height_type }
+        if let ew_dir_segment = ew_dir_segment { location["ew_dir_segment"] = ew_dir_segment }
+        if let speed_multiplier = speed_multiplier { location["speed_multiplier"] = speed_multiplier }
+        if let vertical_accuracy = vertical_accuracy { location["vertical_accuracy"] = vertical_accuracy }
+        if let horizontal_accuracy = horizontal_accuracy { location["horizontal_accuracy"] = horizontal_accuracy }
+        if let baro_accuracy = baro_accuracy { location["baro_accuracy"] = baro_accuracy }
+        if let speed_accuracy = speed_accuracy { location["speed_accuracy"] = speed_accuracy }
+        if let timestamp = timestamp { location["timestamp"] = timestamp }
+        if let timestamp_accuracy = timestamp_accuracy { location["timestamp_accuracy"] = timestamp_accuracy }
+        if !location.isEmpty { raw["Location/Vector Message"] = location }
+        
+        // Transmission data section
+        if let aux_rssi = aux_rssi,
+           let channel = channel,
+           let phy = phy {
+            raw["AUX_ADV_IND"] = [
+                "rssi": aux_rssi,
+                "chan": channel,
+                "phy": phy,
+                "aa": aa ?? 0
+            ]
+        }
+        
+        // Advertisement data section
+        if let adv_mode = adv_mode,
+           let adv_mac = adv_mac,
+           let did = did,
+           let sid = sid {
+            raw["aext"] = [
+                "AdvMode": adv_mode,
+                "AdvA": adv_mac,
+                "AdvDataInfo": [
+                    "did": did,
+                    "sid": sid
+                ]
+            ]
+        }
+        
         return raw
     }
     

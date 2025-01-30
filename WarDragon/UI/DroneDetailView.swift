@@ -106,7 +106,7 @@ struct DroneDetailView: View {
                             InfoRow(title: "Manufacturer", value: message.manufacturer ?? "")
                         }
                         SectionHeader(title: "Operator")
-                        if message.operator_id != "" {
+                        if message.operator_id != nil {
                             InfoRow(title: "ID", value: message.operator_id ?? "")
                         }
                         if message.homeLat != "0.0" {
@@ -115,7 +115,7 @@ struct DroneDetailView: View {
                         if message.pilotLat != "0.0" {
                             InfoRow(title: "Pilot Location", value: "\(message.pilotLat)/\(message.pilotLon)")
                         }
-                        if message.operatorAltGeo != "0.0" {
+                        if message.operatorAltGeo != nil {
                             InfoRow(title: "Pilot Altitude", value: message.operatorAltGeo ?? "")
                         }
                         

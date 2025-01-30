@@ -319,52 +319,44 @@ class ZMQHandler: ObservableObject {
         }
         
         // Location Message Fields
-        func extractDouble(_ dict: [String: Any]?, key: String) -> Double {
-            guard let dict = dict else { return 0.0 }
-            
-            // Check if the value is a String and has units
-            if let str = dict[key] as? String {
-                // Check for known units and clean them up
-                return Double(str.replacingOccurrences(of: " m/s", with: "")
-                              .replacingOccurrences(of: " m", with: "")) ?? 0.0
-            }
-            
-            // Directly return the value if it's already a Double
-            return dict[key] as? Double ?? 0.0
-        }
+        let lat = formatDoubleValue(location?["latitude"])
+        let lon = formatDoubleValue(location?["longitude"])
+        let alt = formatDoubleValue(location?["geodetic_altitude"])
+        let speed = formatDoubleValue(location?["speed"])
+        let vspeed = formatDoubleValue(location?["vert_speed"])
+        let height_agl = formatDoubleValue(location?["height_agl"])
+        let pressure_altitude = formatDoubleValue(location?["pressure_altitude"])
+        let speed_multiplier = formatDoubleValue(location?["speed_multiplier"])
         
-        let lat = extractDouble(location, key: "latitude")
-        let lon = extractDouble(location, key: "longitude")
-        let alt = extractDouble(location, key: "geodetic_altitude")
-        let speed = extractDouble(location, key: "speed")
-        let vspeed = extractDouble(location, key: "vert_speed")
-        
-        // Additional Location Fields
-        let protocol_version = location?["protocol_version"] as? String ?? ""
+        // 4. Protocol specific handling
+        let protocol_version = location?["protocol_version"] as? String ?? mProtocol
         let op_status = location?["op_status"] as? String ?? ""
-        let ew_dir_segment = location?["ew_dir_segment"] as? String ?? ""
-        let speed_multiplier = extractDouble(location, key: "speed_multiplier")
-        let pressure_altitude = extractDouble(location, key: "pressure_altitude")
         let height_type = location?["height_type"] as? String ?? ""
-        let height_agl = extractDouble(location, key: "height_agl")
+        let ew_dir_segment = location?["ew_dir_segment"] as? String ?? ""
+        let direction = formatDoubleValue(location?["direction"])
+        
         
         // Status and Accuracy Fields
         let status = location?["status"] as? Int ?? 0
-        let direction = extractDouble(location, key: "direction")
-        let alt_pressure = extractDouble(location, key: "alt_pressure")
+        let alt_pressure = formatDoubleValue(location?["alt_pressure"])
         let horiz_acc = location?["horiz_acc"] as? Int ?? 0
         let vert_acc = location?["vert_acc"] as? String ?? ""
         let baro_acc = location?["baro_acc"] as? Int ?? 0
         let speed_acc = location?["speed_acc"] as? Int ?? 0
         let timestamp = location?["timestamp"] as? Int ?? 0
         
-        // System Message Fields with fallback for pilot loc
-        let operator_lat = extractDouble(system, key: "operator_lat") != 0.0 ? extractDouble(system, key: "operator_lat") : extractDouble(system, key: "latitude")
-        let operator_lon = extractDouble(system, key: "operator_lon") != 0.0 ? extractDouble(system, key: "operator_lon") : extractDouble(system, key: "longitude")
-
-        let operator_alt_geo = extractDouble(system, key: "operator_alt_geo")
-        let classification = system?["classification"] as? Int ?? 0
+        // 3. System Message Fields - check all possible field names
+        let operator_lat = formatDoubleValue(system?["operator_lat"]) != "0.0" ?
+        formatDoubleValue(system?["operator_lat"]) :
+        formatDoubleValue(system?["latitude"])
         
+        let operator_lon = formatDoubleValue(system?["operator_lon"]) != "0.0" ?
+        formatDoubleValue(system?["operator_lon"]) :
+        formatDoubleValue(system?["longitude"])
+        
+        let operator_alt_geo = formatDoubleValue(location?["operator_alt_geo"])
+        
+        let classification = system?["classification"] as? Int ?? 0
         var channel: Int?
         var phy: Int?
         var accessAddress: Int?
@@ -426,9 +418,7 @@ class ZMQHandler: ObservableObject {
             advMode = aext["AdvMode"] as? String ?? ""
             advAddress = aext["AdvA"] as? String ?? ""
         }
-        
-
-        
+    
         // Generate XML
         let now = ISO8601DateFormatter().string(from: Date())
         let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
@@ -437,7 +427,7 @@ class ZMQHandler: ObservableObject {
         <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
             <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
             <detail>
-                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, CAA: \(caaReg), ID Type: \(idType), Manufacturer: \(manufacturer), Channel: \(String(describing: channel)), PHY: \(String(describing: phy)), Access Address: \(String(describing: accessAddress)), Advertisement Mode: \(String(describing: advMode)), Device ID: \(String(describing: deviceId)), Sequence ID: \(String(describing: sequenceId)), Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector Message: Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc), Self-ID Message: Text: \(selfIDtext), Description: \(selfIDDesc), Operator ID: \(opID), UA Type: \(uaType), Operator Location: Lat \(operator_lat), Operator Location: Lon \(operator_lon), Altitude \(operator_alt_geo) m, Classification: \(classification), Home Lat: \(homeLat), Home Lon: \(homeLon)</remarks>
+                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, CAA: \(caaReg), ID Type: \(idType), UA Type: \(uaType), Manufacturer: \(manufacturer), Channel: \(String(describing: channel)), PHY: \(String(describing: phy)), Operator ID: \(opID), Access Address: \(String(describing: accessAddress)), Advertisement Mode: \(String(describing: advMode)), Device ID: \(String(describing: deviceId)), Sequence ID: \(String(describing: sequenceId)), Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Description: \(desc), Location/Vector: [Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Altitude \(operator_alt_geo) m, Classification: \(classification), Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc)], Self-ID: [Text: \(selfIDtext), Description: \(selfIDDesc)], System: [Operator Lat: \(operator_lat), Operator Lon: \(operator_lon),  Home Lat: \(homeLat), Home Lon: \(homeLon)]</remarks>
                 <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
                 <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
                 <color argb="-256"/>
@@ -445,6 +435,22 @@ class ZMQHandler: ObservableObject {
             </detail>
         </event>
         """
+    }
+    
+    private func formatDoubleValue(_ value: Any?) -> String {
+        if let doubleVal = value as? Double {
+            return String(format: "%.7f", doubleVal)
+        }
+        if let intVal = value as? Int {
+            return String(format: "%.7f", Double(intVal))
+        }
+        if let stringVal = value as? String {
+            if let doubleVal = Double(stringVal.replacingOccurrences(of: " m/s", with: "")
+                                             .replacingOccurrences(of: " m", with: "")) {
+                return String(format: "%.7f", doubleVal)
+            }
+        }
+        return "0.0"
     }
     
     func processJsonArray(_ jsonArray: [[String: Any]]) -> String? {
