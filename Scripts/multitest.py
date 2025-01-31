@@ -289,7 +289,7 @@ class DroneMessageGenerator:
 		direction = math.degrees(math.atan2(dx, dy)) % 360
 		
 		# Fixed values
-		mac = "E0:4E:7A:9A:67:99"
+#		mac = "E0:4E:7A:9A:67:99"
 		rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
 		protocol_version = "1.0"
 		desc = f"Test Drone DRONE{100}"
@@ -309,6 +309,7 @@ class DroneMessageGenerator:
 		selfIDDesc = desc
 		opID = "Operator123"
 		uaType = "Quadcopter"
+		mac = ':'.join([f'{random.randint(0x00, 0xff):02X}' for _ in range(6)])
 		
 		# Operator follows drone with slight delay
 		operator_lat = center_lat + radius_lat * math.sin(t - 0.5)
@@ -343,6 +344,7 @@ class DroneMessageGenerator:
 		rssi = random.randint(-90, -40)
 		homeLat = round(random.uniform(*self.lat_range), 6)
 		homeLon = round(random.uniform(*self.lon_range), 6)
+		mac = ':'.join([f'{random.randint(0x00, 0xff):02X}' for _ in range(6)])
 		
 		message = {
 			"index": 57,

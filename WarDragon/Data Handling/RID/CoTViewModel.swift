@@ -33,7 +33,6 @@ class CoTViewModel: ObservableObject {
     private var macToHomeLoc: [String: (lat: Double, lon: Double)] = [:]
 
     
-    
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
         var caaRegistration: String?
@@ -486,7 +485,7 @@ class CoTViewModel: ObservableObject {
             }
             
             if let message = String(data: data, encoding: .utf8) {
-//                print("DEBUG - Received data: \(message)")
+                //                print("DEBUG - Received data: \(message)")
                 
                 // Check for Status message first (has both status code type and remarks with CPU Usage)
                 if message.contains("<remarks>CPU Usage:") {
@@ -590,7 +589,7 @@ class CoTViewModel: ObservableObject {
                 return
             }
             
-
+            
             if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
                 self.droneSignatures[index] = signature
                 print("Updating existing signature")
@@ -598,14 +597,14 @@ class CoTViewModel: ObservableObject {
                 print("Added new signature")
                 self.droneSignatures.append(signature)
             }
-
+            
             let encounters = DroneStorageManager.shared.encounters
             if encounters[signature.primaryId.id] != nil {
                 let existing = encounters[signature.primaryId.id]!
                 let hasNewPosition = existing.flightPath.last?.latitude != signature.position.coordinate.latitude ||
-                                     existing.flightPath.last?.longitude != signature.position.coordinate.longitude ||
-                                     existing.flightPath.last?.altitude != signature.position.altitude
-
+                existing.flightPath.last?.longitude != signature.position.coordinate.longitude ||
+                existing.flightPath.last?.altitude != signature.position.altitude
+                
                 if hasNewPosition {
                     DroneStorageManager.shared.saveEncounter(message)
                     print("Updated existing encounter with new position")
@@ -614,7 +613,7 @@ class CoTViewModel: ObservableObject {
                 DroneStorageManager.shared.saveEncounter(message)
                 print("Added new encounter to storage")
             }
-
+            
             var updatedMessage = message
             updatedMessage.uid = droneId
             updatedMessage.mac = mac
@@ -636,7 +635,7 @@ class CoTViewModel: ObservableObject {
                 updatedMessage.isSpoofed = spoofResult.isSpoofed
                 updatedMessage.spoofingDetails = spoofResult
             }
-
+            
             if let status = self.statusViewModel.statusMessages.last {
                 let monitorLoc = CLLocation(
                     latitude: status.gpsData.latitude,
@@ -644,20 +643,20 @@ class CoTViewModel: ObservableObject {
                 )
                 self.signatureGenerator.updateMonitorLocation(monitorLoc)
             }
-
+            
             if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
                 let existing = self.parsedMessages[index]
                 let hasChanges = existing.rssi != message.rssi ||
-                                 existing.lat != message.lat ||
-                                 existing.lon != message.lon ||
-                                 existing.speed != message.speed ||
-                                 existing.vspeed != message.vspeed ||
-                                 existing.alt != message.alt ||
-                                 existing.height != message.height ||
-                                 existing.op_status != message.op_status ||
-                                 existing.height_type != message.height_type ||
-                                 existing.direction != message.direction
-
+                existing.lat != message.lat ||
+                existing.lon != message.lon ||
+                existing.speed != message.speed ||
+                existing.vspeed != message.vspeed ||
+                existing.alt != message.alt ||
+                existing.height != message.height ||
+                existing.op_status != message.op_status ||
+                existing.height_type != message.height_type ||
+                existing.direction != message.direction
+                
                 if existing.mac == message.mac {
                     if message.idType.contains("CAA") && existing.uid == message.uid {
                         print("Updating existing drone with CAA id: \(message.uid)")
@@ -668,8 +667,11 @@ class CoTViewModel: ObservableObject {
                         self.parsedMessages[index] = updatedMessage
                         self.objectWillChange.send()
                     }
-                } else {
-                    print("MAC mismatch for drone: \(message.uid), skipping update.")
+                } else if !message.idType.contains("CAA") && existing.uid == message.uid { // Handle MAC randomization
+                    updatedMessage.mac = existing.mac
+                    self.parsedMessages[index] = updatedMessage
+                    print("Updated drone \(message.uid) data while preserving original MAC \(existing.mac ?? "unknown")")
+                    self.objectWillChange.send()
                 }
             } else {
                 if let macIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
@@ -686,7 +688,7 @@ class CoTViewModel: ObservableObject {
             }
         }
     }
-
+    
     
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
         guard Settings.shared.notificationsEnabled else { return }
