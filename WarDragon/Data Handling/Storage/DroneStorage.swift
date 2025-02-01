@@ -190,17 +190,19 @@ class DroneStorageManager: ObservableObject {
         )
         encounter.signatures.append(sig)
 
-        // Update metadata
+        var updatedMetadata = encounter.metadata
         if let mac = message.mac {
-            encounter.metadata["mac"] = mac
+            updatedMetadata["mac"] = mac
         }
+    
         if let caaReg = message.caaRegistration {
-            encounter.metadata["caaRegistration"] = caaReg
+            updatedMetadata["caaRegistration"] = caaReg
         }
         if let manufacturer = message.manufacturer {
-            encounter.metadata["manufacturer"] = manufacturer
+            updatedMetadata["manufacturer"] = manufacturer
         }
-
+        encounter.metadata = updatedMetadata
+        
         encounters[droneId] = encounter
         saveToStorage()
     }

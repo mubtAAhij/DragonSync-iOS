@@ -572,7 +572,7 @@ class CoTViewModel: ObservableObject {
                     self.objectWillChange.send()
                     return
                 }
-                return // Skip adding new message if it's just a CAA registration
+//                return // Skip adding new message if it's just a CAA registration
             }
             
             // Store home location if valid
