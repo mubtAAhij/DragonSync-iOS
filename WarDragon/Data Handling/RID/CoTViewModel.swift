@@ -560,6 +560,11 @@ class CoTViewModel: ObservableObject {
             (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String ??
             (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
             
+            // Skip NONE IDs
+            if droneId.contains("NONE") {
+                return
+            }
+            
             // Store CAA registration if present
             if message.idType.contains("CAA"), let mac = mac {
                 self.macToCAA[mac] = message.uid
