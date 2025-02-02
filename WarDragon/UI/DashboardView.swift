@@ -212,15 +212,25 @@ struct DronesOverviewCard: View {
         return cotViewModel.parsedMessages.last?.rssi
     }
     
+    private var uniqueDroneCount: Int {
+        // Count unique drones by MAC address, falling back to ID if no MAC
+        let uniqueMacs = Set(cotViewModel.parsedMessages.compactMap { message in
+            message.mac ?? message.uid
+        })
+        return uniqueMacs.count
+    }
+    
     private var spoofedCount: Int {
         cotViewModel.parsedMessages.filter { $0.isSpoofed }.count
     }
     
     private var nearbyCount: Int {
-        cotViewModel.parsedMessages.filter { msg in
+        // Only count unique nearby drones
+        let uniqueNearbyMacs = Set(cotViewModel.parsedMessages.filter { msg in
             guard let rssi = msg.rssi else { return false }
             return rssi > -70
-        }.count
+        }.compactMap { $0.mac })
+        return uniqueNearbyMacs.count
     }
     
     private var recentDrones: [CoTViewModel.CoTMessage] {

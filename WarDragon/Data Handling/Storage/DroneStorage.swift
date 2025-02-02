@@ -159,6 +159,19 @@ class DroneStorageManager: ObservableObject {
     
     func saveEncounter(_ message: CoTViewModel.CoTMessage) {
         let droneId = message.uid
+        
+        // If this is a CAA ID, look for existing encounter with same MAC
+        if message.idType.contains("CAA"),
+           let mac = message.mac,
+           let existingId = encounters.first(where: { $0.value.metadata["mac"] == mac })?.key {
+            var encounter = encounters[existingId]!
+            encounter.lastSeen = Date()
+            encounter.metadata["caaRegistration"] = message.uid
+            encounters[existingId] = encounter
+            return
+        }
+        
+        
         var encounter = encounters[droneId] ?? DroneEncounter(
             id: droneId,
             firstSeen: Date(),
