@@ -691,7 +691,4 @@ class ZMQHandler: ObservableObject {
         print("ZMQ: Disconnected")
     }
     
-    deinit {
-        disconnect()
-    }
 }
