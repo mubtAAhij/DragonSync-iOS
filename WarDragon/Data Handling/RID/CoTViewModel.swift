@@ -676,44 +676,62 @@ class CoTViewModel: ObservableObject {
     }
 
     private func updateParsedMessages(updatedMessage: CoTMessage, signature: DroneSignature) {
-        // Find existing message index by either ID or UID
-        if let index = self.parsedMessages.firstIndex(where: { $0.id == updatedMessage.id || $0.uid == updatedMessage.uid }) {
-            let existing = self.parsedMessages[index]
+        // Check for an existing entry with the same MAC
+        if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == updatedMessage.mac }) {
+            var existingMessage = self.parsedMessages[existingIndex]
             
-            // Determine if the message has meaningful changes
-            let hasSignificantChanges = existing.rssi != updatedMessage.rssi ||
-                existing.lat != updatedMessage.lat ||
-                existing.lon != updatedMessage.lon ||
-                existing.speed != updatedMessage.speed ||
-                existing.vspeed != updatedMessage.vspeed ||
-                existing.alt != updatedMessage.alt ||
-                existing.height != updatedMessage.height ||
-                existing.op_status != updatedMessage.op_status ||
-                existing.height_type != updatedMessage.height_type ||
-                existing.direction != updatedMessage.direction
-            
-            // Decide update strategy
-            if existing.mac == updatedMessage.mac || updatedMessage.idType.contains("CAA") {
-                // Update if same MAC or CAA message
-                self.parsedMessages[index] = updatedMessage
-                print("Updated existing drone: \(updatedMessage.uid)")
+            // If this is a CAA message, update with CAA information
+            if updatedMessage.idType.contains("CAA") {
+                existingMessage.caaRegistration = updatedMessage.caaRegistration
+                existingMessage.idType = "CAA Assigned Registration ID"
+                
+                // Replace the existing message with updated CAA info
+                self.parsedMessages[existingIndex] = existingMessage
+                
+                print("Updated existing drone with CAA registration: \(existingMessage.uid)")
                 self.objectWillChange.send()
-            } else if existing.uid == updatedMessage.uid {
-                // Preserve original MAC for same drone
-                var finalMessage = updatedMessage
-                finalMessage.mac = existing.mac
-                self.parsedMessages[index] = finalMessage
-                print("Updated drone preserving original MAC: \(updatedMessage.uid)")
-                self.objectWillChange.send()
+                return
             }
+        }
+        
+        // Default existing logic for adding or updating messages
+        if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == updatedMessage.mac || $0.uid == updatedMessage.uid }) {
+            var existingMessage = self.parsedMessages[existingIndex]
+            
+            // Update fields
+            existingMessage.lat = updatedMessage.lat
+            existingMessage.lon = updatedMessage.lon
+            existingMessage.speed = updatedMessage.speed
+            existingMessage.vspeed = updatedMessage.vspeed
+            existingMessage.alt = updatedMessage.alt
+            existingMessage.height = updatedMessage.height
+            existingMessage.rssi = updatedMessage.rssi
+            existingMessage.op_status = updatedMessage.op_status
+            existingMessage.height_type = updatedMessage.height_type
+            existingMessage.direction = updatedMessage.direction
+            
+            // Ensure MAC is set if not already present
+            if existingMessage.mac == nil {
+                existingMessage.mac = updatedMessage.mac
+            }
+            
+            // Replace the existing message
+            self.parsedMessages[existingIndex] = existingMessage
+            
+            print("Updated existing drone with MAC/UID \(existingMessage.uid)")
+            self.objectWillChange.send()
         } else {
-            // No existing message found - add new entry
-            if !updatedMessage.idType.contains("CAA") {
+            // If no existing message, add new drone only if not a pure CAA message
+            if !updatedMessage.idType.contains("CAA") || updatedMessage.lat != "0.0" || updatedMessage.lon != "0.0" {
                 self.parsedMessages.append(updatedMessage)
-                self.sendNotification(for: updatedMessage)
+                
+                if !updatedMessage.idType.contains("CAA") {
+                    self.sendNotification(for: updatedMessage)
+                }
+                
                 print("Added new drone: \(updatedMessage.uid)")
             } else {
-                print("Skipping CAA drone addition: \(updatedMessage.uid)")
+                print("Skipping empty CAA drone addition: \(updatedMessage.uid)")
             }
         }
     }
