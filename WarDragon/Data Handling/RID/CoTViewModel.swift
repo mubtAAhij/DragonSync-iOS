@@ -567,18 +567,14 @@ class CoTViewModel: ObservableObject {
                 return
             }
             
+            // Prepare updated message
+            var updatedMessage = message
+            updatedMessage.uid = droneId
+            updatedMessage.mac = mac
+            
             // Store CAA registration if present
-            if message.idType.contains("CAA"), let mac = mac {
-                self.macToCAA[mac] = message.uid
-                
-                // Update existing message with same MAC
-                if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
-                    var updatedDrone = self.parsedMessages[existingIndex]
-                    updatedDrone.caaRegistration = message.caaRegistration
-                    self.parsedMessages[existingIndex] = updatedDrone
-                    self.objectWillChange.send()
-                    return
-                }
+            if let mac = mac, message.idType.contains("CAA") {
+                self.macToCAA[mac] = message.id
             }
             
             // Store home location if valid
@@ -589,120 +585,151 @@ class CoTViewModel: ObservableObject {
                 self.macToHomeLoc[mac] = (lat: homeLat, lon: homeLon)
             }
             
-            // Create signature and continue with existing signature handling...
-            guard let signature = self.signatureGenerator.createSignature(from: message.toDictionary()) else {
-                print("DEBUG: Failed to generate signature")
+            // Add stored home location if current message doesn't have one
+            if let mac = mac,
+               (Double(updatedMessage.homeLat) == 0 || Double(updatedMessage.homeLon) == 0),
+               let homeLoc = self.macToHomeLoc[mac] {
+                updatedMessage.homeLat = String(homeLoc.lat)
+                updatedMessage.homeLon = String(homeLoc.lon)
+            }
+            
+            // Generate signature (handle potential nil return)
+            guard let signature = self.signatureGenerator.createSignature(from: updatedMessage.toDictionary()) else {
+                // For CAA messages, we might want to do something different
+                if message.idType.contains("CAA") {
+                    // Special handling for CAA messages
+                    self.handleCAAMessage(updatedMessage)
+                }
                 return
             }
             
+            // Update signatures and encounters
+            self.updateDroneSignaturesAndEncounters(signature, message: updatedMessage)
             
-            if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
-                self.droneSignatures[index] = signature
-                print("Updating existing signature")
-            } else {
-                print("Added new signature")
-                self.droneSignatures.append(signature)
-            }
+            // Track MAC history for this drone ID
+            self.updateMACHistory(droneId: droneId, mac: mac)
             
-            let encounters = DroneStorageManager.shared.encounters
-            if encounters[signature.primaryId.id] != nil {
-                let existing = encounters[signature.primaryId.id]!
-                let hasNewPosition = existing.flightPath.last?.latitude != signature.position.coordinate.latitude ||
-                existing.flightPath.last?.longitude != signature.position.coordinate.longitude ||
-                existing.flightPath.last?.altitude != signature.position.altitude
-                
-                if hasNewPosition {
-                    DroneStorageManager.shared.saveEncounter(message)
-                    print("Updated existing encounter with new position")
-                }
-            } else {
+            // Spoof detection
+            self.performSpoofDetection(signature: signature, updatedMessage: &updatedMessage)
+            
+            // Core message update logic
+            self.updateParsedMessages(updatedMessage: updatedMessage, signature: signature)
+        }
+    }
+
+    private func updateDroneSignaturesAndEncounters(_ signature: DroneSignature, message: CoTMessage) {
+        // Update drone signatures
+        if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
+            self.droneSignatures[index] = signature
+            print("Updating existing signature")
+        } else {
+            print("Added new signature")
+            self.droneSignatures.append(signature)
+        }
+        
+        // Update encounters
+        let encounters = DroneStorageManager.shared.encounters
+        if encounters[signature.primaryId.id] != nil {
+            let existing = encounters[signature.primaryId.id]!
+            let hasNewPosition = existing.flightPath.last?.latitude != signature.position.coordinate.latitude ||
+            existing.flightPath.last?.longitude != signature.position.coordinate.longitude ||
+            existing.flightPath.last?.altitude != signature.position.altitude
+            
+            if hasNewPosition {
                 DroneStorageManager.shared.saveEncounter(message)
-                print("Added new encounter to storage")
+                print("Updated existing encounter with new position")
             }
+        } else {
+            DroneStorageManager.shared.saveEncounter(message)
+            print("Added new encounter to storage")
+        }
+    }
+
+    private func updateMACHistory(droneId: String, mac: String?) {
+        guard let mac = mac, !mac.isEmpty else { return }
+        
+        var macs = self.macIdHistory[droneId] ?? Set<String>()
+        macs.insert(mac)
+        if macs.count > 10 {
+            macs.remove(macs.first!) // Remove oldest MAC
+        }
+        self.macIdHistory[droneId] = macs
+    }
+
+    private func performSpoofDetection(signature: DroneSignature, updatedMessage: inout CoTMessage) {
+        guard Settings.shared.spoofDetectionEnabled,
+              let monitorStatus = self.statusViewModel.statusMessages.last,
+              let spoofResult = self.signatureGenerator.detectSpoof(signature, fromMonitor: monitorStatus) else {
+            return
+        }
+        
+        updatedMessage.isSpoofed = spoofResult.isSpoofed
+        updatedMessage.spoofingDetails = spoofResult
+        
+        if let status = self.statusViewModel.statusMessages.last {
+            let monitorLoc = CLLocation(
+                latitude: status.gpsData.latitude,
+                longitude: status.gpsData.longitude
+            )
+            self.signatureGenerator.updateMonitorLocation(monitorLoc)
+        }
+    }
+
+    private func updateParsedMessages(updatedMessage: CoTMessage, signature: DroneSignature) {
+        // Find existing message index by either ID or UID
+        if let index = self.parsedMessages.firstIndex(where: { $0.id == updatedMessage.id || $0.uid == updatedMessage.uid }) {
+            let existing = self.parsedMessages[index]
             
-            // Look for MAC randomized drones, keep 5 to display
-            if let mac = mac, !mac.isEmpty {
-                // Track MAC history for this drone ID
-                var macs = self.macIdHistory[droneId] ?? Set<String>()
-                macs.insert(mac)
-                if macs.count > 5 {
-                    macs.remove(macs.first!) // Remove oldest MAC
-                }
-                self.macIdHistory[droneId] = macs
+            // Determine if the message has meaningful changes
+            let hasSignificantChanges = existing.rssi != updatedMessage.rssi ||
+                existing.lat != updatedMessage.lat ||
+                existing.lon != updatedMessage.lon ||
+                existing.speed != updatedMessage.speed ||
+                existing.vspeed != updatedMessage.vspeed ||
+                existing.alt != updatedMessage.alt ||
+                existing.height != updatedMessage.height ||
+                existing.op_status != updatedMessage.op_status ||
+                existing.height_type != updatedMessage.height_type ||
+                existing.direction != updatedMessage.direction
+            
+            // Decide update strategy
+            if existing.mac == updatedMessage.mac || updatedMessage.idType.contains("CAA") {
+                // Update if same MAC or CAA message
+                self.parsedMessages[index] = updatedMessage
+                print("Updated existing drone: \(updatedMessage.uid)")
+                self.objectWillChange.send()
+            } else if existing.uid == updatedMessage.uid {
+                // Preserve original MAC for same drone
+                var finalMessage = updatedMessage
+                finalMessage.mac = existing.mac
+                self.parsedMessages[index] = finalMessage
+                print("Updated drone preserving original MAC: \(updatedMessage.uid)")
+                self.objectWillChange.send()
             }
-            
-            // Update any new message data
-            var updatedMessage = message
-            updatedMessage.uid = droneId
-            updatedMessage.mac = mac
-            // Add stored CAA registration if available
-            if let mac = mac {
-                updatedMessage.caaRegistration = self.macToCAA[mac] ?? message.caaRegistration
-                
-                // Add stored home location if current message doesn't have one
-                if Double(updatedMessage.homeLat) == 0 || Double(updatedMessage.homeLon) == 0,
-                   let homeLoc = self.macToHomeLoc[mac] {
-                    updatedMessage.homeLat = String(homeLoc.lat)
-                    updatedMessage.homeLon = String(homeLoc.lon)
-                }
-            }
-            
-            if Settings.shared.spoofDetectionEnabled,
-               let monitorStatus = self.statusViewModel.statusMessages.last,
-               let spoofResult = self.signatureGenerator.detectSpoof(signature, fromMonitor: monitorStatus) {
-                updatedMessage.isSpoofed = spoofResult.isSpoofed
-                updatedMessage.spoofingDetails = spoofResult
-            }
-            
-            if let status = self.statusViewModel.statusMessages.last {
-                let monitorLoc = CLLocation(
-                    latitude: status.gpsData.latitude,
-                    longitude: status.gpsData.longitude
-                )
-                self.signatureGenerator.updateMonitorLocation(monitorLoc)
-            }
-            
-            if let index = self.parsedMessages.firstIndex(where: { $0.uid == message.uid }) {
-                let existing = self.parsedMessages[index]
-                let hasChanges = existing.rssi != message.rssi ||
-                existing.lat != message.lat ||
-                existing.lon != message.lon ||
-                existing.speed != message.speed ||
-                existing.vspeed != message.vspeed ||
-                existing.alt != message.alt ||
-                existing.height != message.height ||
-                existing.op_status != message.op_status ||
-                existing.height_type != message.height_type ||
-                existing.direction != message.direction
-                
-                if existing.mac == message.mac {
-                    if message.idType.contains("CAA") && existing.uid == message.uid {
-                        print("Updating existing drone with CAA id: \(message.uid)")
-                        self.parsedMessages[index] = updatedMessage
-                        self.objectWillChange.send()
-                    } else if hasChanges {
-                        print("Updating drone with matching MAC: \(message.uid)")
-                        self.parsedMessages[index] = updatedMessage
-                        self.objectWillChange.send()
-                    }
-                } else if !message.idType.contains("CAA") && existing.uid == message.uid { // Handle MAC randomization
-                    updatedMessage.mac = existing.mac
-                    self.parsedMessages[index] = updatedMessage
-                    print("Updated drone \(message.uid) data while preserving original MAC \(existing.mac ?? "unknown")")
-                    self.objectWillChange.send()
-                }
+        } else {
+            // No existing message found - add new entry
+            if !updatedMessage.idType.contains("CAA") {
+                self.parsedMessages.append(updatedMessage)
+                self.sendNotification(for: updatedMessage)
+                print("Added new drone: \(updatedMessage.uid)")
             } else {
-                if let macIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
-                    print("Updating CAA drone with matching MAC but different ID: \(message.uid)")
-                    self.parsedMessages[macIndex] = updatedMessage
-                    self.objectWillChange.send()
-                } else if !message.idType.contains("CAA") {
-                    print("Adding new drone: \(message.uid)")
-                    self.parsedMessages.append(updatedMessage)
-                    self.sendNotification(for: updatedMessage)
-                } else {
-                    print("Skipping addition for CAA drone with new ID: \(message.uid)")
-                }
+                print("Skipping CAA drone addition: \(updatedMessage.uid)")
+            }
+        }
+    }
+
+    private func handleCAAMessage(_ message: CoTMessage) {
+        // Special handling for CAA messages that don't generate a signature
+        if let mac = message.mac {
+            // Update MAC to CAA mapping
+            self.macToCAA[mac] = message.id
+            
+            // Find and update existing message with same MAC
+            if let index = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
+                var existingMessage = self.parsedMessages[index]
+                existingMessage.caaRegistration = message.caaRegistration
+                self.parsedMessages[index] = existingMessage
+                print("Updated CAA registration for existing drone")
             }
         }
     }

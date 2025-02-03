@@ -121,6 +121,7 @@ public final class DroneSignatureGenerator {
         let now = Date().timeIntervalSince1970
         let primaryId = extractPrimaryId(message)
         let cacheInfo = signatureCache[primaryId.id]
+        
         // Get MAC from all possible sources
         let mac = (message["mac"] as? String) ??
         (message["Basic ID"] as? [String: Any])?["MAC"] as? String ??
@@ -132,14 +133,20 @@ public final class DroneSignatureGenerator {
         if mac != "Unknown" {
             metadata["mac"] = mac
         }
-        if let caaReg = message["caa_registration"] as? String {
+        
+        // Look for CAA registration in multiple possible locations
+        let caaReg = message["caaRegistration"] as? String ??
+                     message["caa_registration"] as? String ??
+                     message["CAA_registration"] as? String
+        
+        if let caaReg = caaReg {
             metadata["caaRegistration"] = caaReg
         }
+        
         if let manufacturer = message["manufacturer"] as? String {
             metadata["manufacturer"] = manufacturer
         }
         
-        // Add metadata to the storage save
         let signature = DroneSignature(
             primaryId: primaryId,
             secondaryId: extractSecondaryId(message),
@@ -153,15 +160,7 @@ public final class DroneSignatureGenerator {
             timestamp: now,
             firstSeen: cacheInfo?.signatures.first?.timestamp ?? now,
             messageInterval: calculateMessageInterval(forId: primaryId.id)
-            
         )
-        
-        // Skip signature generation for CAA-only messages
-        if let idType = message["idType"] as? String, idType.contains("CAA") {
-            return nil
-        }
-        
-//        print("Signature generated: \(signature)")
         
         updateSignatureCache(signature)
         return signature
