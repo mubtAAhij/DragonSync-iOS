@@ -17,6 +17,7 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
     var lastSeen: Date
     var signatures: [SignatureData]
     var metadata: [String: String]
+    var macHistory: Set<String>
     private var _flightPath: [FlightPathPoint]
     
     // Computed property for flight path
@@ -30,13 +31,14 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
     }
     
     // Initialize with private flight path
-    init(id: String, firstSeen: Date, lastSeen: Date, flightPath: [FlightPathPoint], signatures: [SignatureData], metadata: [String: String]) {
+    init(id: String, firstSeen: Date, lastSeen: Date, flightPath: [FlightPathPoint], signatures: [SignatureData], metadata: [String: String], macHistory: Set<String>) {
         self.id = id
         self.firstSeen = firstSeen
         self.lastSeen = lastSeen
         self._flightPath = flightPath
         self.signatures = signatures
         self.metadata = metadata
+        self.macHistory = macHistory
     }
     
     var maxAltitude: Double {
@@ -171,14 +173,14 @@ class DroneStorageManager: ObservableObject {
             return
         }
         
-        
         var encounter = encounters[droneId] ?? DroneEncounter(
             id: droneId,
             firstSeen: Date(),
             lastSeen: Date(),
             flightPath: [],
             signatures: [],
-            metadata: [:]
+            metadata: [:],
+            macHistory: []
         )
 
         encounter.lastSeen = Date()
@@ -193,6 +195,12 @@ class DroneStorageManager: ObservableObject {
             homeLongitude: Double(message.homeLon)
         )
         encounter.flightPath.append(point)
+        
+        // Update randomized macs
+        if let mac = message.mac {
+            encounter.macHistory.insert(mac)
+        }
+
 
         // Add signature data
         let sig = SignatureData(

@@ -140,21 +140,25 @@ struct SystemStatusCard: View {
 struct DronesOverviewCard: View {
     @ObservedObject var cotViewModel: CoTViewModel
     
+    private var activeDroneCount: Int {
+        cotViewModel.parsedMessages.filter { message in
+            !message.idType.contains("CAA") && message.mac != nil
+        }.count
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
             HStack {
                 Image(systemName: "airplane")
                     .foregroundColor(.blue)
                 Text("ACTIVE DRONES")
                     .font(.appHeadline)
                 Spacer()
-                Text("\(cotViewModel.parsedMessages.count)")
+                Text("\(activeDroneCount)")
                     .font(.system(.title2, design: .monospaced))
                     .foregroundColor(.blue)
             }
             
-            // Quick stats
             HStack {
                 StatBox(
                     title: "TRACKED",
@@ -176,8 +180,22 @@ struct DronesOverviewCard: View {
                     icon: "location.fill",
                     color: .green
                 )
+                
+                let randomizingCount = cotViewModel.parsedMessages.filter { msg in
+                    !msg.idType.contains("CAA") && // Exclude CAA-only
+                    (cotViewModel.macIdHistory[msg.uid]?.count ?? 0 > 1)
+                }.count
+                
+                if randomizingCount > 0 {
+                    StatBox(
+                        title: "RANDOMIZING",
+                        value: "\(randomizingCount)",
+                        icon: "shuffle",
+                        color: .yellow
+                    )
+                }
             }
-            
+
             // Recent activity list
             if !recentDrones.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
@@ -231,6 +249,14 @@ struct DronesOverviewCard: View {
             return rssi > -70
         }.compactMap { $0.mac })
         return uniqueNearbyMacs.count
+    }
+    
+    private var uniqueDroneCount: Int {
+        // Count unique drones by MAC address, falling back to ID if no MAC
+        let uniqueMacs = Set(cotViewModel.parsedMessages.compactMap { message in
+            message.mac ?? message.uid
+        })
+        return uniqueMacs.count
     }
     
     private var recentDrones: [CoTViewModel.CoTMessage] {

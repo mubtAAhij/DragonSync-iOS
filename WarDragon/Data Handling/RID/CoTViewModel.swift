@@ -14,6 +14,7 @@ import CoreLocation
 class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
     @Published var droneSignatures: [DroneSignature] = []
+    @Published var randomMacIdHistory: [String: Set<String>] = [:]
     private let signatureGenerator = DroneSignatureGenerator()
     private var spectrumViewModel: SpectrumData.SpectrumViewModel?
     private var zmqHandler: ZMQHandler?
@@ -538,6 +539,7 @@ class CoTViewModel: ObservableObject {
             }
         }
     }
+    //MARK: - Message Handling
     
     private func updateStatusMessage(_ message: StatusViewModel.StatusMessage) {
         DispatchQueue.main.async {
@@ -572,7 +574,7 @@ class CoTViewModel: ObservableObject {
                 // Update existing message with same MAC
                 if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
                     var updatedDrone = self.parsedMessages[existingIndex]
-                    updatedDrone.caaRegistration = message.uid
+                    updatedDrone.caaRegistration = message.caaRegistration
                     self.parsedMessages[existingIndex] = updatedDrone
                     self.objectWillChange.send()
                     return
@@ -618,6 +620,18 @@ class CoTViewModel: ObservableObject {
                 print("Added new encounter to storage")
             }
             
+            // Look for MAC randomized drones, keep 5 to display
+            if let mac = mac, !mac.isEmpty {
+                // Track MAC history for this drone ID
+                var macs = self.macIdHistory[droneId] ?? Set<String>()
+                macs.insert(mac)
+                if macs.count > 5 {
+                    macs.remove(macs.first!) // Remove oldest MAC
+                }
+                self.macIdHistory[droneId] = macs
+            }
+            
+            // Update any new message data
             var updatedMessage = message
             updatedMessage.uid = droneId
             updatedMessage.mac = mac

@@ -43,8 +43,8 @@ struct LiveMapView: View {
     private var uniqueDrones: [CoTViewModel.CoTMessage] {
         var latestDronePositions: [String: CoTViewModel.CoTMessage] = [:]
         for message in cotViewModel.parsedMessages {
-            // Only include valid messages with coordinates
-            if let _ = message.coordinate {
+            // Only include valid non-CAA messages with coordinates
+            if !message.idType.contains("CAA"), let _ = message.coordinate {
                 latestDronePositions[message.uid] = message
             }
         }
@@ -115,7 +115,7 @@ struct LiveMapView: View {
         .sheet(isPresented: $showDroneList) {
             NavigationView {
                 List(uniqueDrones) { message in
-                    NavigationLink(destination: DroneDetailView(message: message, flightPath: flightPaths[message.uid]?.map { $0.coordinate } ?? [])) {
+                    NavigationLink(destination: DroneDetailView(message: message, flightPath: flightPaths[message.uid]?.map { $0.coordinate } ?? [], cotViewModel: cotViewModel)) {
                         VStack(alignment: .leading) {
                             Text(message.uid)
                                 .font(.appHeadline)
@@ -128,6 +128,15 @@ struct LiveMapView: View {
                             if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
                                 Text("Pilot: \(message.pilotLat), \(message.pilotLon)")
                                     .font(.appCaption)
+                            }
+                            if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 1 {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.yellow)
+                                    Text("MAC randomizing (\(macs.count))")
+                                        .font(.appCaption)
+                                        .foregroundColor(.yellow)
+                                }
                             }
                         }
                     }
@@ -147,14 +156,18 @@ struct LiveMapView: View {
         .sheet(isPresented: $showDroneDetail) {
             if let drone = selectedDrone {
                 NavigationView {
-                    DroneDetailView(message: drone, flightPath: selectedFlightPath)
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                Button("Done") {
-                                    showDroneDetail = false
-                                }
+                    DroneDetailView(
+                        message: drone,
+                        flightPath: selectedFlightPath,
+                        cotViewModel: cotViewModel
+                    )
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showDroneDetail = false
                             }
                         }
+                    }
                 }
             }
         }

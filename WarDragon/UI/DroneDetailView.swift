@@ -10,11 +10,13 @@ import MapKit
 import CoreLocation
 
 struct DroneDetailView: View {
+    @ObservedObject var cotViewModel: CoTViewModel
     let message: CoTViewModel.CoTMessage
     let flightPath: [CLLocationCoordinate2D]
     @State private var region: MKCoordinateRegion
     
-    init(message: CoTViewModel.CoTMessage, flightPath: [CLLocationCoordinate2D]) {
+    init(message: CoTViewModel.CoTMessage, flightPath: [CLLocationCoordinate2D], cotViewModel: CoTViewModel) {
+        self.cotViewModel = cotViewModel
         self.message = message
         self.flightPath = flightPath
         let lat = Double(message.lat) ?? 0
@@ -66,9 +68,42 @@ struct DroneDetailView: View {
                 .frame(height: 300)
                 .cornerRadius(12)
                 .font(.appDefault)
+                
+                Group {
+                    if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 1 {
+                        SectionHeader(title: "MAC Randomization")
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.yellow)
+                                Text("Device using MAC randomization")
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(.bottom, 4)
+                            
+                            Text("Last seen MACs:")
+                                .font(.appCaption)
+                                .foregroundColor(.secondary)
+                            
+                            ForEach(Array(macs).sorted(), id: \.self) { mac in
+                                HStack {
+                                    Image(systemName: "circle.fill")
+                                        .font(.system(size: 6))
+                                    Text(mac)
+                                        .font(.appCaption)
+                                        .foregroundColor(mac == message.mac ? .primary : .secondary)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .background(Color.yellow.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                }
+                
                 Group {
                     InfoRow(title: "ID", value: message.uid)
-                    if message.caaRegistration != "" {
+                    if message.caaRegistration != nil {
                         InfoRow(title: "CAA Registration", value: message.caaRegistration ?? "")
                     }
                     if !message.description.isEmpty {
@@ -98,16 +133,15 @@ struct DroneDetailView: View {
                     
                 }
                 
-                
                 // Operator Section
                 if message.pilotLat != "0.0" || ((message.operator_id?.isEmpty) == nil) || message.manufacturer != "Unknown"  {
                     Group {
                         if message.manufacturer != "Unknown"  {
-                            InfoRow(title: "Manufacturer", value: message.manufacturer ?? "")
+                            InfoRow(title: "Manufacturer", value: message.manufacturer ?? "Unknown")
                         }
                         SectionHeader(title: "Operator")
-                        if message.operator_id != nil {
-                            InfoRow(title: "ID", value: message.operator_id ?? "")
+                        if message.operator_id != "" {
+                            InfoRow(title: "ID", value: message.operator_id ?? "Unknown")
                         }
                         if message.homeLat != "0.0" {
                             InfoRow(title: "Takeoff Location", value: "\(message.homeLat)/\(message.homeLon)")

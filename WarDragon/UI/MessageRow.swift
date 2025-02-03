@@ -139,6 +139,21 @@ struct MessageRow: View {
                         }
                     }
                     
+                    // MAC randomization indicator
+                    if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 1 {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.yellow)
+                            Text("MAC randomizing")
+                                .font(.appCaption)
+                                .foregroundColor(.yellow)
+                            Text("(\(macs.count) MACs)")
+                                .font(.appCaption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    
                     MapView(message: message)
                         .frame(height: 150)
                         .cornerRadius(10)
@@ -236,7 +251,8 @@ struct MessageRow: View {
                 NavigationView {
                     DroneDetailView(
                         message: message,
-                        flightPath: [] // Single location view doesn't have flight path
+                        flightPath: [], // Single location view doesn't have flight path
+                        cotViewModel: cotViewModel
                     )
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {

@@ -21,8 +21,8 @@ class Config:
 		
 class DroneMessageGenerator:
 	def __init__(self):
-		self.lat_range = (39.724129, 39.764129)
-		self.lon_range = (-105.060828, -104.980828)  
+		self.lat_range = (39.724129, 39.734129)
+		self.lon_range = (-105.060828, -105.080828)  
 		self.msg_index = 0
 		self.start_time = time.time()
 		
@@ -337,13 +337,20 @@ class DroneMessageGenerator:
 	def generate_esp32_format(self):
 		"""Generate a telemetry message in ESP32-compatible format"""
 		now = datetime.now(timezone.utc)
-		latitude = round(random.uniform(*self.lat_range), 6)
-		longitude = round(random.uniform(*self.lon_range), 6)
+		
+		# Get base lat/lon from status message
+		base_lat = round(random.uniform(*self.lat_range), 6)
+		base_lon = round(random.uniform(*self.lon_range), 6)
+	
+		# Add small random variation
+		latitude = round(base_lat + random.uniform(-0.0001, 0.0001), 6)
+		longitude = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
+		homeLat = round(base_lat + random.uniform(-0.0001, 0.0001), 6)
+		homeLon = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
+		
 		speed = round(random.uniform(20, 50), 1)
 		alt = round(random.uniform(50, 400), 1)
 		rssi = random.randint(-90, -40)
-		homeLat = round(random.uniform(*self.lat_range), 6)
-		homeLon = round(random.uniform(*self.lon_range), 6)
 		mac = ':'.join([f'{random.randint(0x00, 0xff):02X}' for _ in range(6)])
 		
 		message = {
