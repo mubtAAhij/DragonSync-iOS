@@ -64,12 +64,10 @@
 The app supports two connection formats:
 
 > **ZMQ Server (JSON)**
-> - Easy setup with direct ZMQ connection and minimal configuration.
-Requires conversion for ATAK integration.
+> - Includes all data available. Easy setup with direct ZMQ connection and minimal configuration. ***Recommended***
 
 > **Multicast (CoT)**
-> - CoT feeds ATAK directly.
-Needs additional script running and network setup for multicast.
+> - Limited data compared to ZMQ. Needs additional script running and network setup for multicast. Supports multiple sources at once on same network. 
 
 **Using WarDragon Direct ZMQ**
 - Ensure that your device is connected to the same network as your WarDragon or host system.
