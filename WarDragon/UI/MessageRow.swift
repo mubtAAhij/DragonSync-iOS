@@ -136,6 +136,9 @@ struct MessageRow: View {
                             Label("\(Int(mRSSI ?? 0.0))dBm", systemImage: "antenna.radiowaves.left.and.right")
                                 .font(.appCaption)
                                 .foregroundColor(rssiColor(mRSSI ?? 0.0))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                                .background(rssiColor(mRSSI ?? 0.0).opacity(0.1))
                         }
                     }
                     
@@ -147,7 +150,7 @@ struct MessageRow: View {
                                 .foregroundColor(.yellow)
                             Text("MAC randomizing")
                                 .font(.appCaption)
-                                .foregroundColor(.yellow)
+                                .foregroundColor(.secondary)
                             Text("(\(macCount > 10 ? "10+" : String(macCount)) MACs)")
                                 .font(.appCaption)
                                 .foregroundColor(.secondary)
@@ -157,6 +160,9 @@ struct MessageRow: View {
                                     .help("Random MAC addresses detected")
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 4)
+                        .background(Color.yellow.opacity(0.1))
                     }
                     
                     
