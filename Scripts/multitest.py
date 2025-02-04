@@ -21,8 +21,8 @@ class Config:
 		
 class DroneMessageGenerator:
 	def __init__(self):
-		self.lat_range = (39.724129, 39.764129)
-		self.lon_range = (-105.060828, -104.980828)  
+		self.lat_range = (39.724129, 39.734129)
+		self.lon_range = (-105.060828, -105.080828)  
 		self.msg_index = 0
 		self.start_time = time.time()
 		
@@ -321,7 +321,7 @@ class DroneMessageGenerator:
 		id_type = "Serial Number (ANSI/CTA-2063-A)"
 		
 		return f"""
-		<event version="2.0" uid="drone-{desc.split()[-1]}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
+		<event version="2.0" uid="112624150A" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
 			<point lat="{lat:.6f}" lon="{lon:.6f}" hae="{alt:.1f}" ce="35.0" le="999999"/>
 			<detail>
 				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Self-ID: {desc}, Location/Vector: [Speed: {speed:.1f} m/s, Vert Speed: {vspeed:.1f} m/s, Geodetic Altitude: {alt:.1f} m, Height AGL: {height_agl:.1f} m], System: [Operator Lat: {operator_lat:.6f}, Operator Lon: {operator_lon:.6f}, Home Lat: {homeLat:.6f}, Home Lon: {homeLon:.6f}]</remarks>
@@ -337,25 +337,32 @@ class DroneMessageGenerator:
 	def generate_esp32_format(self):
 		"""Generate a telemetry message in ESP32-compatible format"""
 		now = datetime.now(timezone.utc)
-		latitude = round(random.uniform(*self.lat_range), 6)
-		longitude = round(random.uniform(*self.lon_range), 6)
+		
+		# Get base lat/lon from status message
+		base_lat = round(random.uniform(*self.lat_range), 6)
+		base_lon = round(random.uniform(*self.lon_range), 6)
+	
+		# Add small random variation
+		latitude = round(base_lat + random.uniform(-0.0001, 0.0001), 6)
+		longitude = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
+		homeLat = round(base_lat + random.uniform(-0.0001, 0.0001), 6)
+		homeLon = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
+		
 		speed = round(random.uniform(20, 50), 1)
 		alt = round(random.uniform(50, 400), 1)
 		rssi = random.randint(-90, -40)
-		homeLat = round(random.uniform(*self.lat_range), 6)
-		homeLon = round(random.uniform(*self.lon_range), 6)
 		mac = ':'.join([f'{random.randint(0x00, 0xff):02X}' for _ in range(6)])
 		
 		message = {
 			"index": 57,
 			"runtime": 11,
 			"Basic ID": {
-				"id": "112624150A90E3AE1EC0",
-				"id_type": "Serial Number (ANSI/CTA-2063-A)",
-#				"id_type": "CAA Assigned Registration ID",
-#				"id": "112624150A",
+#				"id": "112624150A90E3AE1EC0",
+#				"id_type": "Serial Number (ANSI/CTA-2063-A)",
+				"id_type": "CAA Assigned Registration ID",
+				"id": "112624150A",
 				"ua_type": 0,
-				"MAC": "18:65:6A:00:4B:5B",
+				"MAC": mac,
 				"RSSI": rssi
 			},
 			"Location/Vector Message": {

@@ -17,6 +17,7 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
     var lastSeen: Date
     var signatures: [SignatureData]
     var metadata: [String: String]
+    var macHistory: Set<String>
     private var _flightPath: [FlightPathPoint]
     
     // Computed property for flight path
@@ -30,13 +31,14 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
     }
     
     // Initialize with private flight path
-    init(id: String, firstSeen: Date, lastSeen: Date, flightPath: [FlightPathPoint], signatures: [SignatureData], metadata: [String: String]) {
+    init(id: String, firstSeen: Date, lastSeen: Date, flightPath: [FlightPathPoint], signatures: [SignatureData], metadata: [String: String], macHistory: Set<String>) {
         self.id = id
         self.firstSeen = firstSeen
         self.lastSeen = lastSeen
         self._flightPath = flightPath
         self.signatures = signatures
         self.metadata = metadata
+        self.macHistory = macHistory
     }
     
     var maxAltitude: Double {
@@ -159,13 +161,26 @@ class DroneStorageManager: ObservableObject {
     
     func saveEncounter(_ message: CoTViewModel.CoTMessage) {
         let droneId = message.uid
+        
+        // If this is a CAA ID, look for existing encounter with same MAC
+        if message.idType.contains("CAA"),
+           let mac = message.mac,
+           let existingId = encounters.first(where: { $0.value.metadata["mac"] == mac })?.key {
+            var encounter = encounters[existingId]!
+            encounter.lastSeen = Date()
+            encounter.metadata["caaRegistration"] = message.uid
+            encounters[existingId] = encounter
+            return
+        }
+        
         var encounter = encounters[droneId] ?? DroneEncounter(
             id: droneId,
             firstSeen: Date(),
             lastSeen: Date(),
             flightPath: [],
             signatures: [],
-            metadata: [:]
+            metadata: [:],
+            macHistory: []
         )
 
         encounter.lastSeen = Date()
@@ -180,6 +195,12 @@ class DroneStorageManager: ObservableObject {
             homeLongitude: Double(message.homeLon)
         )
         encounter.flightPath.append(point)
+        
+        // Update randomized macs
+        if let mac = message.mac {
+            encounter.macHistory.insert(mac)
+        }
+
 
         // Add signature data
         let sig = SignatureData(

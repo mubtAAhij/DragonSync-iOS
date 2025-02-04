@@ -60,7 +60,7 @@ struct SpectrumData: Codable, Identifiable {
             let parameters = NWParameters.udp
             parameters.allowLocalEndpointReuse = true
             parameters.prohibitedInterfaceTypes = [.cellular]
-//            parameters.requiredInterfaceType = .wifi
+            parameters.requiredInterfaceType = .wifi
             
             connection = NWConnection(
                 to: NWEndpoint.hostPort(
