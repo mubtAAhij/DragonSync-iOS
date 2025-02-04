@@ -286,6 +286,13 @@ class ZMQHandler: ObservableObject {
         let homeLat = system?["home_lat"] as? Double ?? 0.0
         let homeLon = system?["home_lon"] as? Double ?? 0.0
         
+        // Extract operator ID from both possible sources
+        var opID = (system?["operator_id"] as? String) ?? (operatorId?["operator_id"] as? String) ?? ""
+        
+        // Handle weird multicast output
+        if opID == "Terminator0x00" {
+            opID = "N/A"
+        }
         guard let basicId = basicId else {
             print("No Basic ID found")
             return nil
@@ -328,7 +335,7 @@ class ZMQHandler: ObservableObject {
         let pressure_altitude = formatDoubleValue(location?["pressure_altitude"])
         let speed_multiplier = formatDoubleValue(location?["speed_multiplier"])
         
-        // 4. Protocol specific handling
+        // Protocol specific handling
         let protocol_version = location?["protocol_version"] as? String ?? mProtocol
         let op_status = location?["op_status"] as? String ?? ""
         let height_type = location?["height_type"] as? String ?? ""
@@ -345,7 +352,7 @@ class ZMQHandler: ObservableObject {
         let speed_acc = location?["speed_acc"] as? Int ?? 0
         let timestamp = location?["timestamp"] as? Int ?? 0
         
-        // 3. System Message Fields - check all possible field names
+        // System Message Fields - check all possible field names
         let operator_lat = formatDoubleValue(system?["operator_lat"]) != "0.0" ?
         formatDoubleValue(system?["operator_lat"]) :
         formatDoubleValue(system?["latitude"])
@@ -365,15 +372,7 @@ class ZMQHandler: ObservableObject {
         var sequenceId: Int?
         var advAddress: String?
         
-        // Operator ID Message
-        var opID = ""
-        if let operatorId = operatorId {
-            opID = operatorId["operator_id"] as? String ?? ""
-            if opID == "Terminator0x00" {
-                opID = "N/A"
-            }
-        }
-        
+      
         var manufacturer = "Unknown"
         if let aext = jsonObject["aext"] as? [String: Any],
            let advInfo = aext["AdvDataInfo"] as? [String: Any],
@@ -424,17 +423,17 @@ class ZMQHandler: ObservableObject {
         let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
         
         return """
-        <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
-            <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
-            <detail>
-                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, CAA: \(caaReg), ID Type: \(idType), UA Type: \(uaType), Manufacturer: \(manufacturer), Channel: \(String(describing: channel)), PHY: \(String(describing: phy)), Operator ID: \(opID), Access Address: \(String(describing: accessAddress)), Advertisement Mode: \(String(describing: advMode)), Device ID: \(String(describing: deviceId)), Sequence ID: \(String(describing: sequenceId)), Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Location/Vector: [Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Altitude \(operator_alt_geo) m, Classification: \(classification), Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc)], Text: \(selfIDtext), Description: \(desc), System: [Operator Lat: \(operator_lat), Operator Lon: \(operator_lon), Home Lat: \(homeLat), Home Lon: \(homeLon)]</remarks>
-                <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
-                <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
-                <color argb="-256"/>
-                <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
-            </detail>
-        </event>
-        """
+                <event version="2.0" uid="drone-\(droneId)" type="a-f-G-U-C" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
+                    <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
+                    <detail>
+                        <remarks>MAC: \(mac), RSSI: \(rssi)dBm, CAA: \(caaReg), ID Type: \(idType), UA Type: \(uaType), Manufacturer: \(manufacturer), Channel: \(String(describing: channel)), PHY: \(String(describing: phy)), Operator ID: \(opID), Access Address: \(String(describing: accessAddress)), Advertisement Mode: \(String(describing: advMode)), Device ID: \(String(describing: deviceId)), Sequence ID: \(String(describing: sequenceId)), Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Location/Vector: [Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Altitude \(operator_alt_geo) m, Classification: \(classification), Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc)], Text: \(selfIDtext), Description: \(desc), System: [Operator Lat: \(operator_lat), Operator Lon: \(operator_lon), Home Lat: \(homeLat), Home Lon: \(homeLon)]</remarks>
+                        <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
+                        <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
+                        <color argb="-256"/>
+                        <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
+                    </detail>
+                </event>
+                """
     }
     
     private func formatDoubleValue(_ value: Any?) -> String {
@@ -472,7 +471,6 @@ class ZMQHandler: ObservableObject {
                 break
             }
         }
-        
         // Collect other messages
         for obj in jsonArray {
             if let locationMsg = obj["Location/Vector Message"] as? [String: Any] { location = locationMsg }

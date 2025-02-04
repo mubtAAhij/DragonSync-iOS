@@ -171,6 +171,14 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 droneData["description"] = selfId["description"]
                 droneData["text"] = selfId["text"]
             }
+            
+            if let operatorId = message["Operator ID Message"] as? [String: Any] {
+                droneData["operator_id"] = operatorId["operator_id"]
+                droneData["operator_id_type"] = operatorId["operator_id_type"]
+                if let protocolVersion = operatorId["protocol_version"] {
+                    droneData["operator_protocol_version"] = protocolVersion
+                }
+            }
         }
         
         if let basicId = droneData["id"] as? String {
@@ -234,6 +242,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             let location = jsonData["Location/Vector Message"] as? [String: Any]
             let system = jsonData["System Message"] as? [String: Any]
             let selfId = jsonData["Self-ID Message"] as? [String: Any]
+            let operatorID = jsonData["Operator ID Message"] as? [String: Any]
             
             // Get MAC from all possible sources
             var mac = basicId["MAC"] as? String ?? ""
@@ -273,9 +282,15 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 }
             }
             
-            // Skip if "None" Registration ID
-            if idType == "None" {
-                print("Skipping message with ID type: \(idType)")
+            // Get operator info
+            var opID = operatorID?["operator_id"] as? String ?? ""
+            var opIDType = operatorID?["operator_id_type"] as? String ?? ""
+            var opProtocol = operatorID?["protocol_version"] as? String ?? ""
+            
+            
+            // Skip if "None" Registration ID or blank multicast
+            if idType == "None" || id == "drone-" {
+                print("Skipping message with ID: \(id) and type \(idType)")
                 return nil
             }
             
@@ -312,8 +327,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 speed_accuracy: location?["speed_accuracy"] as? String,
                 timestamp: location?["timestamp"] as? String,
                 timestamp_accuracy: location?["timestamp_accuracy"] as? String,
-                operator_id: (jsonData["Operator ID Message"] as? [String: Any])?["operator_id"] as? String,
-                operator_id_type: (jsonData["Operator ID Message"] as? [String: Any])?["operator_id_type"] as? String,
+                operator_id: opID,
+                operator_id_type: opIDType,
                 rawMessage: jsonData
             )
         }
