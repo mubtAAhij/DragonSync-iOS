@@ -64,24 +64,24 @@
 The app supports two connection formats:
 
 > **ZMQ Server (JSON)**
-> - Includes all data available. Easy setup with direct ZMQ connection and minimal configuration. ***Recommended***
+> - ***Recommended*** Includes all data available. Easy setup with direct ZMQ connection and minimal configuration. 
 
 > **Multicast (CoT)**
-> - Limited data compared to ZMQ. Needs additional script running and network setup for multicast. Supports multiple sources at once on same network. 
+> - ***Experimental*** Limited data compared to ZMQ. Lacks data needed for ID Type and many other features. Needs additional script running and network setup for multicast. Supports multiple sources at once on same network. 
 
-**Using WarDragon Direct ZMQ**
+**Using Direct ZMQ**
 - Ensure that your device is connected to the same network as your WarDragon or host system.
 - Launch the app & choose ZMQ from settings 
-- Tap the address and enter the IP of the WarDragon (use `arp -a` for example)
-- Start the listener & status and drone detection will happen automatically. 
+- Tap the address and enter the IP of the WarDragon or host system
+    -  If not using WarDragon, start the `zmq_decoder`, WiFi/BT sniffer, and `wardragon_monitor` scripts from the [DroneID](https://github.com/alphafox02/DroneID) and [DragonSync](https://github.com/alphafox02/DragonSync) repos
+- Start the listener
+- Status and drone detection will happen automatically for WarDragon. 
 
-**Multicast**
-- Start dragonsync.py and wardragon-monitor.py from the DragonSync repo.
-- From the DroneId repo start zmq_decoder.py and WiFi/BT sniffer. 
+**Multicast: CoT Data Only**
+- Start `dragonsync.py` and `wardragon-monitor.py` from the DragonSync repo.
+- From the DroneId repo start `zmq_decoder.py` and WiFi/BT sniffer. 
 
-(Default multicast address is pre-configured for `dragonsync.py`, adjust per network requirements.)
-
-  _**Refer to [dragonsync.py](https://github.com/alphafox02/DragonSync) for detailed instructions & commands**_
+> *Refer to [dragonsync.py](https://github.com/alphafox02/DragonSync) for detailed instructions & commands*
 
   
 ### Detection
