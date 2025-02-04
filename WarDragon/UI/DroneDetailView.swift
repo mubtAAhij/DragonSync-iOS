@@ -95,6 +95,7 @@ struct DroneDetailView: View {
                                 }
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 4)
                         .background(Color.yellow.opacity(0.1))
                         .cornerRadius(8)

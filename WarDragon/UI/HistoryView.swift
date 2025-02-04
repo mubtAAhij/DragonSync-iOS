@@ -21,11 +21,18 @@ struct StoredEncountersView: View {
     }
     
     var sortedEncounters: [DroneEncounter] {
-        let filtered = storage.encounters.values.filter { encounter in
-            (!(encounter.metadata["idType"]?.contains("CAA") ?? false)) &&
-            (searchText.isEmpty ||
-             encounter.id.localizedCaseInsensitiveContains(searchText) ||
-             encounter.metadata["caaRegistration"]?.localizedCaseInsensitiveContains(searchText) ?? false)
+        // Get unique drones by MAC, falling back to ID
+        let uniqueEncounters = Dictionary(grouping: storage.encounters.values) { encounter in
+            encounter.metadata["mac"] ?? encounter.id
+        }.values.map { encounters in
+            encounters.max { $0.lastSeen < $1.lastSeen }!
+        }
+        
+        // CAA ID handler
+        let filtered = uniqueEncounters.filter { encounter in
+            searchText.isEmpty ||
+            encounter.id.localizedCaseInsensitiveContains(searchText) ||
+            encounter.metadata["caaRegistration"]?.localizedCaseInsensitiveContains(searchText) ?? false
         }
         
         return filtered.sorted { first, second in

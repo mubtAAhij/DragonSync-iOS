@@ -140,16 +140,22 @@ struct MessageRow: View {
                     }
                     
                     // MAC randomization indicator
-                    if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 1 {
+                    if let macs = cotViewModel.macIdHistory[message.uid] {
+                        let macCount = macs.count
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.yellow)
                             Text("MAC randomizing")
                                 .font(.appCaption)
                                 .foregroundColor(.yellow)
-                            Text("(\(macs.count) MACs)")
+                            Text("(\(macCount > 10 ? "10+" : String(macCount)) MACs)")
                                 .font(.appCaption)
                                 .foregroundColor(.secondary)
+                            if cotViewModel.macProcessing[message.uid] == true {
+                                Image(systemName: "shield.lefthalf.filled")
+                                    .foregroundColor(.yellow)
+                                    .help("Random MAC addresses detected")
+                            }
                         }
                     }
                     

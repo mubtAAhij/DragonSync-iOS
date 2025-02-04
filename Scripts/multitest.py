@@ -357,10 +357,10 @@ class DroneMessageGenerator:
 			"index": 57,
 			"runtime": 11,
 			"Basic ID": {
-#				"id": "112624150A90E3AE1EC0",
-#				"id_type": "Serial Number (ANSI/CTA-2063-A)",
-				"id_type": "CAA Assigned Registration ID",
-				"id": "112624150A",
+				"id": "112624150A90E3AE1EC0",
+				"id_type": "Serial Number (ANSI/CTA-2063-A)",
+#				"id_type": "CAA Assigned Registration ID",
+#				"id": "112624150A",
 				"ua_type": 0,
 				"MAC": mac,
 				"RSSI": rssi
@@ -384,8 +384,7 @@ class DroneMessageGenerator:
 				"horiz_acc": 10,
 				"vert_acc": 4,
 				"baro_acc": 6,
-				"speed_acc": 3,
-				"timestamp": 360
+				"speed_acc": 3
 			},
 			"Self-ID Message": {
 				"text": "UAV 8c:17:59:f5:95:65 operational",
@@ -397,6 +396,7 @@ class DroneMessageGenerator:
 				"longitude": -145.0013,
 				"operator_lat": 51.4391,
 				"operator_lon": -145.0113,
+				"operator_id": "NotMe",
 				"home_lat": homeLat,
 				"home_lon": homeLon,
 #				"area_count": 1,
@@ -407,13 +407,18 @@ class DroneMessageGenerator:
 				"classification": 1,
 				"timestamp": 28056789
 			},
-			"Auth Message": {
-				"type": 1,
-				"page": 0,
-				"length": 63,
-				"timestamp": 28000000,
-				"data": "12345678901234567"
+			"Operator ID Message": {
+				"protocol_version": "F3411.22",
+				"operator_id_type": "Operator ID",
+				"operator_id": "NotMe"
 			}
+#			"Auth Message": {
+##				"type": 1,
+##				"page": 0,
+##				"length": 63,
+##				"timestamp": 28000000,
+#				"data": "12345678901234567"
+#			}
 		}
 		
 		return json.dumps(message, indent=4)

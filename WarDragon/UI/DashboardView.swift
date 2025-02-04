@@ -134,16 +134,17 @@ struct SystemStatusCard: View {
         return .green
     }
     
-    // Additional color computation vars...
+    // Additional color comps TODO: adjust these to be less scary
 }
 
 struct DronesOverviewCard: View {
     @ObservedObject var cotViewModel: CoTViewModel
     
     private var activeDroneCount: Int {
-        cotViewModel.parsedMessages.filter { message in
-            !message.idType.contains("CAA") && message.mac != nil
-        }.count
+        let uniqueMacs = Set(cotViewModel.parsedMessages.compactMap { message in
+            message.mac ?? message.uid
+        })
+        return uniqueMacs.count
     }
     
     var body: some View {
@@ -249,14 +250,6 @@ struct DronesOverviewCard: View {
             return rssi > -70
         }.compactMap { $0.mac })
         return uniqueNearbyMacs.count
-    }
-    
-    private var uniqueDroneCount: Int {
-        // Count unique drones by MAC address, falling back to ID if no MAC
-        let uniqueMacs = Set(cotViewModel.parsedMessages.compactMap { message in
-            message.mac ?? message.uid
-        })
-        return uniqueMacs.count
     }
     
     private var recentDrones: [CoTViewModel.CoTMessage] {

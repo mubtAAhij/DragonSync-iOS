@@ -267,7 +267,7 @@ public final class DroneSignatureGenerator {
         var confidenceScore = 0.0
         
         // Get RSSI from signature
-        guard let rssi = signature.transmissionInfo.signalStrength else {
+        guard signature.transmissionInfo.signalStrength != nil else {
             return nil  // Need RSSI for spoof detection
         }
         
