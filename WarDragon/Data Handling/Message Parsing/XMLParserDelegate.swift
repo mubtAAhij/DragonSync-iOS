@@ -573,10 +573,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 mac = trimmed.dropFirst(4).trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first
             } else if trimmed.hasPrefix("RSSI:") {
                 rssi = Int(trimmed.dropFirst(5).replacingOccurrences(of: "dBm", with: "").trimmingCharacters(in: .whitespaces))
-            } else if trimmed.hasPrefix("CAA:") {
-                caaReg = trimmed.dropFirst(4).trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first
             } else if trimmed.hasPrefix("ID Type:") {
-                idRegType = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first
+                idRegType = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
+                if idRegType?.contains("CAA") == true {
+                    if let droneId = eventAttributes["uid"] {
+                        caaReg = droneId.replacingOccurrences(of: "drone-", with: "")
+                    }
+                }
             } else if trimmed.hasPrefix("Channel:") {
                 channel = Int(trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces))
             } else if trimmed.hasPrefix("PHY:") {
