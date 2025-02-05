@@ -15,7 +15,7 @@
                         <rect key="frame" x="0.0" y="0.0" width="402" height="874"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" alpha="0.20000000000000001" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="WickedDragon" translatesAutoresizingMaskIntoConstraints="NO" id="pYY-tY-Eh3">
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" alpha="0.10000000000000001" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="WickedDragon" translatesAutoresizingMaskIntoConstraints="NO" id="pYY-tY-Eh3">
                                 <rect key="frame" x="-55.666666666666657" y="144.33333333333331" width="513.33333333333337" height="600.33333333333348"/>
                                 <constraints>
                                     <constraint firstAttribute="width" secondItem="pYY-tY-Eh3" secondAttribute="height" multiplier="253:296" id="ArC-Dt-W9j"/>
@@ -38,7 +38,7 @@
                                 <constraints>
                                     <constraint firstAttribute="height" constant="78.666666666666686" id="YTH-oh-k81"/>
                                 </constraints>
-                                <fontDescription key="fontDescription" name="NotoSansMyanmar-Regular" family="Noto Sans Myanmar" pointSize="40"/>
+                                <fontDescription key="fontDescription" name="PingFangTC-Thin" family="PingFang TC" pointSize="40"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>

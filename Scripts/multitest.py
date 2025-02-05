@@ -271,6 +271,12 @@ class DroneMessageGenerator:
 		lat = center_lat + radius_lat * math.sin(t)
 		lon = center_lon + radius_lon * math.sin(t * 2)
 		
+		# Calculate exact distance between monitor and drone
+		distance = math.sqrt((lat - center_lat)**2 + (lon - center_lon)**2) * 111000  # Meters
+		
+		# Calculate RSSI that perfectly matches this distance  
+		rssi = -40 - int(20 * math.log10(distance))
+		
 		# Home position stays fixed
 		homeLat = center_lat 
 		homeLon = center_lon
@@ -290,7 +296,7 @@ class DroneMessageGenerator:
 		
 		# Fixed values
 #		mac = "E0:4E:7A:9A:67:99"
-		rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
+#		rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
 		protocol_version = "1.0"
 		desc = f"Test Drone DRONE{100}"
 		height_type = "AGL"
@@ -343,7 +349,7 @@ class DroneMessageGenerator:
 		base_lon = round(random.uniform(*self.lon_range), 6)
 	
 		# Add small random variation
-		latitude = round(base_lat + random.uniform(-0.0001, 0.0001), 6)
+		latitude = round(base_lat + random.uniform(-0.0004, 0.0004), 6)
 		longitude = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
 		homeLat = round(base_lat + random.uniform(-0.0001, 0.0001), 6)
 		homeLon = round(base_lon + random.uniform(-0.0001, 0.0001), 6)

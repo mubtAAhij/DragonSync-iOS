@@ -282,6 +282,7 @@ struct StoredEncountersView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("ENCOUNTER STATS")
                     .font(.appHeadline)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 
                 StatsGrid {
                     StatItem(title: "Duration", value: formatDuration(encounter.totalFlightTime))
@@ -321,12 +322,15 @@ struct StoredEncountersView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("FLIGHT DATA")
                     .font(.appHeadline)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 20) {
+                        Spacer()
                         FlightDataChart(title: "Altitude", data: encounter.flightPath.map { $0.altitude })
                         FlightDataChart(title: "Speed", data: encounter.signatures.map { $0.speed })
                         FlightDataChart(title: "RSSI", data: encounter.signatures.map { $0.rssi })
+                        Spacer()
                     }
                 }
             }
@@ -334,6 +338,7 @@ struct StoredEncountersView: View {
             .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(12)
         }
+
     }
     
     struct StatsGrid<Content: View>: View {
