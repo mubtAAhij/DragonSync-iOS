@@ -139,19 +139,19 @@ struct StoredEncountersView: View {
             }
             .padding(.vertical, 4)
             
-            if !encounter.macHistory.isEmpty && encounter.macHistory.count > 1 {
-                VStack(alignment: .leading) {
-                    Text("MAC RANDOMIZATION")
-                        .font(.appHeadline)
-                    ForEach(Array(encounter.macHistory).sorted(), id: \.self) { mac in
-                        Text(mac)
-                            .font(.appCaption)
-                    }
-                }
-                .padding()
-                .background(Color.yellow.opacity(0.1))
-                .cornerRadius(12)
-            }
+//            if !encounter.macHistory.isEmpty && encounter.macHistory.count > 1 {
+//                VStack(alignment: .leading) {
+//                    Text("MAC RANDOMIZATION")
+//                        .font(.appHeadline)
+//                    ForEach(Array(encounter.macHistory).sorted(), id: \.self) { mac in
+//                        Text(mac)
+//                            .font(.appCaption)
+//                    }
+//                }
+//                .padding()
+//                .background(Color.yellow.opacity(0.1))
+//                .cornerRadius(12)
+//            }
         }
         
         private func formatDuration(_ time: TimeInterval) -> String {
