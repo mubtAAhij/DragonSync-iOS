@@ -17,15 +17,15 @@ struct StatusListView: View {
             ScrollViewReader { proxy in
                 List {
                     // Service Status Widget
-                    Section {
-                        ServiceStatusWidget(
-                            healthReport: serviceViewModel.healthReport,
-                            criticalServices: serviceViewModel.criticalServices(),
-                            showServiceManagement: $showServiceManagement
-                        )
-                    }
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+//                    Section {
+//                        ServiceStatusWidget(
+//                            healthReport: serviceViewModel.healthReport,
+//                            criticalServices: serviceViewModel.criticalServices(),
+//                            showServiceManagement: $showServiceManagement
+//                        )
+//                    }
+//                    .listRowInsets(EdgeInsets())
+//                    .listRowBackground(Color.clear)
                     
                     // System status messages
                     Section {
@@ -84,7 +84,7 @@ struct ServiceStatusWidget: View {
     
     var body: some View {
         Button(action: { showServiceManagement = true }) {
-            VStack(spacing: 12) {
+            VStack(spacing: 4) {
                 // Health Status Bar
 //                HStack(spacing: 12) {
 //                    Circle()
