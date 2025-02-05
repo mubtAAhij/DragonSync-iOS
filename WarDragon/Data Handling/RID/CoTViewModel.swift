@@ -32,7 +32,7 @@ class CoTViewModel: ObservableObject {
     private var lastNotificationTime: Date?
     private var macToCAA: [String: String] = [:]
     private var macToHomeLoc: [String: (lat: Double, lon: Double)] = [:]
-
+    
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
@@ -262,7 +262,7 @@ class CoTViewModel: ObservableObject {
                 "type": self.type,
                 "lat": self.lat,
                 "lon": self.lon,
-                "latitude": self.lon,
+                "latitude": self.lat,
                 "longitude": self.lon,
                 "speed": self.speed,
                 "vspeed": self.vspeed,
@@ -610,13 +610,26 @@ class CoTViewModel: ObservableObject {
             self.updateMACHistory(droneId: droneId, mac: mac)
             
             // Spoof detection
-            self.performSpoofDetection(signature: signature, updatedMessage: &updatedMessage)
+            if Settings.shared.spoofDetectionEnabled,
+               let monitorStatus = self.statusViewModel.statusMessages.last,
+               let spoofResult = self.signatureGenerator.detectSpoof(signature, fromMonitor: monitorStatus) {
+                updatedMessage.isSpoofed = spoofResult.isSpoofed
+                updatedMessage.spoofingDetails = spoofResult
+            }
+            
+            if let status = self.statusViewModel.statusMessages.last {
+                let monitorLoc = CLLocation(
+                    latitude: status.gpsData.latitude,
+                    longitude: status.gpsData.longitude
+                )
+                self.signatureGenerator.updateMonitorLocation(monitorLoc)
+            }
             
             // Core message update logic
             self.updateParsedMessages(updatedMessage: updatedMessage, signature: signature)
         }
     }
-
+    
     private func updateDroneSignaturesAndEncounters(_ signature: DroneSignature, message: CoTMessage) {
         // Update drone signatures
         if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
@@ -644,7 +657,7 @@ class CoTViewModel: ObservableObject {
             print("Added new encounter to storage")
         }
     }
-
+    
     private func updateMACHistory(droneId: String, mac: String?) {
         guard let mac = mac, !mac.isEmpty else { return }
         
@@ -662,26 +675,7 @@ class CoTViewModel: ObservableObject {
             macProcessing[droneId] = true
         }
     }
-
-    private func performSpoofDetection(signature: DroneSignature, updatedMessage: inout CoTMessage) {
-        guard Settings.shared.spoofDetectionEnabled,
-              let monitorStatus = self.statusViewModel.statusMessages.last,
-              let spoofResult = self.signatureGenerator.detectSpoof(signature, fromMonitor: monitorStatus) else {
-            return
-        }
-        
-        updatedMessage.isSpoofed = spoofResult.isSpoofed
-        updatedMessage.spoofingDetails = spoofResult
-        
-        if let status = self.statusViewModel.statusMessages.last {
-            let monitorLoc = CLLocation(
-                latitude: status.gpsData.latitude,
-                longitude: status.gpsData.longitude
-            )
-            self.signatureGenerator.updateMonitorLocation(monitorLoc)
-        }
-    }
-
+    
     private func updateParsedMessages(updatedMessage: CoTMessage, signature: DroneSignature) {
         // Single check for existing message by MAC or UID
         if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == updatedMessage.mac || $0.uid == updatedMessage.uid }) {
@@ -703,6 +697,8 @@ class CoTViewModel: ObservableObject {
                 existingMessage.height_type = updatedMessage.height_type
                 existingMessage.direction = updatedMessage.direction
                 existingMessage.mac = existingMessage.mac ?? updatedMessage.mac
+                existingMessage.isSpoofed = updatedMessage.isSpoofed
+                existingMessage.spoofingDetails = updatedMessage.spoofingDetails
             }
             
             self.parsedMessages[existingIndex] = existingMessage
@@ -715,7 +711,7 @@ class CoTViewModel: ObservableObject {
             }
         }
     }
-
+    
     private func handleCAAMessage(_ message: CoTMessage) {
         // Special handling for CAA messages that don't generate a signature
         if let mac = message.mac {
