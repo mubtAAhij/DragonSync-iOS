@@ -50,7 +50,7 @@
 - [DroneID](https://github.com/alphafox02/DroneID)
 - [DragonSync Python](https://github.com/alphafox02/DragonSync)
 - [DJI Firmware - E200](https://github.com/alphafox02/antsdr_dji_droneid)
-- [DJI Firmware - ESP32](https://github.com/alphafox02/T-Halow/tree/wifi_rid/examples/DragonOS_RID_Scanner)
+- [WiFi Remote ID Firmware - ESP32](https://github.com/alphafox02/T-Halow/tree/wifi_rid/examples/DragonOS_RID_Scanner)
 
 
 ## Usage
