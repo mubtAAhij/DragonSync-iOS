@@ -328,7 +328,7 @@ public final class DroneSignatureGenerator {
             isSpoofed: confidenceScore > 0.6,
             confidence: confidenceScore,
             reasons: reasons,
-            expectedRssi: expectedRssi ?? 0.0,
+            expectedRssi: expectedRssi,
             actualRssi: rssi,
             distance: distance
         )
@@ -600,8 +600,6 @@ public final class DroneSignatureGenerator {
     }
     
     private func extractPositionInfo(_ message: [String: Any]) -> DroneSignature.PositionInfo {
-        let system = message["System Message"] as? [String: Any] ?? [:]
-        let location = message["Location/Vector Message"] as? [String: Any] ?? [:]
         
         var lat = 0.0
         var lon = 0.0
@@ -725,8 +723,8 @@ public final class DroneSignatureGenerator {
                 print("DEBUG extractTransmissionInfo Distance: \(distance) meters")
                 print("DEBUG extractTransmissionInfo Lat/Lon: \(lat), \(lon)")
                 print("DEBUG extractTransmissionInfo Monitor Location: \(monitorLoc.coordinate.latitude), \(monitorLoc.coordinate.longitude)")
-                print("DEBUG extractTransmissionInfo  Actual RSSI: \(signalStrength))")
-                print("DEBUG extractTransmissionInfo Expected RSSI: \(expectedSignalStrength))")
+                print("DEBUG extractTransmissionInfo  Actual RSSI: \(String(describing: signalStrength)))")
+                print("DEBUG extractTransmissionInfo Expected RSSI: \(String(describing: expectedSignalStrength)))")
             } else {
                 // Don't print error - just skip expected signal calculation if no monitor location
                 expectedSignalStrength = nil

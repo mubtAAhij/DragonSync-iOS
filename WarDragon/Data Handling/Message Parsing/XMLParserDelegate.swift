@@ -283,9 +283,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             }
             
             // Get operator info
-            var opID = operatorID?["operator_id"] as? String ?? ""
-            var opIDType = operatorID?["operator_id_type"] as? String ?? ""
-            var opProtocol = operatorID?["protocol_version"] as? String ?? ""
+            let opID = operatorID?["operator_id"] as? String ?? ""
+            let opIDType = operatorID?["operator_id_type"] as? String ?? ""
+            _ = operatorID?["protocol_version"] as? String ?? ""
             
             
             // Skip if "None" Registration ID or blank multicast
@@ -954,7 +954,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 let id = eventAttributes["uid"] ?? ""
                 let droneId = id.hasPrefix("drone-") ? id : "drone-\(id)"
                 
-                var mac = eventAttributes["MAC"] ?? ""
+                let mac = eventAttributes["MAC"] ?? ""
                 var manufacturer = "Unknown"
                 
                 if !mac.isEmpty {
