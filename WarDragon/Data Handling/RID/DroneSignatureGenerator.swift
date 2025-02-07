@@ -282,7 +282,7 @@ public final class DroneSignatureGenerator {
         
         if rssiDelta > 15 {
             reasons.append(String(format: "Signal strength deviation: %.1f dB", rssiDelta))
-            confidenceScore += min(rssiDelta / 30.0, 0.4)
+            confidenceScore += 0.2 // lose the signal based confidence
         }
         
         // Check for impossible speeds
@@ -290,7 +290,7 @@ public final class DroneSignatureGenerator {
             let speeds = calculateSpeedsBetweenPoints(history.signatures)
             if let maxSpeed = speeds.max(), maxSpeed > 100 {
                 reasons.append(String(format: "Unrealistic speed: %.1f m/s", maxSpeed))
-                confidenceScore += 0.3
+                confidenceScore += 0.4
             }
             
             // Check for static RSSI while moving
@@ -304,7 +304,7 @@ public final class DroneSignatureGenerator {
                 
                 if positionChange > 10 && rssiChange < 1 {
                     reasons.append(String(format: "Static RSSI (%.1f dB) while moving %.1fm", rssiChange, positionChange))
-                    confidenceScore += 0.3
+                    confidenceScore += 0.4
                 }
             }
             
@@ -325,7 +325,7 @@ public final class DroneSignatureGenerator {
         print("Spoof confidence: \(confidenceScore) for reasons \(reasons)")
         
         return SpoofDetectionResult(
-            isSpoofed: confidenceScore > 0.6,
+            isSpoofed: confidenceScore >= 0.6,
             confidence: confidenceScore,
             reasons: reasons,
             expectedRssi: expectedRssi,
