@@ -27,11 +27,12 @@ struct MessageRow: View {
     }
     
     private func rssiColor(_ rssi: Double) -> Color {
-        switch rssi {
-        case ..<(-75): return .red
-        case -75..<(-60): return .yellow
-        default: return .green
-        }
+       switch rssi {
+       case ..<(-75): return .red
+       case -75..<(-60): return .yellow
+       case 0...0: return .red
+       default: return .green
+       }
     }
     
     private func getRSSI() -> Double? {
@@ -130,15 +131,14 @@ struct MessageRow: View {
                     Text("Type: \(message.type)")
                         .font(.appSubheadline)
                     
-                    if (getRSSI() != 0.0) {
-                        let mRSSI = getRSSI()
+                    if let mRSSI = getRSSI(){
                         HStack(spacing: 8) {
-                            Label("\(Int(mRSSI ?? 0.0))dBm", systemImage: "antenna.radiowaves.left.and.right")
+                            Label("\(Int(mRSSI))dBm", systemImage: "antenna.radiowaves.left.and.right")
                                 .font(.appCaption)
-                                .foregroundColor(rssiColor(mRSSI ?? 0.0))
+                                .foregroundColor(rssiColor(mRSSI))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.vertical, 4)
-                                .background(rssiColor(mRSSI ?? 0.0).opacity(0.1))
+                                .background(rssiColor(mRSSI).opacity(0.1))
                         }
                     }
                     
