@@ -594,6 +594,7 @@ class CoTViewModel: ObservableObject {
             
             // Get RSSI from various possible sources
             let rssi = updatedMessage.rssi
+            let opID = updatedMessage.operator_id
             
             let signalType: SignalSource.SignalType = {
                 let basicId = message.rawMessage["Basic ID"] as? [String: Any]
@@ -621,8 +622,6 @@ class CoTViewModel: ObservableObject {
                 updatedMessage.signalSources.append(newSource)
             }
             
-            print("Signal sources: \(updatedMessage.signalSources)")
-            
             // Use strongest signal as primary RSSI/MAC for display
             if let strongestSignal = updatedMessage.signalSources.max(by: { $0.rssi < $1.rssi }) {
                 updatedMessage.mac = strongestSignal.mac
@@ -649,6 +648,9 @@ class CoTViewModel: ObservableObject {
                 updatedMessage.homeLat = String(homeLoc.lat)
                 updatedMessage.homeLon = String(homeLoc.lon)
             }
+            
+            
+            
             
             
             // Generate signature (handle potential nil return)
@@ -776,6 +778,7 @@ class CoTViewModel: ObservableObject {
                 existingMessage.mac = updatedMessage.mac
                 existingMessage.isSpoofed = updatedMessage.isSpoofed
                 existingMessage.spoofingDetails = updatedMessage.spoofingDetails
+                existingMessage.operator_id = updatedMessage.operator_id
             }
             
             self.parsedMessages[existingIndex] = existingMessage
