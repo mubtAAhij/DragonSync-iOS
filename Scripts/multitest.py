@@ -356,8 +356,23 @@ class DroneMessageGenerator:
 		
 		speed = round(random.uniform(20, 50), 1)
 		alt = round(random.uniform(50, 400), 1)
-		rssi = random.randint(-90, -40)
+#		rssi = random.randint(-90, -40)
 		mac = ':'.join([f'{random.randint(0x00, 0xff):02X}' for _ in range(6)])
+		
+		# RSSI modification to cycle through values
+		if not hasattr(self, '_rssi_state'):
+			self._rssi_state = {
+				'current_value': 0,
+				'values': [-90, -60, -40, 0],
+				'index': 0
+			}
+			
+		# Cycle through RSSI values
+		rssi_state = self._rssi_state
+		rssi = rssi_state['values'][rssi_state['index']]
+	
+		# Update state for next call
+		rssi_state['index'] = (rssi_state['index'] + 1) % len(rssi_state['values'])
 		
 		message = {
 			"index": 57,
