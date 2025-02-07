@@ -68,9 +68,42 @@ struct DroneDetailView: View {
                 .frame(height: 300)
                 .cornerRadius(12)
                 .font(.appDefault)
-                
                 Group {
-                    if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 1 {
+                    if !message.signalSources.isEmpty {
+                        SectionHeader(title: "Signal Sources")
+                        ForEach(message.signalSources.sorted(by: { $0.rssi > $1.rssi }), id: \.mac) { source in
+                            VStack(alignment: .leading) {
+                                HStack {
+                                    Image(systemName: source.type == .bluetooth ? "antenna.radiowaves.left.and.right.circle" :
+                                            source.type == .wifi ? "wifi.circle" :
+                                            source.type == .sdr ? "dot.radiowaves.left.and.right" :
+                                            "questionmark.circle")
+                                    .foregroundColor(source.type == .bluetooth ? .blue :
+                                                        source.type == .wifi ? .green :
+                                                        source.type == .sdr ? .purple :
+                                            .gray)
+                                    
+                                    Text(source.type.rawValue)
+                                        .font(.appCaption)
+                                        .foregroundColor(source.type == .bluetooth ? .blue :
+                                                            source.type == .wifi ? .green :
+                                                            source.type == .sdr ? .purple :
+                                                .gray)
+                                }
+                                InfoRow(title: "MAC", value: source.mac)
+                                InfoRow(title: "RSSI", value: "\(source.rssi) dBm")
+                                InfoRow(title: "Last Seen", value: source.timestamp.formatted(date: .numeric, time: .standard))
+                            }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .background(rssiColor(Double(source.rssi)).opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                    }
+                }
+
+                Group {
+                    if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 3 {
                         SectionHeader(title: "MAC Randomization")
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
@@ -330,5 +363,16 @@ struct SectionHeader: View {
         Text(title)
             .font(.appHeadline)
             .padding(.top, 8)
+    }
+}
+
+extension DroneDetailView {
+    private func rssiColor(_ rssi: Double) -> Color {
+        switch rssi {
+        case ..<(-75): return .red
+        case -75..<(-60): return .yellow
+        case 0...0: return .red
+        default: return .green
+        }
     }
 }

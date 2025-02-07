@@ -33,6 +33,19 @@ class CoTViewModel: ObservableObject {
     private var macToCAA: [String: String] = [:]
     private var macToHomeLoc: [String: (lat: Double, lon: Double)] = [:]
     
+    struct SignalSource: Hashable {
+        let mac: String
+        let rssi: Int
+        let type: SignalType
+        let timestamp: Date
+        
+        enum SignalType: String {
+            case bluetooth
+            case wifi
+            case sdr
+            case unknown
+        }
+    }
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
@@ -61,6 +74,7 @@ class CoTViewModel: ObservableObject {
         var mac: String?
         var rssi: Int?
         var manufacturer: String?
+        var signalSources: [SignalSource] = []
         
         // Location/Vector Message fields
         var location_protocol: String?
@@ -558,9 +572,16 @@ class CoTViewModel: ObservableObject {
     private func updateMessage(_ message: CoTMessage) {
         DispatchQueue.main.async {
             let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
-            let mac = message.mac ??
-            (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String ??
-            (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String
+            
+            // Safely extract MAC address with multiple fallback options
+            var mac: String? = nil
+            if let basicIdMac = (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String {
+                mac = basicIdMac
+            } else if let auxAdvMac = (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String {
+                mac = auxAdvMac
+            } else {
+                mac = message.mac
+            }
             
             // Skip NONE IDs
             if droneId.contains("NONE") {
@@ -570,28 +591,65 @@ class CoTViewModel: ObservableObject {
             // Prepare updated message
             var updatedMessage = message
             updatedMessage.uid = droneId
-            updatedMessage.mac = mac
+            
+            // Get RSSI from various possible sources
+            let rssi = updatedMessage.rssi
+            
+            let signalType: SignalSource.SignalType = {
+                let basicId = message.rawMessage["Basic ID"] as? [String: Any]
+                if mac == nil || mac == "" {
+                    return .sdr
+                } else {
+                    return (message.rawMessage["index"] != nil ||
+                            basicId?["ua_type"] is String) ? .wifi : .bluetooth
+                }
+            }()
+            
+            let newSource = SignalSource(
+                mac: mac ?? "",  // Use empty string if mac is nil
+                rssi: rssi ?? 0,
+                type: signalType,
+                timestamp: Date()
+            )
+            
+            print("DEBUG: Signal from source \(newSource) with RSSI \(newSource.rssi)")
+            
+            // Update or add signal source
+            if let existingIndex = updatedMessage.signalSources.firstIndex(where: { $0.mac == mac }) {
+                updatedMessage.signalSources[existingIndex] = newSource
+            } else {
+                updatedMessage.signalSources.append(newSource)
+            }
+            
+            print("Signal sources: \(updatedMessage.signalSources)")
+            
+            // Use strongest signal as primary RSSI/MAC for display
+            if let strongestSignal = updatedMessage.signalSources.max(by: { $0.rssi < $1.rssi }) {
+                updatedMessage.mac = strongestSignal.mac
+                updatedMessage.rssi = strongestSignal.rssi
+            }
             
             // Store CAA registration if present
-            if let mac = mac, message.idType.contains("CAA") {
-                self.macToCAA[mac] = message.id
+            if let safeMac = mac, !safeMac.isEmpty, message.idType.contains("CAA") {
+                self.macToCAA[safeMac] = message.id
             }
             
             // Store home location if valid
-            if let mac = mac,
+            if let safeMac = mac, !safeMac.isEmpty,
                let homeLat = Double(message.homeLat),
                let homeLon = Double(message.homeLon),
                homeLat != 0 && homeLon != 0 {
-                self.macToHomeLoc[mac] = (lat: homeLat, lon: homeLon)
+                self.macToHomeLoc[safeMac] = (lat: homeLat, lon: homeLon)
             }
             
             // Add stored home location if current message doesn't have one
-            if let mac = mac,
+            if let safeMac = mac, !safeMac.isEmpty,
                (Double(updatedMessage.homeLat) == 0 || Double(updatedMessage.homeLon) == 0),
-               let homeLoc = self.macToHomeLoc[mac] {
+               let homeLoc = self.macToHomeLoc[safeMac] {
                 updatedMessage.homeLat = String(homeLoc.lat)
                 updatedMessage.homeLon = String(homeLoc.lon)
             }
+            
             
             // Generate signature (handle potential nil return)
             guard let signature = self.signatureGenerator.createSignature(from: updatedMessage.toDictionary()) else {
@@ -681,6 +739,25 @@ class CoTViewModel: ObservableObject {
         if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == updatedMessage.mac || $0.uid == updatedMessage.uid }) {
             var existingMessage = self.parsedMessages[existingIndex]
             
+            // Preserve existing signal sources while updating with new ones
+            var updatedSources = existingMessage.signalSources
+            for newSource in updatedMessage.signalSources {
+                if let existingIndex = updatedSources.firstIndex(where: {
+                    $0.mac == newSource.mac && $0.type == newSource.type
+                }) {
+                    updatedSources[existingIndex] = newSource
+                } else {
+                    updatedSources.append(newSource)
+                }
+            }
+            existingMessage.signalSources = updatedSources
+            
+            print("DEBUG: Updated message now has \(existingMessage.signalSources.count) signal sources:")
+            existingMessage.signalSources.forEach { source in
+                print("  - \(source.type): \(source.mac) @ \(source.rssi)dBm (\(source.timestamp))")
+            }
+            
+            
             if updatedMessage.idType.contains("CAA") {
                 existingMessage.caaRegistration = updatedMessage.caaRegistration
                 existingMessage.idType = "CAA Assigned Registration ID"
@@ -696,7 +773,7 @@ class CoTViewModel: ObservableObject {
                 existingMessage.op_status = updatedMessage.op_status
                 existingMessage.height_type = updatedMessage.height_type
                 existingMessage.direction = updatedMessage.direction
-                existingMessage.mac = existingMessage.mac ?? updatedMessage.mac
+                existingMessage.mac = updatedMessage.mac
                 existingMessage.isSpoofed = updatedMessage.isSpoofed
                 existingMessage.spoofingDetails = updatedMessage.spoofingDetails
             }

@@ -579,7 +579,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         
         let components = remarks.components(separatedBy: ", ")
         
-        print("DEBUG: REMARKS COMPONENTS: \(components)")
+//        print("DEBUG: REMARKS COMPONENTS: \(components)")
         
         for component in components {
             let trimmed = component.trimmingCharacters(in: .whitespaces)
@@ -805,7 +805,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                  channel, phy, accessAddress, advMode, deviceId, sequenceId, advAddress,
                  timestampAdv, homeLat, homeLon) = parseDroneRemarks(remarks)
             
-            print("DEBUG - Parsing Remarks: \(remarks) and op lon is \(String(describing: operatorLon)) and home is \(String(describing: homeLat)) / \(String(describing: homeLon))")
+//            print("DEBUG - Parsing Remarks: \(remarks) and op lon is \(String(describing: operatorLon)) and home is \(String(describing: homeLat)) / \(String(describing: homeLon))")
             
             let finalDescription = description?.isEmpty ?? true ? selfIDDesc : description ?? ""
             

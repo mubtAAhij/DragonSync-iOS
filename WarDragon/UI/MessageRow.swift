@@ -36,6 +36,11 @@ struct MessageRow: View {
     }
     
     private func getRSSI() -> Double? {
+        // First check signal sources for strongest RSSI
+        if !message.signalSources.isEmpty {
+            return Double(message.signalSources.max(by: { $0.rssi < $1.rssi })?.rssi ?? 0)
+        }
+        
         // Get RSSI from transmission info or raw message
         if let signature = signature,
            let rssi = signature.transmissionInfo.signalStrength {
@@ -131,10 +136,46 @@ struct MessageRow: View {
                     Text("Type: \(message.type)")
                         .font(.appSubheadline)
                     
-                    if let mRSSI = getRSSI(){
+                    if !message.signalSources.isEmpty {
+                        VStack(alignment: .leading) {
+                            ForEach(message.signalSources.sorted(by: { $0.rssi > $1.rssi }), id: \.mac) { source in
+                                HStack {
+                                    // Signal type icon with proper type handling
+                                    Image(systemName: source.type == .bluetooth ? "antenna.radiowaves.left.and.right.circle" :
+                                                     source.type == .wifi ? "wifi.circle" :
+                                                     source.type == .sdr ? "dot.radiowaves.left.and.right" :
+                                                     "questionmark.circle")
+                                        .foregroundColor(source.type == .bluetooth ? .blue :
+                                                       source.type == .wifi ? .green :
+                                                       source.type == .sdr ? .purple :
+                                                       .gray)
+                                    
+                                    VStack(alignment: .leading) {
+                                        HStack {
+                                            Text(source.mac)
+                                                .font(.appCaption)
+                                            Text(source.type.rawValue)
+                                                .font(.appCaption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Text("\(source.rssi) dBm")
+                                            .font(.appCaption)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(rssiColor(Double(source.rssi)))
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                                .background(rssiColor(Double(source.rssi)).opacity(0.1))
+                                .cornerRadius(6)
+                            }
+                        }
+                    } else if let mRSSI = getRSSI() {
+                        // Fallback for messages without signal sources
                         HStack(spacing: 8) {
                             Label("\(Int(mRSSI))dBm", systemImage: "antenna.radiowaves.left.and.right")
                                 .font(.appCaption)
+                                .fontWeight(.bold)
                                 .foregroundColor(rssiColor(mRSSI))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.vertical, 4)
@@ -143,7 +184,7 @@ struct MessageRow: View {
                     }
                     
                     // MAC randomization indicator
-                    if let macs = cotViewModel.macIdHistory[message.uid] {
+                    if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 3 {
                         let macCount = macs.count
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
@@ -193,7 +234,7 @@ struct MessageRow: View {
                         if message.manufacturer != "Unknown" {
                             Text("Manufacturer: \(message.manufacturer ?? "")")
                         }
-                        if (message.mac != nil) {
+                        if (message.mac != "") {
                             Text("MAC: \(message.mac ?? "")")
                         }
                     }
@@ -215,11 +256,6 @@ struct MessageRow: View {
                             
                             VStack(alignment: .leading) {
                                 
-                                let expectedRssi = details.expectedRssi
-                                
-                                Text(String(format: "Distance: %.1fm", details.distance))
-                                Text(String(format: "Expected RSSI: %.1f dB", expectedRssi))
-                                Text(String(format: "Actual RSSI: %.1f dB", getRSSI() ?? 0.0))
                             }
                             .font(.appCaption)
                             .foregroundColor(.secondary)
