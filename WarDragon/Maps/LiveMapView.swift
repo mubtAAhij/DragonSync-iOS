@@ -18,6 +18,7 @@ struct LiveMapView: View {
     @State private var flightPaths: [String: [(coordinate: CLLocationCoordinate2D, timestamp: Date)]] = [:]
     @State private var lastProcessedDrones: [String: CoTViewModel.CoTMessage] = [:] // Track last processed drones
     @State private var shouldUpdateMapView: Bool = false
+    @State private var userHasMovedMap = false
     let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect() // Timer for updates
     
     init(cotViewModel: CoTViewModel, initialMessage: CoTViewModel.CoTMessage) {
@@ -42,13 +43,20 @@ struct LiveMapView: View {
     
     private var uniqueDrones: [CoTViewModel.CoTMessage] {
         var latestDronePositions: [String: CoTViewModel.CoTMessage] = [:]
+        var droneOrder: [String] = [] // Track the original order of appearance
+        
         for message in cotViewModel.parsedMessages {
             // Only include valid non-CAA messages with coordinates
             if !message.idType.contains("CAA"), let _ = message.coordinate {
+                if latestDronePositions[message.uid] == nil {
+                    droneOrder.append(message.uid)
+                }
                 latestDronePositions[message.uid] = message
             }
         }
-        return Array(latestDronePositions.values)
+        
+        // Return drones in their original order of first appearance
+        return droneOrder.compactMap { latestDronePositions[$0] }
     }
     
     func updateFlightPathsIfNewData() {
@@ -101,7 +109,49 @@ struct LiveMapView: View {
                     }
                 }
             }
+            .gesture(
+                DragGesture(minimumDistance: 10)
+                    .onChanged { _ in
+                        userHasMovedMap = true
+                    }
+            )
             VStack {
+                // Reset view button
+                if userHasMovedMap {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            // Force an immediate camera update
+                            let allCoordinates = uniqueDrones.compactMap { $0.coordinate }
+                            if !allCoordinates.isEmpty {
+                                let latitudes = allCoordinates.map(\.latitude)
+                                let longitudes = allCoordinates.map(\.longitude)
+                                let minLat = latitudes.min()!
+                                let maxLat = latitudes.max()!
+                                let minLon = longitudes.min()!
+                                let maxLon = longitudes.max()!
+                                let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2,
+                                                                    longitude: (minLon + maxLon) / 2)
+                                let deltaLat = max((maxLat - minLat) * 1.2, 0.05)
+                                let deltaLon = max((maxLon - minLon) * 1.2, 0.05)
+                                withAnimation {
+                                    mapCameraPosition = .region(
+                                        MKCoordinateRegion(center: center,
+                                                           span: MKCoordinateSpan(latitudeDelta: deltaLat,
+                                                                                  longitudeDelta: deltaLon))
+                                    )
+                                }
+                            }
+                        }) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .padding(8)
+                                .background(.ultraThinMaterial)
+                                .cornerRadius(8)
+                        }
+                        .padding()
+                    }
+                }
+                
                 Spacer()
                 Button(action: { showDroneList.toggle() }) {
                     Text("\(uniqueDrones.count) Drones")
@@ -174,26 +224,28 @@ struct LiveMapView: View {
         .onReceive(timer) { _ in
             updateFlightPathsIfNewData()
             
-            guard shouldUpdateMapView else { return } // Only update if necessary
-            
-            let allCoordinates = uniqueDrones.compactMap { $0.coordinate }
-            if !allCoordinates.isEmpty {
-                print("Rendering new flightpaths & map...")
-                let latitudes = allCoordinates.map(\.latitude)
-                let longitudes = allCoordinates.map(\.longitude)
-                let minLat = latitudes.min()!
-                let maxLat = latitudes.max()!
-                let minLon = longitudes.min()!
-                let maxLon = longitudes.max()!
-                let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2,
-                                                    longitude: (minLon + maxLon) / 2)
-                let deltaLat = max((maxLat - minLat) * 1.2, 0.05)
-                let deltaLon = max((maxLon - minLon) * 1.2, 0.05)
-                withAnimation {
-                    mapCameraPosition = .region(
-                        MKCoordinateRegion(center: center,
-                                           span: MKCoordinateSpan(latitudeDelta: deltaLat, longitudeDelta: deltaLon))
-                    )
+            // Only auto-update camera if user hasn't moved map and we have new data
+            if !userHasMovedMap && shouldUpdateMapView {
+                let allCoordinates = uniqueDrones.compactMap { $0.coordinate }
+                if !allCoordinates.isEmpty {
+                    print("Rendering new flightpaths & map...")
+                    let latitudes = allCoordinates.map(\.latitude)
+                    let longitudes = allCoordinates.map(\.longitude)
+                    let minLat = latitudes.min()!
+                    let maxLat = latitudes.max()!
+                    let minLon = longitudes.min()!
+                    let maxLon = longitudes.max()!
+                    let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2,
+                                                        longitude: (minLon + maxLon) / 2)
+                    let deltaLat = max((maxLat - minLat) * 1.2, 0.05)
+                    let deltaLon = max((maxLon - minLon) * 1.2, 0.05)
+                    withAnimation {
+                        mapCameraPosition = .region(
+                            MKCoordinateRegion(center: center,
+                                               span: MKCoordinateSpan(latitudeDelta: deltaLat,
+                                                                      longitudeDelta: deltaLon))
+                        )
+                    }
                 }
             }
         }
