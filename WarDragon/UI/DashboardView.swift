@@ -141,10 +141,15 @@ struct DronesOverviewCard: View {
     @ObservedObject var cotViewModel: CoTViewModel
     
     private var activeDroneCount: Int {
-        let uniqueMacs = Set(cotViewModel.parsedMessages.compactMap { message in
-            message.mac ?? message.uid
+        // Count unique drones by serial ID, excluding duplicates from MAC addresses
+        let uniqueDrones = Set(cotViewModel.parsedMessages.compactMap { message in
+            // Only count drones with valid serial IDs
+            if message.idType.contains("Serial") {
+                return message.uid
+            }
+            return nil
         })
-        return uniqueMacs.count
+        return uniqueDrones.count
     }
     
     var body: some View {
