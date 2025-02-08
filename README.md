@@ -4,35 +4,52 @@
   <img src="https://github.com/user-attachments/assets/d21ab909-7dba-4b42-8996-a741248e9223">
 </p>
 
-> *Revolutionize your airspace awareness. Bridge the power of WarDragon to your iOS device. Stay ahead with real-time monitoring, instant alerts, and robust protocol support.*
+> *Revolutionize your airspace awareness. Bridge the power of WarDragon to your iOS device. Stay ahead with real-time monitoring & alerts.*
 
 ***TestFlight is open: [Join the beta](https://testflight.apple.com/join/QKDKMSfA)***
 
 ## Features
 
 - **Real-Time Airspace Monitoring**  
-  Track the status and location of Remote ID-compliant UAVs on your iOS device. See flightpaths and comprehensive decoded data of any RID broadcast.
+ Keep an eye on the status and location of Remote ID-compliant drones on your iOS device. You can see their flight paths and get all the decoded data from any RID broadcast. Everything in the app is updated in real time. 
 
 - **Spoof Detection**
-  Uses advanced algorithms to identify anomalies in flight data, providing a confidence score and detailed insights when spoofing is detected.
+   Refined algorithms to spot any unusual patterns in flight data. It gives you a confidence score and all the juicy details when it detects spoofing.
 
   ![image](https://github.com/user-attachments/assets/b06547b7-4f04-4e80-a562-232b96cc8a5b)
 
+- **MAC Randomization Alerts**
+  Associates all addresses to the origin ID for full source transparency. 
+
+  ![image](https://github.com/user-attachments/assets/a6c0698f-944d-4a41-b38c-fca75778a5e8)
+
+
+- **Transmission Identification**
+  Decodes the source information and displays the type of signal (WiFi, Bluetooth, or SDR) it originated from, along with the corresponding MAC addresses.
+
+  ![image](https://github.com/user-attachments/assets/c1514c00-df58-4231-bfff-cd3268210d6f)
 
 - **Instant System Alerts**  
-  Stay informed with real-time status updates about your system’s performance & location. Memory, GPS, CPU, temp and more. WarDragon Pro also displays ANTSDR internal temperatures.
+Keep an eye on your system’s performance and location with real-time updates. You’ll get info on memory, GPS, CPU, temperature, and more. WarDragon Pro even shows ANTSDR dio temperatures.
+
+![image](https://github.com/user-attachments/assets/b384b0b1-8a90-48c6-bf3a-bcf41b599703)
+
+- **Encounter History**
+  Stores seen drones automatically. Search, review and export CSV & KML files. View flight data & more by selecting it from the History tab. 
+
+  ![image](https://github.com/user-attachments/assets/816debe7-6c05-4c7a-9e88-14a6a4f0989a)
+
 
 - **Detect the Undetectable:**
 
-  *SDR-Powered Drone Detection & Decoding with WarDragon Pro. Support for Ocusync and other difficult signals*
-
-  OcuSync's advanced frequency-hopping and encrypted communication make it nearly invisible to standard detection tools.
+  *SDR-Powered Drone Detection & Decoding with WarDragon Pro- Support for Ocusync and other difficult signals*
+> OcuSync's advanced frequency-hopping and encrypted communication make it nearly invisible to standard detection tools.
 
 - **Seamless WarDragon Integration**  
-  Designed to work flawlessly with the WarDragon DragonOS platform directly over ZMQ or broader applications with Multicast. A unified and user-friendly experience out of the box. 
+  Designed to work seamlessly with the WarDragon DragonOS platform, it can also be used with other applications that use the same stack as WarDragon Pro. It comes with a user-friendly interface that’s ready to use out of the box. 
 
 - **Flexible Protocol Support**  
-  Supports ZMQ and Multicast configurations to receive CoT and status messages, tailored to your operational needs.
+  Supports ZMQ and Multicast configurations, tailored to your operational needs.
 
 ## Requirements
 
