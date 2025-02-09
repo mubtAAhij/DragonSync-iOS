@@ -29,7 +29,7 @@ struct MessageRow: View {
     private func rssiColor(_ rssi: Double) -> Color {
        switch rssi {
        case ..<(-75): return .red
-       case -75..<(-60): return .yellow
+       case -75..<(-50): return .yellow
        case 0...0: return .red
        default: return .green
        }

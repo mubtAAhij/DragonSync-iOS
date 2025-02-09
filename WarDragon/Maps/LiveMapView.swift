@@ -62,32 +62,30 @@ struct LiveMapView: View {
     func updateFlightPathsIfNewData() {
         let newMessages = cotViewModel.parsedMessages.filter { message in
             guard let lastMessage = lastProcessedDrones[message.uid] else {
-                return true // Process if no prior message exists for this uid
+                return true // Always process first time
             }
-            return message != lastMessage // Process only if the message is different
+            
+            // Only process if significant coordinate change occurred
+            return message.lat != lastMessage.lat ||
+                   message.lon != lastMessage.lon
         }
         
-        guard !newMessages.isEmpty else {
-            shouldUpdateMapView = false // No new data; suppress map updates
-            return
-        }
+        guard !newMessages.isEmpty else { return }
         
-        print("Updating flight paths with new data...")
         for message in newMessages {
             guard let coordinate = message.coordinate else { continue }
             
             var path = flightPaths[message.uid] ?? []
             path.append((coordinate: coordinate, timestamp: Date()))
+            
+            // Limit path length
             if path.count > 200 {
                 path.removeFirst()
             }
-            flightPaths[message.uid] = path
             
-            // Update the processed message
+            flightPaths[message.uid] = path
             lastProcessedDrones[message.uid] = message
         }
-        
-        shouldUpdateMapView = true // Trigger map updates
     }
     
     var body: some View {
