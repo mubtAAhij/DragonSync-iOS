@@ -54,6 +54,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private var adv_mac: String?
     private var did: Int?
     private var sid: Int?
+    private var index: String?
+    private var runtime: String?
     
     private var memoryTotal: Double = 0.0
     private var memoryAvailable: Double = 0.0
@@ -129,6 +131,10 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         var droneData: [String: Any] = [:]
         
         for message in messages {
+            // Top level elements for WiFi ID
+            droneData["index"] = message["index"]
+            droneData["runtime"] = message["runtime"]
+            
             if let basicId = message["Basic ID"] as? [String: Any] {
                 droneData["id"] = basicId["id"]
                 droneData["id_type"] = basicId["id_type"]
@@ -215,6 +221,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 timestamp_accuracy: droneData["timestamp_accuracy"] as? String,
                 operator_id: droneData["operator_id"] as? String,
                 operator_id_type: droneData["operator_id_type"] as? String,
+                index: droneData["index"] as? String,
+                runtime: droneData["runtime"] as? String ?? "",
                 rawMessage: droneData
             )
         }
@@ -227,6 +235,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     }
     
     func parseESP32Message(_ jsonData: [String: Any]) -> CoTViewModel.CoTMessage? {
+        let index = jsonData["index"] as? String
+        let runtime = jsonData["runtime"] as? String ?? ""
+        
         if let basicId = jsonData["Basic ID"] as? [String: Any] {
             let id = basicId["id"] as? String ?? UUID().uuidString
             let droneId = id.hasPrefix("drone-") ? id : "drone-\(id)"
@@ -329,6 +340,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 timestamp_accuracy: location?["timestamp_accuracy"] as? String,
                 operator_id: opID,
                 operator_id_type: opIDType,
+                index: index,
+                runtime: runtime,
                 rawMessage: jsonData
             )
         }
@@ -897,6 +910,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     authData: nil,
                     isSpoofed: false,
                     spoofingDetails: nil,
+                    runtime: runtime ?? "",
                     rawMessage: buildRawMessage(mac, rssi, description)
                 )
             }
@@ -951,6 +965,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     "aext": aext ?? [:]
                 ]
                 rawMessage = jsonFormat
+                
                 let id = eventAttributes["uid"] ?? ""
                 let droneId = id.hasPrefix("drone-") ? id : "drone-\(id)"
                 
@@ -1025,6 +1040,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     rxAdd: nil,
                     adLength: nil,
                     accessAddress: nil,
+                    index: index,
+                    runtime: runtime ?? "",
 //                    operatorAltGeo: operatorAltGeo,
                     rawMessage: jsonFormat
                 )

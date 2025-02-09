@@ -161,6 +161,9 @@ class CoTViewModel: ObservableObject {
         var isSpoofed: Bool = false
         var spoofingDetails: DroneSignatureGenerator.SpoofDetectionResult?
         
+        var index: String?
+        var runtime: String?
+        
         // Data store
         func saveToStorage() {
             DroneStorageManager.shared.saveEncounter(self)
