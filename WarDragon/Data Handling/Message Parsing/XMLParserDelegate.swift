@@ -933,6 +933,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         case "event":
             if cotMessage == nil {
                 let jsonFormat: [String: Any] = [
+                    "index": index ?? "",
+                    "runtime": runtime ?? "",
                     "Basic ID": [
                         "id": eventAttributes["uid"] ?? "",
                         "mac": eventAttributes["MAC"] ?? "",

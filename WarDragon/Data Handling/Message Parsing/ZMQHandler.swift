@@ -10,6 +10,7 @@ import SwiftyZeroMQ5
 
 class ZMQHandler: ObservableObject {
     //MARK: - ZMQ Connection
+    @Published var messageFormat: MessageFormat = .bluetooth 
     
     @Published var isConnected = false {
         didSet {
@@ -19,6 +20,12 @@ class ZMQHandler: ObservableObject {
                 }
             }
         }
+    }
+    
+    enum MessageFormat {
+        case wifi
+        case bluetooth
+        case sdr
     }
     
     private let manufacturerMapping: [Int: String] = [
@@ -251,6 +258,15 @@ class ZMQHandler: ObservableObject {
         guard let data = jsonString.data(using: .utf8) else { return nil }
         print("Raw Message: ", jsonString)
         
+        // Determine format from raw string
+        if jsonString.contains("\"index\":") && jsonString.contains("\"runtime\":") {
+            messageFormat = .wifi
+        } else if jsonString.hasPrefix("[") {
+            messageFormat = .bluetooth
+        } else {
+            messageFormat = .sdr
+        }
+        
         do {
             // Try parsing as a single object first (ESP32 format)
             if let jsonObject = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -265,7 +281,6 @@ class ZMQHandler: ObservableObject {
             print("JSON parsing error: \(error)")
         }
         
-        print("Failed to parse message")
         return nil
     }
     

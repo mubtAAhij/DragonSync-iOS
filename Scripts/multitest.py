@@ -196,6 +196,47 @@ class DroneMessageGenerator:
 		}
 		return json.dumps(message)
 	
+	def generate_wifi_esp32_format(self):
+		"""Generate a telemetry message in ESP32 WiFi-only format"""
+		now = datetime.now(timezone.utc)
+		
+		# Get base lat/lon
+		base_lat = round(random.uniform(*self.lat_range), 6)
+		base_lon = round(random.uniform(*self.lon_range), 6)
+		
+		# Add small random variation
+		latitude = round(base_lat + random.uniform(-0.0004, 0.0004), 6)
+		longitude = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
+		homeLat = round(base_lat + random.uniform(-0.0001, 0.0001), 6)
+		homeLon = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
+		
+		message = {
+			"index": 57,
+			"runtime": 11,
+			"Basic ID": {
+				"id": "112624150A90E3AE1EC0",
+				"id_type": "Serial Number (ANSI/CTA-2063-A)",
+				"ua_type": 0,
+				"MAC": "8c:17:59:f5:95:65"
+			},
+			"Location/Vector Message": {
+				"latitude": latitude,
+				"longitude": longitude,
+				"speed": 0,
+				"vert_speed": 0,
+				"geodetic_altitude": 110,
+				"height_agl": 80
+			},
+			"System Message": {
+				"latitude": latitude,
+				"longitude": longitude,
+				"home_lat": homeLat,
+				"home_lon": homeLon
+			}
+		}
+		
+		return json.dumps(message)
+	
 	def generate_wifi_message(self):
 		"""Generate WiFi format message with DroneID structure"""
 		mac = f"WIFI-{random.randint(100000,999999)}"

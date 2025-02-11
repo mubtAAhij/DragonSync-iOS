@@ -33,6 +33,10 @@ class CoTViewModel: ObservableObject {
     private var macToCAA: [String: String] = [:]
     private var macToHomeLoc: [String: (lat: Double, lon: Double)] = [:]
     
+    private var currentMessageFormat: ZMQHandler.MessageFormat {
+        return zmqHandler?.messageFormat ?? .bluetooth
+    }
+     
     struct SignalSource: Hashable {
         let mac: String
         let rssi: Int
@@ -586,28 +590,15 @@ class CoTViewModel: ObservableObject {
                 mac = message.mac
             }
             
-            // Skip NONE IDs
-            if droneId.contains("NONE") {
-                return
-            }
-            
             // Prepare updated message
             var updatedMessage = message
             updatedMessage.uid = droneId
             
-            // Get RSSI from various possible sources
             let rssi = updatedMessage.rssi
             let opID = updatedMessage.operator_id
             
-            let signalType: SignalSource.SignalType = {
-                let basicId = message.rawMessage["Basic ID"] as? [String: Any]
-                if mac == nil || mac == "" {
-                    return .sdr
-                } else {
-                    return (message.rawMessage["index"] != nil ||
-                            basicId?["ua_type"] is String) ? .wifi : .bluetooth
-                }
-            }()
+            print("Current message format: \(self.currentMessageFormat)")
+            let signalType = self.determineSignalType(message: message, mac: mac, rssi: rssi, updatedMessage: &updatedMessage)
             
             let newSource = SignalSource(
                 mac: mac ?? "",  // Use empty string if mac is nil
@@ -652,10 +643,6 @@ class CoTViewModel: ObservableObject {
                 updatedMessage.homeLon = String(homeLoc.lon)
             }
             
-            
-            
-            
-            
             // Generate signature (handle potential nil return)
             guard let signature = self.signatureGenerator.createSignature(from: updatedMessage.toDictionary()) else {
                 // For CAA messages, we might want to do something different
@@ -692,6 +679,63 @@ class CoTViewModel: ObservableObject {
             self.updateParsedMessages(updatedMessage: updatedMessage, signature: signature)
         }
     }
+    
+    func determineSignalType(message: CoTMessage, mac: String?, rssi: Int?, updatedMessage: inout CoTMessage) -> SignalSource.SignalType {
+        print("DEBUG: Current message format: \(currentMessageFormat)")
+        
+        // Create a new signal source based on current message format
+        let newSource = SignalSource(
+            mac: mac ?? "",  // Use empty string if mac is nil
+            rssi: rssi ?? 0,
+            type: currentMessageFormat == .wifi ? .wifi :
+                  currentMessageFormat == .sdr ? .sdr :
+                  .bluetooth,
+            timestamp: Date()
+        )
+        
+        // Determine unique sources, keeping only the strongest for each MAC
+        var uniqueSources = [String: SignalSource]()
+        
+        // Add existing sources
+        for source in updatedMessage.signalSources {
+            let existingSourceForMac = uniqueSources[source.mac]
+            
+            // Keep the source with the strongest signal
+            if existingSourceForMac == nil || source.rssi > existingSourceForMac!.rssi {
+                uniqueSources[source.mac] = source
+            }
+        }
+        
+        // Add new source if it's stronger or the first for its MAC
+        if !newSource.mac.isEmpty {
+            let existingSourceForMac = uniqueSources[newSource.mac]
+            
+            if existingSourceForMac == nil || newSource.rssi > existingSourceForMac!.rssi {
+                uniqueSources[newSource.mac] = newSource
+            }
+        }
+        
+        // Convert to array
+        updatedMessage.signalSources = Array(uniqueSources.values)
+        
+        print("DEBUG: Unique signal sources after filtering: \(updatedMessage.signalSources.count)")
+        
+        // Return type for current message
+        switch currentMessageFormat {
+        case .wifi:
+            print("DEBUG: WiFi format detected (ESP32)")
+            return .wifi
+            
+        case .sdr:
+            print("DEBUG: SDR format detected (no MAC)")
+            return .sdr
+            
+        case .bluetooth:
+            print("DEBUG: Bluetooth format detected")
+            return .bluetooth
+        }
+    }
+
     
     private func updateDroneSignaturesAndEncounters(_ signature: DroneSignature, message: CoTMessage) {
         // Update drone signatures
