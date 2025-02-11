@@ -258,8 +258,11 @@ class ZMQHandler: ObservableObject {
         guard let data = jsonString.data(using: .utf8) else { return nil }
         print("Raw Message: ", jsonString)
         
-        // Determine format from raw string
-        if jsonString.contains("\"index\":") && jsonString.contains("\"runtime\":") {
+        // Determine format from raw string and runtime/index presence
+        if jsonString.contains("\"index\":") &&
+           jsonString.contains("\"runtime\":") &&
+           (jsonString.range(of: "\"index\":\\s*([1-9]\\d*)", options: .regularExpression) != nil) &&
+           (jsonString.range(of: "\"runtime\":\\s*([1-9]\\d*)", options: .regularExpression) != nil) {
             messageFormat = .wifi
         } else if jsonString.hasPrefix("[") {
             messageFormat = .bluetooth

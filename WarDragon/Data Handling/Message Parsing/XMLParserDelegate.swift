@@ -9,6 +9,7 @@ import Foundation
 
 class CoTMessageParser: NSObject, XMLParserDelegate {
     // MARK: - Properties
+    var messageFormat: ZMQHandler.MessageFormat = .bluetooth
     private var rawMessage: [String: Any]?
     private var currentElement = ""
     private var currentIdType: String = "Unknown"
@@ -608,6 +609,16 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         caaReg = droneId.replacingOccurrences(of: "drone-", with: "")
                     }
                 }
+            } else if trimmed.hasPrefix("Index:") {
+                let indexStr = trimmed.dropFirst(6)
+                    .replacingOccurrences(of: "]", with: "")
+                    .trimmingCharacters(in: .whitespaces)
+                index = indexStr
+            } else if trimmed.hasPrefix("Runtime:") {
+                let runtimeStr = trimmed.dropFirst(8)
+                    .replacingOccurrences(of: "]", with: "")
+                    .trimmingCharacters(in: .whitespaces)
+                runtime = runtimeStr
             } else if trimmed.hasPrefix("Channel:") {
                 channel = Int(trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces))
             } else if trimmed.hasPrefix("PHY:") {

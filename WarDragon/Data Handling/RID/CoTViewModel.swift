@@ -516,7 +516,7 @@ class CoTViewModel: ObservableObject {
             }
             
             if let message = String(data: data, encoding: .utf8) {
-                //                print("DEBUG - Received data: \(message)")
+//                print("DEBUG - Received data: \(message)")
                 
                 // Check for Status message first (has both status code type and remarks with CPU Usage)
                 if message.contains("<remarks>CPU Usage:") {
@@ -526,7 +526,7 @@ class CoTViewModel: ObservableObject {
                     parser.delegate = cotParserDelegate
                     
                     if parser.parse(), let statusMessage = cotParserDelegate.statusMessage {
-                        self.updateStatusMessage(statusMessage) // Use deduplication logic here
+                        self.updateStatusMessage(statusMessage)
                     } else {
                         print("Failed to parse Status XML message.")
                     }
@@ -556,6 +556,13 @@ class CoTViewModel: ObservableObject {
                     parser.delegate = cotParserDelegate
                     
                     if parser.parse(), let cotMessage = cotParserDelegate.cotMessage {
+                        // Set message format based on Index/Runtime presence
+                        if cotMessage.index != "0" || cotMessage.runtime != "0" {
+                            self.zmqHandler?.messageFormat = .wifi
+                        } else {
+                            self.zmqHandler?.messageFormat = .bluetooth
+                        }
+                        
                         DispatchQueue.main.async {
                             self.updateMessage(cotMessage)
                         }
@@ -658,12 +665,11 @@ class CoTViewModel: ObservableObject {
     }
     
     func determineSignalType(message: CoTMessage, mac: String?, rssi: Int?, updatedMessage: inout CoTMessage) -> SignalSource.SignalType {
-        print("DEBUG: Current message format: \(currentMessageFormat)")
         
+        print("DEBUG: Index and runbtiume : \(updatedMessage.index) and \(updatedMessage.runtime)")
         // Determine type for new source
-        let newSourceType = currentMessageFormat == .wifi ? SignalSource.SignalType.wifi :
-                           currentMessageFormat == .sdr ? SignalSource.SignalType.sdr :
-                           SignalSource.SignalType.bluetooth
+        let newSourceType = (updatedMessage.runtime != "0" && updatedMessage.runtime != nil) ? SignalSource.SignalType.wifi :
+                            SignalSource.SignalType.bluetooth
         
         // Create new source
         let newSource = SignalSource(
