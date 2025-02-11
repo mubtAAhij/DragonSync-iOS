@@ -138,17 +138,17 @@ struct MessageRow: View {
                     
                     if !message.signalSources.isEmpty {
                         VStack(alignment: .leading) {
-                            ForEach(message.signalSources.sorted(by: { $0.rssi > $1.rssi }), id: \.mac) { source in
+                            // Sort by timestamp (most recent first)
+                            ForEach(message.signalSources.sorted(by: { $0.timestamp > $1.timestamp }), id: \.self) { source in
                                 HStack {
-                                    // Signal type icon with proper type handling
                                     Image(systemName: source.type == .bluetooth ? "antenna.radiowaves.left.and.right.circle" :
-                                                     source.type == .wifi ? "wifi.circle" :
-                                                     source.type == .sdr ? "dot.radiowaves.left.and.right" :
-                                                     "questionmark.circle")
-                                        .foregroundColor(source.type == .bluetooth ? .blue :
-                                                       source.type == .wifi ? .green :
-                                                       source.type == .sdr ? .purple :
-                                                       .gray)
+                                            source.type == .wifi ? "wifi.circle" :
+                                            source.type == .sdr ? "dot.radiowaves.left.and.right" :
+                                            "questionmark.circle")
+                                    .foregroundColor(source.type == .bluetooth ? .blue :
+                                                        source.type == .wifi ? .green :
+                                                        source.type == .sdr ? .purple :
+                                            .gray)
                                     
                                     VStack(alignment: .leading) {
                                         HStack {
@@ -158,16 +158,23 @@ struct MessageRow: View {
                                                 .font(.appCaption)
                                                 .foregroundColor(.secondary)
                                         }
-                                        Text("\(source.rssi) dBm")
-                                            .font(.appCaption)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(rssiColor(Double(source.rssi)))
+                                        HStack {
+                                            Text("\(source.rssi) dBm")
+                                                .font(.appCaption)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(rssiColor(Double(source.rssi)))
+                                            Spacer()
+                                            Text(source.timestamp.formatted(.relative(presentation: .numeric)))
+                                                .font(.appCaption)
+                                                .foregroundColor(.secondary)
+                                        }
                                     }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.vertical, 4)
                                 .background(rssiColor(Double(source.rssi)).opacity(0.1))
                                 .cornerRadius(6)
+                                .id("\(source.mac)-\(source.timestamp.timeIntervalSince1970)")
                             }
                         }
                     } else if let mRSSI = getRSSI() {

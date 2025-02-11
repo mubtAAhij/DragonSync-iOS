@@ -917,3 +917,10 @@ class CoTViewModel: ObservableObject {
     }
     
 }
+
+extension CoTViewModel.SignalSource {
+    // comparison for time-based sorting
+    static func byTimestamp(_ s1: CoTViewModel.SignalSource, _ s2: CoTViewModel.SignalSource) -> Bool {
+        return s1.timestamp > s2.timestamp
+    }
+}
