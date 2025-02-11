@@ -108,7 +108,7 @@ struct DroneDetailView: View {
                     }
                     
                     Group {
-                        if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 3 {
+                        if let macs = cotViewModel.macIdHistory[message.uid], macs.count >= 3 {
                             SectionHeader(title: "MAC Randomization")
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
@@ -325,7 +325,6 @@ struct DroneDetailView: View {
                         }
                     }
                 }
-                .padding()
             }
             .navigationTitle("Drone Details")
             .font(.appSubheadline)

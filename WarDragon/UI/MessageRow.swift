@@ -184,7 +184,7 @@ struct MessageRow: View {
                     }
                     
                     // MAC randomization indicator
-                    if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 3 {
+                    if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 2 {
                         let macCount = macs.count
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")

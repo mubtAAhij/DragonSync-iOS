@@ -603,15 +603,9 @@ class CoTViewModel: ObservableObject {
             var updatedMessage = message
             updatedMessage.uid = droneId
             
-            // Determine signal type and update sources - this now handles all source management
+            // Determine signal type and update sources
             let signalType = self.determineSignalType(message: message, mac: mac, rssi: updatedMessage.rssi, updatedMessage: &updatedMessage)
             
-//            // Use strongest signal as primary RSSI/MAC for display
-//            if let strongestSignal = updatedMessage.signalSources.max(by: { $0.rssi < $1.rssi }) {
-//                updatedMessage.mac = strongestSignal.mac
-//                updatedMessage.rssi = strongestSignal.rssi
-//            }
-//            
             // Handle CAA and location mapping
             if let safeMac = mac, !safeMac.isEmpty {
                 // Store CAA registration if present
@@ -752,7 +746,6 @@ class CoTViewModel: ObservableObject {
             
             if isRandomized {
                 macProcessing[droneId] = true
-                // Update UI to show randomization warning
             }
         }
         
@@ -800,7 +793,7 @@ class CoTViewModel: ObservableObject {
                 existingMessage.mac = strongestSource.mac
                 existingMessage.rssi = strongestSource.rssi
             }
-            
+
             
             // Never overwrite good data with zeros/empty values
             if updatedMessage.lat != "0.0" { existingMessage.lat = updatedMessage.lat }
