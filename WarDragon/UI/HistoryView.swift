@@ -183,6 +183,9 @@ struct StoredEncountersView: View {
                     mapSection
                     encounterStats
 //                    metadataSection
+                    if !encounter.macHistory.isEmpty && encounter.macHistory.count > 1 {
+                        macSection
+                    }
                     flightDataSection
                 }
                 .padding()
@@ -298,25 +301,75 @@ struct StoredEncountersView: View {
             .cornerRadius(12)
         }
         
-//        private var metadataSection: some View {
-//            VStack(alignment: .leading, spacing: 8) {
-//                Text("METADATA")
-//                    .font(.appHeadline)
-//                
-//                ForEach(Array(encounter.metadata.sorted(by: { $0.key < $1.key })), id: \.key) { key, value in
-//                    HStack {
-//                        Text(key)
-//                            .foregroundStyle(.secondary)
-//                        Spacer()
-//                        Text(value)
-//                    }
-//                    .font(.appCaption)
-//                }
-//            }
-//            .padding()
-//            .background(Color(UIColor.secondarySystemBackground))
-//            .cornerRadius(12)
-//        }
+        private var macSection: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                macSectionTitle
+                macSectionContent
+            }
+            .padding()
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.yellow.opacity(0.3), lineWidth: 1)
+            )
+        }
+
+        private var macSectionTitle: some View {
+            Text("MAC RANDOMIZATION")
+                .font(.appHeadline)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+
+        private var macSectionContent: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                macSectionHeader
+                macAddressScrollView
+            }
+        }
+
+        private var macSectionHeader: some View {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.yellow)
+                Text("Device using MAC randomization")
+                    .font(.appSubheadline)
+                Spacer()
+                Text("\(encounter.macHistory.count) addresses")
+                    .font(.appCaption)
+                    .foregroundColor(.secondary)
+            }
+        }
+
+        private var macAddressScrollView: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(encounter.macHistory).sorted(), id: \.self) { mac in
+                        macAddressRow(mac)
+                    }
+                }
+            }
+            .frame(maxHeight: 150)
+        }
+
+        private func macAddressRow(_ mac: String) -> some View {
+            HStack {
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 6))
+                    .foregroundColor(.yellow)
+                Text(mac)
+                    .font(.appCaption)
+                
+                if let firstSig = encounter.signatures.first(where: { $0.mac == mac }) {
+                    Spacer()
+                    Text(Date(timeIntervalSince1970: firstSig.timestamp), format: .dateTime.year().month().day().hour().minute())
+                        .font(.appCaption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        
+        
         
         private var flightDataSection: some View {
             VStack(alignment: .leading, spacing: 8) {
@@ -535,3 +588,25 @@ extension StoredEncountersView.EncounterDetailView {
     }
 
 }
+
+
+// TODO: add a nice metadata section
+//        private var metadataSection: some View {
+//            VStack(alignment: .leading, spacing: 8) {
+//                Text("METADATA")
+//                    .font(.appHeadline)
+//
+//                ForEach(Array(encounter.metadata.sorted(by: { $0.key < $1.key })), id: \.key) { key, value in
+//                    HStack {
+//                        Text(key)
+//                            .foregroundStyle(.secondary)
+//                        Spacer()
+//                        Text(value)
+//                    }
+//                    .font(.appCaption)
+//                }
+//            }
+//            .padding()
+//            .background(Color(UIColor.secondarySystemBackground))
+//            .cornerRadius(12)
+//        }

@@ -87,16 +87,18 @@ struct SignatureData: Codable, Hashable {
     let rssi: Double
     let speed: Double
     let height: Double
+    let mac: String?
 }
 
 extension DroneEncounter {
     static func csvHeaders() -> String {
         return "First Seen,First Seen Latitude,First Seen Longitude,First Seen Altitude (m)," +
                "Last Seen,Last Seen Latitude,Last Seen Longitude,Last Seen Altitude (m)," +
-               "ID,CAA Registration,MAC,Flight Path Points," +
+               "ID,CAA Registration,Primary MAC,Flight Path Points," +
                "Max Altitude (m),Max Speed (m/s),Average RSSI (dBm)," +
-               "Flight Duration (HH:MM:SS),Height (m),Manufacturer"
-    }
+               "Flight Duration (HH:MM:SS),Height (m),Manufacturer," +
+               "MAC Count,MAC History"
+    }q
     
     func toCSVRow() -> String {
         var row = [String]()
@@ -126,8 +128,8 @@ extension DroneEncounter {
         // Identifiers
         row.append(id)
         row.append(metadata["caaRegistration"] ?? "")
-        row.append(metadata["mac"] ?? "")
-        row.append(String(flightPath.count))
+        row.append(macHistory.isEmpty ? "" : macHistory.first ?? "")  // Primary MAC
+        row.append(String(flightPath.count))  // Flight Path Points
         
         // Flight stats
         row.append(String(format: "%.1f", maxAltitude))
@@ -144,6 +146,10 @@ extension DroneEncounter {
         // Height and manufacturer
         row.append(String(format: "%.1f", signatures.last?.height ?? 0.0))
         row.append(metadata["manufacturer"] ?? "")
+        
+        // MAC Count and MAC History
+        row.append(String(macHistory.count))
+        row.append(macHistory.joined(separator: ";"))
 
         return row.joined(separator: ",")
     }
@@ -196,8 +202,15 @@ class DroneStorageManager: ObservableObject {
         )
         encounter.flightPath.append(point)
         
-        // Update randomized macs
-        if let mac = message.mac {
+        // Update MAC history from signal sources
+        for source in message.signalSources {
+            if !source.mac.isEmpty {
+                encounter.macHistory.insert(source.mac)
+            }
+        }
+        
+        // Also check for MAC in message.mac as fallback
+        if let mac = message.mac, !mac.isEmpty {
             encounter.macHistory.insert(mac)
         }
 
@@ -207,7 +220,8 @@ class DroneStorageManager: ObservableObject {
             timestamp: Date().timeIntervalSince1970,
             rssi: Double(message.rssi ?? 0),
             speed: Double(message.speed) ?? 0.0,
-            height: Double(message.height ?? "0.0") ?? 0.0
+            height: Double(message.height ?? "0.0") ?? 0.0,
+            mac: String(message.mac ?? "")
         )
         encounter.signatures.append(sig)
 
