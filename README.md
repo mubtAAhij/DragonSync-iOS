@@ -200,7 +200,8 @@ Watch ANTSDR temperatures in Pro version:
 
 ## Usage
 
-> **Note:** Keep your DroneID and DragonSync repositories updated. Update by running `git pull` in both repository directories.
+> [!NOTE]
+> Keep your DroneID and DragonSync repositories updated. Update by running `git pull` in both repository directories.
 
 ### Connection Methods
 
@@ -270,7 +271,8 @@ Special thanks to:
 
 ## Disclaimer
 
-> **Warning:** This software is provided as-is, without warranty. Use at your own risk. Root Down Digital and associated developers are not responsible for damages, legal issues, or misuse. Operate in compliance with local regulations.
+> [!WARNING]
+> This software is provided as-is, without warranty. Use at your own risk. Root Down Digital and associated developers are not responsible for damages, legal issues, or misuse. Operate in compliance with local regulations.
 
 ## License
 
@@ -286,12 +288,17 @@ For support, please open an issue in this repository.
 
 ## Notes
 
-> **Note:** Active development continues. Features may change.
+> [!NOTE]
+> DragonSync is currently in active development. Some features may be incomplete or subject to change.
 
-> **Important:** Keep WarDragon DragonOS updated for best compatibility.
+> [!IMPORTANT]
+> Ensure that your WarDragon DragonOS image is updated for optimal compatibility with DragonSync.
 
-> **Tip:** Use same local network for iOS device and WarDragon.
+> [!TIP]
+> Keep your iOS device and WarDragon system on the same local network to ensure seamless communication.
 
-> **Caution:** Follow local regulations and guidelines.
+> [!CAUTION]
+> Always operate in compliance with local regulations and guidelines to ensure safety and legality.
 
-> **Warning:** Unauthorized use with non-WarDragon systems may cause instability.
+> [!WARNING]
+> Use of this application with systems other than WarDragon may result in unexpected behavior or system instability
