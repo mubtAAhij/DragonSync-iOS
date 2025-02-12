@@ -93,12 +93,12 @@ struct SignatureData: Codable, Hashable {
 extension DroneEncounter {
     static func csvHeaders() -> String {
         return "First Seen,First Seen Latitude,First Seen Longitude,First Seen Altitude (m)," +
-               "Last Seen,Last Seen Latitude,Last Seen Longitude,Last Seen Altitude (m)," +
-               "ID,CAA Registration,Primary MAC,Flight Path Points," +
-               "Max Altitude (m),Max Speed (m/s),Average RSSI (dBm)," +
-               "Flight Duration (HH:MM:SS),Height (m),Manufacturer," +
-               "MAC Count,MAC History"
-    }q
+        "Last Seen,Last Seen Latitude,Last Seen Longitude,Last Seen Altitude (m)," +
+        "ID,CAA Registration,Primary MAC,Flight Path Points," +
+        "Max Altitude (m),Max Speed (m/s),Average RSSI (dBm)," +
+        "Flight Duration (HH:MM:SS),Height (m),Manufacturer," +
+        "MAC Count,MAC History"
+    }
     
     func toCSVRow() -> String {
         var row = [String]()
@@ -150,7 +150,7 @@ extension DroneEncounter {
         // MAC Count and MAC History
         row.append(String(macHistory.count))
         row.append(macHistory.joined(separator: ";"))
-
+        
         return row.joined(separator: ",")
     }
 }
@@ -188,9 +188,9 @@ class DroneStorageManager: ObservableObject {
             metadata: [:],
             macHistory: []
         )
-
+        
         encounter.lastSeen = Date()
-
+        
         // Get coordinates including home location directly from message
         let point = FlightPathPoint(
             latitude: Double(message.lat) ?? 0.0,
@@ -213,8 +213,8 @@ class DroneStorageManager: ObservableObject {
         if let mac = message.mac, !mac.isEmpty {
             encounter.macHistory.insert(mac)
         }
-
-
+        
+        
         // Add signature data
         let sig = SignatureData(
             timestamp: Date().timeIntervalSince1970,
@@ -224,12 +224,12 @@ class DroneStorageManager: ObservableObject {
             mac: String(message.mac ?? "")
         )
         encounter.signatures.append(sig)
-
+        
         var updatedMetadata = encounter.metadata
         if let mac = message.mac {
             updatedMetadata["mac"] = mac
         }
-    
+        
         if let caaReg = message.caaRegistration {
             updatedMetadata["caaRegistration"] = caaReg
         }
@@ -329,7 +329,7 @@ class DroneStorageManager: ObservableObject {
             }
         }
     }
-
+    
     class CSVDataItem: NSObject, UIActivityItemSource {
         private let fileURL: URL
         private let filename: String
@@ -360,6 +360,6 @@ class DroneStorageManager: ObservableObject {
             return filename
         }
     }
-
-
+    
+    
 }
