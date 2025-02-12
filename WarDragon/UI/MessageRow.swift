@@ -66,33 +66,39 @@ struct MessageRow: View {
     
     
     private func getMAC() -> String? {
+        // Function to validate MAC format
+        func isValidMAC(_ mac: String) -> Bool {
+            return mac.range(of: "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", options: .regularExpression) != nil
+        }
+
         // Check signature for MAC
         if let signature = signature,
-           let mac = signature.transmissionInfo.macAddress {
+           let mac = signature.transmissionInfo.macAddress,
+           isValidMAC(mac) {
             return mac
         }
         
         // Fallback to raw message parsing
         if let macValue = (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String ??
             (message.rawMessage["Basic ID"] as? [String: Any])?["mac"] as? String ??
-            (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["mac"] as? String {
+            (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["mac"] as? String,
+           isValidMAC(macValue) {
             return macValue
         }
         
         // Check remarks field for MAC address
         if let details = message.rawMessage["detail"] as? [String: Any],
            let remarks = details["remarks"] as? String,
-           let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/) {
-            return String(match.1) // Convert Substring to String
+           let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/),
+           isValidMAC(String(match.1)) {
+            return String(match.1)
         }
         
         if let details = message.rawMessage["detail"] as? [String: Any],
-           let remarks = details["remarks"] as? String {
-            print("Remarks: \(remarks)")
-            if let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/) {
-                print("Regex Match: \(match.1)")
-                return String(match.1)
-            }
+           let remarks = details["remarks"] as? String,
+           let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/),
+           isValidMAC(String(match.1)) {
+            return String(match.1)
         }
         
         return nil

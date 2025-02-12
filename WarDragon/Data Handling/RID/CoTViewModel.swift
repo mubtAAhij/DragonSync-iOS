@@ -666,10 +666,29 @@ class CoTViewModel: ObservableObject {
     
     func determineSignalType(message: CoTMessage, mac: String?, rssi: Int?, updatedMessage: inout CoTMessage) -> SignalSource.SignalType {
         
-        print("DEBUG: Index and runbtiume : \(updatedMessage.index) and \(updatedMessage.runtime)")
+        print("DEBUG: Index and runbtiume : \(message.index) and \(message.runtime)")
+        print("CurrentmessageFormat: \(currentMessageFormat)")
+        
+        func isValidMAC(_ mac: String) -> Bool {
+            return mac.range(of: "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", options: .regularExpression) != nil
+        }
+        
+        var checkedMac = mac ?? ""
+        if !isValidMAC(checkedMac){
+            checkedMac = ""
+        }
+
         // Determine type for new source
-        let newSourceType = (updatedMessage.runtime != "0" && updatedMessage.runtime != nil) ? SignalSource.SignalType.wifi :
-                            SignalSource.SignalType.bluetooth
+        let newSourceType: SignalSource.SignalType
+        if !isValidMAC(checkedMac) {
+            newSourceType = .sdr
+        } else if currentMessageFormat == .wifi ||
+                    ((message.index ?? "0") != "0" ||
+                     (message.runtime ?? "0") != "0") {
+            newSourceType = .wifi
+        } else {
+            newSourceType = .bluetooth
+        }
         
         // Create new source
         let newSource = SignalSource(

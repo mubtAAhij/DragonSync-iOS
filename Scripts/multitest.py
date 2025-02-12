@@ -337,7 +337,7 @@ class DroneMessageGenerator:
 		
 		# Fixed values
 		mac = "E0:4E:7A:9A:67:99"
-#		mac = ""
+		#mac = "DJI"
 		rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
 		protocol_version = "1.0"
 		desc = f"DJI {100}"
@@ -374,7 +374,7 @@ class DroneMessageGenerator:
 		<event version="2.0" uid="{uid}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
 			<point lat="{lat:.6f}" lon="{lon:.6f}" hae="{alt:.1f}" ce="35.0" le="999999"/>
 			<detail>
-				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Self-ID: {desc}, Location/Vector: [Speed: {speed:.1f} m/s, Vert Speed: {vspeed:.1f} m/s, Geodetic Altitude: {alt:.1f} m, Height AGL: {height_agl:.1f} m], System: [Operator Lat: {operator_lat:.6f}, Operator Lon: {operator_lon:.6f}, Home Lat: {homeLat:.6f}, Home Lon: {homeLon:.6f}]</remarks>
+				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Self-ID: {desc}, Location/Vector: [Speed: {speed:.1f} m/s, Vert Speed: {vspeed:.1f} m/s, Geodetic Altitude: {alt:.1f} m, Height AGL: {height_agl:.1f} m], System: [Operator Lat: {operator_lat:.6f}, Operator Lon: {operator_lon:.6f}, Home Lat: {homeLat:.6f}, Home Lon: {homeLon:.6f}], Index: "0", Runtime: "0"</remarks>
 				<contact endpoint="" phone="" callsign="drone-{desc.split()[-1]}"/>
 				<precisionlocation geopointsrc="gps" altsrc="gps"/>
 				<color argb="-256"/>
@@ -419,8 +419,8 @@ class DroneMessageGenerator:
 		rssi_state['index'] = (rssi_state['index'] + 1) % len(rssi_state['values'])
 		
 		message = {
-			"index": 57,
-			"runtime": 11,
+			"index": 0,
+			"runtime": 0,
 			"Basic ID": {
 				"id": "112624150A90E3AE1EC0",
 				"id_type": "Serial Number (ANSI/CTA-2063-A)",

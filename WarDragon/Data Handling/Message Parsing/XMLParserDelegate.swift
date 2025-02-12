@@ -236,8 +236,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     }
     
     func parseESP32Message(_ jsonData: [String: Any]) -> CoTViewModel.CoTMessage? {
-        let index = jsonData["index"] as? String
-        let runtime = jsonData["runtime"] as? String ?? ""
+        let index = jsonData["index"] as? Int ?? 0
+        let runtime = jsonData["runtime"] as? Int ?? 0
         
         if let basicId = jsonData["Basic ID"] as? [String: Any] {
             let id = basicId["id"] as? String ?? UUID().uuidString
@@ -341,8 +341,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 timestamp_accuracy: location?["timestamp_accuracy"] as? String,
                 operator_id: opID,
                 operator_id_type: opIDType,
-                index: index,
-                runtime: runtime,
+                index: String(index),
+                runtime: String(runtime),
                 rawMessage: jsonData
             )
         }
