@@ -1,4 +1,4 @@
-# DragonSync iOS
+# DragonSync iOS  
 
 <div align="center">
  <img src="https://github.com/user-attachments/assets/d21ab909-7dba-4b42-8996-a741248e9223" width="80%" alt="DragonSync Logo">
@@ -14,6 +14,52 @@ Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSy
 [![TestFlight Beta](https://img.shields.io/badge/TestFlight-Join_Beta-blue.svg)](https://testflight.apple.com/join/QKDKMSfA)
 
 </div>
+
+## Table of Contents  
+
+### 🔹 Features  
+- [Real-Time Monitoring](#real-time-monitoring)  
+- [Spoof Detection](#spoof-detection)  
+- [MAC Randomization Detection](#mac-randomization-detection)  
+- [Multi-Source Signal Analysis](#multi-source-signal-analysis)  
+- [System Monitoring](#system-monitoring)  
+- [Encounter History](#encounter-history)  
+
+### 📡 Detection & Tracking  
+- [Dashboard Display](#dashboard-display)  
+- [Live Drone View](#live-drone-view)  
+
+### 📊 History & Analysis  
+- [Encounter History](#encounter-history-1)  
+
+### ⚙️ App Settings Configuration  
+- [Warning Dials](#warning-dials)  
+
+### 🔧 Requirements  
+- [Option 1: WarDragon/Pro](#option-1-wardragonpro)  
+- [Option 2: DIY Setup](#option-2-diy-setup)  
+  - [Hardware Requirements](#hardware-requirements)  
+  - [Software Requirements](#software-requirements)  
+
+### 🚀 Usage  
+- [Connection Methods](#connection-methods)  
+  - [ZMQ Server (JSON) - Recommended](#zmq-server-json---recommended)  
+  - [Multicast (CoT) - Experimental](#multicast-cot---experimental)  
+- [Setup Instructions](#setup-instructions)  
+  - [ZMQ Connection](#zmq-connection)  
+  - [Multicast Setup](#multicast-setup)  
+- [Settings Configuration](#settings-configuration)  
+
+### 🛠️ Build Instructions  
+
+### 🌍 Community & Legal  
+- [Credits](#credits)  
+- [Disclaimer](#disclaimer)  
+- [License](#license)  
+- [Contributing](#contributing)  
+- [Contact](#contact)  
+- [Notes](#notes)  
+
 
 ## Features
 
@@ -78,7 +124,8 @@ Automatically identifies and tracks MAC address changes:
  <img src="https://github.com/user-attachments/assets/816debe7-6c05-4c7a-9e88-14a6a4f0989a" width="60%" alt="Encounter History View">
 </div>
 
-### Detection & Tracking
+
+## Detection & Tracking
 
 #### Dashboard Display
 Keep tabs on your entire system at a glance:
@@ -101,27 +148,11 @@ Track multiple drones in real-time with interactive maps and detailed signal ana
 * Spoof analysis
 * MAC randomization monitoring
 
-To get a better view:
-* Tap the "Live" map button for full-screen tracking
-* Select any drone entry to view full details
-* Watch for color changes indicating signal strength or alerts
-
-
-#### Advanced Spoofing Detection
-When enabled, DragonSync's spoof detection provides:
-* Signal strength analysis relative to reported positions
-* Flight physics validation
-* Position consistency monitoring
-* Detailed confidence scoring
-* Full breakdown of detection reasons
-
-#### Signal Analysis 
-Watch for MAC randomization and track signal changes:
-* MAC address pattern detection
-* Real-time association tracking
-* Historical MAC mapping
-* Signal type identification
-* Source verification
+> [!TIP]
+> To get a better view:
+> * Tap the "Live" map button for full-screen tracking
+> * Select from Active Drones to view full details
+> * Watch for color changes indicating signal strength or alerts
 
 ### History & Analysis
 
@@ -142,10 +173,10 @@ Access this data through the History tab:
 * Delete individual records with left swipe
 * Clear all history via menu
 
-### System Configuration
+## App Settings Configuration
 
 #### Warning Dials
-Customize alerts with tactile control dials:
+Customize dashboard alerts with the control dials:
 * CPU Usage threshold
 * System temperature limits
 * Memory usage warnings
@@ -155,7 +186,7 @@ Customize alerts with tactile control dials:
 
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0" width="100%" alt="Warning Configuration">
+  <img src="https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0" width="70%" alt="Warning Configuration">
 </div>
 
 Set proximity warnings based on signal strength - useful for:
@@ -164,20 +195,6 @@ Set proximity warnings based on signal strength - useful for:
 * Zone monitoring
 * Signal strength tracking
 
-#### System Monitoring
-Keep tabs on your hardware:
-* Real-time CPU usage
-* Memory allocation
-* Temperature tracking
-* GPS status
-* Storage space
-* Network connectivity
-
-Watch ANTSDR temperatures in Pro version:
-* PLUTO core temp
-* ZYNQ temperature
-* Historical tracking
-* Warning indicators
 
 ## Requirements
 
