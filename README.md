@@ -17,7 +17,7 @@ Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSy
 
 ## Table of Contents  
 
-### 🔹 Features  
+### Features  
 - [Real-Time Monitoring](#real-time-monitoring)  
 - [Spoof Detection](#spoof-detection)  
 - [MAC Randomization Detection](#mac-randomization-detection)  
@@ -25,23 +25,23 @@ Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSy
 - [System Monitoring](#system-monitoring)  
 - [Encounter History](#encounter-history)  
 
-### 📡 Detection & Tracking  
+### Detection & Tracking  
 - [Dashboard Display](#dashboard-display)  
 - [Live Drone View](#live-drone-view)  
 
-### 📊 History & Analysis  
+### History & Analysis  
 - [Encounter History](#encounter-history-1)  
 
-### ⚙️ App Settings Configuration  
+### App Settings Configuration  
 - [Warning Dials](#warning-dials)  
 
-### 🔧 Requirements  
+### Requirements  
 - [Option 1: WarDragon/Pro](#option-1-wardragonpro)  
 - [Option 2: DIY Setup](#option-2-diy-setup)  
   - [Hardware Requirements](#hardware-requirements)  
   - [Software Requirements](#software-requirements)  
 
-### 🚀 Usage  
+### Usage  
 - [Connection Methods](#connection-methods)  
   - [ZMQ Server (JSON) - Recommended](#zmq-server-json---recommended)  
   - [Multicast (CoT) - Experimental](#multicast-cot---experimental)  
@@ -50,9 +50,9 @@ Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSy
   - [Multicast Setup](#multicast-setup)  
 - [Settings Configuration](#settings-configuration)  
 
-### 🛠️ Build Instructions  
+### Build Instructions  
 
-### 🌍 Community & Legal  
+### Community & Legal  
 - [Credits](#credits)  
 - [Disclaimer](#disclaimer)  
 - [License](#license)  
