@@ -50,7 +50,8 @@ Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSy
   - [Multicast Setup](#multicast-setup)  
 - [Settings Configuration](#settings-configuration)  
 
-### Build Instructions  
+### Building from Source
+- [Xcode](#build-instructions)  
 
 ### Community & Legal  
 - [Credits](#credits)  
