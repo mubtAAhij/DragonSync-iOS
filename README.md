@@ -65,9 +65,10 @@ Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSy
 ## Features
 
 ### Real-Time Monitoring
-* Live tracking of Remote ID-compliant drones
+* Live tracking of Remote ID-compliant drones.
+* Decodes Ocusync and others that do not use Remote ID
 * Instant flight path visualization
-* Comprehensive telemetry data display
+* Comprehensive telemetry data
 * Multi-protocol (ZMQ and multicast)
 * Simultaneous tri-source detection
 
