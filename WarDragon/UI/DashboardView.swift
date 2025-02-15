@@ -141,15 +141,8 @@ struct DronesOverviewCard: View {
     @ObservedObject var cotViewModel: CoTViewModel
     
     private var activeDroneCount: Int {
-        // Count unique drones by serial ID, excluding duplicates from MAC addresses
-        let uniqueDrones = Set(cotViewModel.parsedMessages.compactMap { message in
-            // Only count drones with valid serial IDs
-            if message.idType.contains("Serial") {
-                return message.uid
-            }
-            return nil
-        })
-        return uniqueDrones.count
+        // Simple count of unique drones by their MAC addresses
+        return Set(cotViewModel.parsedMessages.compactMap { $0.mac }).count
     }
     
     var body: some View {
@@ -168,7 +161,7 @@ struct DronesOverviewCard: View {
             HStack {
                 StatBox(
                     title: "TRACKED",
-                    value: "\(cotViewModel.droneSignatures.count)",
+                    value: "\(activeDroneCount)",
                     icon: "antenna.radiowaves.left.and.right",
                     color: .blue
                 )
