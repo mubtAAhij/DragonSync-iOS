@@ -681,7 +681,6 @@ class CoTViewModel: ObservableObject {
     }
     
     func determineSignalType(message: CoTMessage, mac: String?, rssi: Int?, updatedMessage: inout CoTMessage) -> SignalSource.SignalType {
-        
         print("DEBUG: Index and runbtiume : \(String(describing: message.index)) and \(String(describing: message.runtime))")
         print("CurrentmessageFormat: \(currentMessageFormat)")
         
@@ -690,34 +689,32 @@ class CoTViewModel: ObservableObject {
         }
         
         var checkedMac = mac ?? ""
-        if !isValidMAC(checkedMac){
+        if !isValidMAC(checkedMac) {
             checkedMac = ""
         }
 
-        // Determine type for new source
         let newSourceType: SignalSource.SignalType
         if !isValidMAC(checkedMac) {
-           newSourceType = .sdr
-        } else if currentMessageFormat == .wifi ||
-                   ((message.index != nil && message.index != "" && message.index != "0") ||
-                    (message.runtime != nil && message.runtime != "" && message.runtime != "0")) {
-           newSourceType = .wifi
+            newSourceType = .sdr
+        } else if message.index != nil && message.index != "" && message.index != "0" ||
+                  message.runtime != nil && message.runtime != "" && message.runtime != "0" {
+            newSourceType = .wifi
         } else {
-           newSourceType = .bluetooth
+            newSourceType = .bluetooth
         }
         
-        // Create new source
-        let newSource = SignalSource(
-            mac: mac ?? "",
+        // Create new source only if we have valid data
+        guard let newSource = SignalSource(
+            mac: checkedMac,
             rssi: rssi ?? 0,
             type: newSourceType,
             timestamp: Date()
-        )
+        ) else { return newSourceType }
         
-        // Keep strongest signal per TYPE
+        // Keep track of sources by TYPE
         var sourcesByType: [SignalSource.SignalType: SignalSource] = [:]
         
-        // Process existing sources
+        // Process existing sources - keep newest per type
         for source in updatedMessage.signalSources {
             if let existing = sourcesByType[source.type] {
                 if source.timestamp > existing.timestamp {
@@ -728,19 +725,18 @@ class CoTViewModel: ObservableObject {
             }
         }
         
-        // Add/update new source
-        if let newSource = newSource {
-            if let existing = sourcesByType[newSourceType] {
-                if newSource.rssi > existing.rssi {
-                    sourcesByType[newSourceType] = newSource
-                }
-            } else {
-                sourcesByType[newSourceType] = newSource
+        // Only add the new source if it's valid
+        sourcesByType[newSourceType] = newSource
+        
+        // Sort by precedence: WiFi > BT > SDR
+        updatedMessage.signalSources = Array(sourcesByType.values).sorted { s1, s2 in
+            let typeOrder: [SignalSource.SignalType] = [.wifi, .bluetooth, .sdr]
+            if let index1 = typeOrder.firstIndex(of: s1.type),
+               let index2 = typeOrder.firstIndex(of: s2.type) {
+                return index1 < index2
             }
+            return false
         }
-
-        // Update message sources
-        updatedMessage.signalSources = Array(sourcesByType.values)
         
         print("DEBUG: Signal sources after filtering by type: \(updatedMessage.signalSources.count)")
         for source in updatedMessage.signalSources {
@@ -809,21 +805,15 @@ class CoTViewModel: ObservableObject {
         if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == updatedMessage.mac || $0.uid == updatedMessage.uid }) {
             var existingMessage = self.parsedMessages[existingIndex]
 
-            // Consolidate signal sources using the most recent timestamp per type
+            // Consolidate sources maintaining original order and updating only with newer sources
             var consolidatedSources: [SignalSource.SignalType: SignalSource] = [:]
 
-            // Process existing sources
+            // Process existing sources first to maintain original order
             for source in existingMessage.signalSources {
-                if let existing = consolidatedSources[source.type] {
-                    if source.timestamp > existing.timestamp {
-                        consolidatedSources[source.type] = source
-                    }
-                } else {
-                    consolidatedSources[source.type] = source
-                }
+                consolidatedSources[source.type] = source
             }
 
-            // Process new sources from updated message
+            // Only update with newer sources
             for source in updatedMessage.signalSources {
                 if let existing = consolidatedSources[source.type] {
                     if source.timestamp > existing.timestamp {
@@ -834,18 +824,15 @@ class CoTViewModel: ObservableObject {
                 }
             }
 
-            // Update the message with consolidated sources
-            let typeOrder: [SignalSource.SignalType] = [.wifi, .sdr, .bluetooth]
+            // Maintain the preferred order of WiFi > Bluetooth > SDR while preserving existing sources
+            let typeOrder: [SignalSource.SignalType] = [.wifi, .bluetooth, .sdr]
             existingMessage.signalSources = Array(consolidatedSources.values)
-                .sorted { source1, source2 in
-                    // First, sort by type order
-                    if let index1 = typeOrder.firstIndex(of: source1.type),
-                       let index2 = typeOrder.firstIndex(of: source2.type),
-                       index1 != index2 {
+                .sorted { s1, s2 in
+                    if let index1 = typeOrder.firstIndex(of: s1.type),
+                       let index2 = typeOrder.firstIndex(of: s2.type) {
                         return index1 < index2
                     }
-                    // If types are the same, sort by most recent timestamp
-                    return source1.timestamp > source2.timestamp
+                    return false
                 }
 
             // Set primary MAC and RSSI based on the most recent source
