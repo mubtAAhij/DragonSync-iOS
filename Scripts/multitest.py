@@ -316,7 +316,8 @@ class DroneMessageGenerator:
 		distance = math.sqrt((lat - center_lat)**2 + (lon - center_lon)**2) * 111000  # Meters
 		
 		# Calculate RSSI that perfectly matches this distance  
-		rssi = -40 - int(20 * math.log10(distance))
+		#rssi = -40 - int(20 * math.log10(distance))
+		
 		
 		# Home position stays fixed
 		homeLat = center_lat 
@@ -338,7 +339,8 @@ class DroneMessageGenerator:
 		# Fixed values
 		mac = "E0:4E:7A:9A:67:99"
 		#mac = "DJI"
-		rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
+		#rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
+		rssi = random.randint(-90, -10)
 		protocol_version = "1.0"
 		desc = f"DJI {100}"
 		height_type = "AGL"
@@ -374,7 +376,7 @@ class DroneMessageGenerator:
 		<event version="2.0" uid="{uid}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
 			<point lat="{lat:.6f}" lon="{lon:.6f}" hae="{alt:.1f}" ce="35.0" le="999999"/>
 			<detail>
-				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Self-ID: {desc}, Location/Vector: [Speed: {speed:.1f} m/s, Vert Speed: {vspeed:.1f} m/s, Geodetic Altitude: {alt:.1f} m, Height AGL: {height_agl:.1f} m], System: [Operator Lat: {operator_lat:.6f}, Operator Lon: {operator_lon:.6f}, Home Lat: {homeLat:.6f}, Home Lon: {homeLon:.6f}], Index: "0", Runtime: "0"</remarks>
+				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Self-ID: {desc}, Location/Vector: [Speed: {speed:.1f} m/s, Vert Speed: {vspeed:.1f} m/s, Geodetic Altitude: {alt:.1f} m, Height AGL: {height_agl:.1f} m], System: [Operator Lat: {operator_lat:.6f}, Operator Lon: {operator_lon:.6f}, Home Lat: {homeLat:.6f}, Home Lon: {homeLon:.6f}]</remarks>
 				<contact endpoint="" phone="" callsign="drone-{desc.split()[-1]}"/>
 				<precisionlocation geopointsrc="gps" altsrc="gps"/>
 				<color argb="-256"/>
@@ -397,30 +399,18 @@ class DroneMessageGenerator:
 		longitude = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
 		homeLat = round(base_lat + random.uniform(-0.0001, 0.0001), 6)
 		homeLon = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
-		
-		speed = round(random.uniform(20, 50), 1)
+		speed = random.choice([0, 50, 65])
+		#speed = round(random.uniform(20, 50), 1)
 		alt = round(random.uniform(50, 400), 1)
-		rssi = random.randint(-90, -18)
+		rssi = random.choice([0, 50, 65])
+		
 		#mac = ':'.join([f'{random.randint(0x00, 0xff):02X}' for _ in range(6)])
 		mac = "E3:4E:7A:9A:67:96"
 		# RSSI modification to cycle through values
-		if not hasattr(self, '_rssi_state'):
-			self._rssi_state = {
-				'current_value': 0,
-				'values': [-90, -60, -40, 0, -22, -50, -20, -80, -70, -72],
-				'index': 0
-			}
-			
-		# Cycle through RSSI values
-		rssi_state = self._rssi_state
-		rssi = rssi_state['values'][rssi_state['index']]
-	
-		# Update state for next call
-		rssi_state['index'] = (rssi_state['index'] + 1) % len(rssi_state['values'])
-		
+				
 		message = {
-			"index": 0,
-			"runtime": 0,
+#			"index": 10,
+#			"runtime": 20,
 			"Basic ID": {
 				"id": "112624150A90E3AE1EC0",
 				"id_type": "Serial Number (ANSI/CTA-2063-A)",
