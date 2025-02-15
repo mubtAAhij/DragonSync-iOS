@@ -380,9 +380,9 @@ struct StoredEncountersView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 20) {
                         Spacer()
-                        FlightDataChart(title: "Altitude", data: encounter.flightPath.map { $0.altitude })
-                        FlightDataChart(title: "Speed", data: encounter.signatures.map { $0.speed })
-                        FlightDataChart(title: "RSSI", data: encounter.signatures.map { $0.rssi })
+                        FlightDataChart(title: "Altitude", data: encounter.flightPath.map { $0.altitude }.filter { $0 != 0 })
+                        FlightDataChart(title: "Speed", data: encounter.signatures.map { $0.speed }.filter { $0 != 0 })
+                        FlightDataChart(title: "RSSI", data: encounter.signatures.map { $0.rssi }.filter { $0 != 0 })
                         Spacer()
                     }
                 }
@@ -428,36 +428,42 @@ struct StoredEncountersView: View {
     }
     
     struct FlightDataChart: View {
-        let title: String
-        let data: [Double]
-        
-        var body: some View {
-            VStack {
-                Text(title)
-                    .font(.appCaption)
-                
-                GeometryReader { geometry in
-                    Path { path in
-                        let step = geometry.size.width / CGFloat(data.count - 1)
-                        let scale = geometry.size.height / (data.max()! - data.min()!)
-                        
-                        path.move(to: CGPoint(
-                            x: 0,
-                            y: geometry.size.height - (data[0] - data.min()!) * scale
-                        ))
-                        
-                        for i in 1..<data.count {
-                            path.addLine(to: CGPoint(
-                                x: CGFloat(i) * step,
-                                y: geometry.size.height - (data[i] - data.min()!) * scale
-                            ))
-                        }
-                    }
-                    .stroke(.blue, lineWidth: 2)
-                }
-            }
-            .frame(width: 200, height: 100)
-        }
+       let title: String
+       let data: [Double]
+       
+       var body: some View {
+           VStack {
+               Text(title)
+                   .font(.appCaption)
+               
+               if let minValue = data.min(), let maxValue = data.max(), data.count > 1 {
+                   GeometryReader { geometry in
+                       Path { path in
+                           let step = geometry.size.width / CGFloat(data.count - 1)
+                           let scale = geometry.size.height / (maxValue - minValue)
+                           
+                           path.move(to: CGPoint(
+                               x: 0,
+                               y: geometry.size.height - (data[0] - minValue) * scale
+                           ))
+                           
+                           for i in 1..<data.count {
+                               path.addLine(to: CGPoint(
+                                   x: CGFloat(i) * step,
+                                   y: geometry.size.height - (data[i] - minValue) * scale
+                               ))
+                           }
+                       }
+                       .stroke(.blue, lineWidth: 2)
+                   }
+               } else {
+                   Text("Insufficient data")
+                       .font(.appCaption)
+                       .foregroundColor(.secondary)
+               }
+           }
+           .frame(width: 200, height: 100)
+       }
     }
 }
 
