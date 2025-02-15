@@ -42,23 +42,32 @@ class CoTViewModel: ObservableObject {
         let rssi: Int
         let type: SignalType
         let timestamp: Date
-        
+
         enum SignalType: String, Hashable {
             case bluetooth
             case wifi
             case sdr
             case unknown
         }
-        
+
+        init?(mac: String, rssi: Int, type: SignalType, timestamp: Date) {
+            guard rssi != 0 else { return nil }
+            self.mac = mac
+            self.rssi = rssi
+            self.type = type
+            self.timestamp = timestamp
+        }
+
         func hash(into hasher: inout Hasher) {
             hasher.combine(mac)
             hasher.combine(type)
         }
-        
+
         static func == (lhs: SignalSource, rhs: SignalSource) -> Bool {
             return lhs.mac == rhs.mac && lhs.type == rhs.type
         }
     }
+
     
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
@@ -593,6 +602,13 @@ class CoTViewModel: ObservableObject {
     }
     
     private func updateMessage(_ message: CoTMessage) {
+        
+        // Uncomment this to disallow zero-coordinate entries
+//        guard let coordinate = message.coordinate,
+//              coordinate.latitude != 0 || coordinate.longitude != 0 else {
+//            return
+//        }
+        
         DispatchQueue.main.async {
             let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
             
@@ -666,7 +682,7 @@ class CoTViewModel: ObservableObject {
     
     func determineSignalType(message: CoTMessage, mac: String?, rssi: Int?, updatedMessage: inout CoTMessage) -> SignalSource.SignalType {
         
-        print("DEBUG: Index and runbtiume : \(message.index) and \(message.runtime)")
+        print("DEBUG: Index and runbtiume : \(String(describing: message.index)) and \(String(describing: message.runtime))")
         print("CurrentmessageFormat: \(currentMessageFormat)")
         
         func isValidMAC(_ mac: String) -> Bool {
@@ -681,13 +697,13 @@ class CoTViewModel: ObservableObject {
         // Determine type for new source
         let newSourceType: SignalSource.SignalType
         if !isValidMAC(checkedMac) {
-            newSourceType = .sdr
+           newSourceType = .sdr
         } else if currentMessageFormat == .wifi ||
-                    ((message.index ?? "0") != "0" ||
-                     (message.runtime ?? "0") != "0") {
-            newSourceType = .wifi
+                   ((message.index != nil && message.index != "" && message.index != "0") ||
+                    (message.runtime != nil && message.runtime != "" && message.runtime != "0")) {
+           newSourceType = .wifi
         } else {
-            newSourceType = .bluetooth
+           newSourceType = .bluetooth
         }
         
         // Create new source
@@ -704,7 +720,7 @@ class CoTViewModel: ObservableObject {
         // Process existing sources
         for source in updatedMessage.signalSources {
             if let existing = sourcesByType[source.type] {
-                if source.rssi > existing.rssi {
+                if source.timestamp > existing.timestamp {
                     sourcesByType[source.type] = source
                 }
             } else {
@@ -713,14 +729,16 @@ class CoTViewModel: ObservableObject {
         }
         
         // Add/update new source
-        if let existing = sourcesByType[newSourceType] {
-            if newSource.rssi > existing.rssi {
+        if let newSource = newSource {
+            if let existing = sourcesByType[newSourceType] {
+                if newSource.rssi > existing.rssi {
+                    sourcesByType[newSourceType] = newSource
+                }
+            } else {
                 sourcesByType[newSourceType] = newSource
             }
-        } else {
-            sourcesByType[newSourceType] = newSource
         }
-        
+
         // Update message sources
         updatedMessage.signalSources = Array(sourcesByType.values)
         
@@ -745,6 +763,13 @@ class CoTViewModel: ObservableObject {
         
         // Update encounters
         let encounters = DroneStorageManager.shared.encounters
+
+        // Validate coordinates first
+        guard signature.position.coordinate.latitude != 0 &&
+              signature.position.coordinate.longitude != 0 else {
+            return // Skip update if coordinates are 0,0
+        }
+
         if encounters[signature.primaryId.id] != nil {
             let existing = encounters[signature.primaryId.id]!
             let hasNewPosition = existing.flightPath.last?.latitude != signature.position.coordinate.latitude ||
@@ -783,76 +808,85 @@ class CoTViewModel: ObservableObject {
         // Find existing message by MAC or UID
         if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == updatedMessage.mac || $0.uid == updatedMessage.uid }) {
             var existingMessage = self.parsedMessages[existingIndex]
-            
-            // Build consolidated signal sources set using strongest signal per type
+
+            // Consolidate signal sources using the most recent timestamp per type
             var consolidatedSources: [SignalSource.SignalType: SignalSource] = [:]
-            
+
             // Process existing sources
             for source in existingMessage.signalSources {
                 if let existing = consolidatedSources[source.type] {
-                    if source.rssi > existing.rssi {
+                    if source.timestamp > existing.timestamp {
                         consolidatedSources[source.type] = source
                     }
                 } else {
                     consolidatedSources[source.type] = source
                 }
             }
-            
+
             // Process new sources from updated message
             for source in updatedMessage.signalSources {
                 if let existing = consolidatedSources[source.type] {
-                    if source.rssi > existing.rssi {
+                    if source.timestamp > existing.timestamp {
                         consolidatedSources[source.type] = source
                     }
                 } else {
                     consolidatedSources[source.type] = source
                 }
             }
-            
-            // Update message with consolidated sources
+
+            // Update the message with consolidated sources
+            let typeOrder: [SignalSource.SignalType] = [.wifi, .sdr, .bluetooth]
             existingMessage.signalSources = Array(consolidatedSources.values)
-                .sorted { $0.rssi > $1.rssi } // Sort by signal strength
-            
-            // Use the strongest signal source's MAC and RSSI as primary
-            if let strongestSource = existingMessage.signalSources.first {
-                existingMessage.mac = strongestSource.mac
-                existingMessage.rssi = strongestSource.rssi
+                .sorted { source1, source2 in
+                    // First, sort by type order
+                    if let index1 = typeOrder.firstIndex(of: source1.type),
+                       let index2 = typeOrder.firstIndex(of: source2.type),
+                       index1 != index2 {
+                        return index1 < index2
+                    }
+                    // If types are the same, sort by most recent timestamp
+                    return source1.timestamp > source2.timestamp
+                }
+
+            // Set primary MAC and RSSI based on the most recent source
+            if let latestSource = existingMessage.signalSources.first {
+                existingMessage.mac = latestSource.mac
+                existingMessage.rssi = latestSource.rssi
             }
 
-            
-            // Never overwrite good data with zeros/empty values
+            // Update metadata but avoid overwriting good values with defaults
             if updatedMessage.lat != "0.0" { existingMessage.lat = updatedMessage.lat }
             if updatedMessage.lon != "0.0" { existingMessage.lon = updatedMessage.lon }
             if updatedMessage.speed != "0.0" { existingMessage.speed = updatedMessage.speed }
             if updatedMessage.vspeed != "0.0" { existingMessage.vspeed = updatedMessage.vspeed }
             if updatedMessage.alt != "0.0" { existingMessage.alt = updatedMessage.alt }
             if let height = updatedMessage.height, height != "0.0" { existingMessage.height = height }
-            
+
             // Preserve operator info
             if !updatedMessage.pilotLat.isEmpty && updatedMessage.pilotLat != "0.0" {
                 existingMessage.pilotLat = updatedMessage.pilotLat
                 existingMessage.pilotLon = updatedMessage.pilotLon
             }
-            
+
             // Preserve operator ID unless we get a new valid one
             if let newOpId = updatedMessage.operator_id, !newOpId.isEmpty {
                 existingMessage.operator_id = newOpId
             }
-            
+
             // Update ID type and CAA registration if present
             if updatedMessage.idType.contains("CAA") {
                 existingMessage.caaRegistration = updatedMessage.caaRegistration
                 existingMessage.idType = "CAA Assigned Registration ID"
             }
-            
+
             // Update spoof detection
             existingMessage.isSpoofed = updatedMessage.isSpoofed
             existingMessage.spoofingDetails = updatedMessage.spoofingDetails
-            
+
             // Update the message
             self.parsedMessages[existingIndex] = existingMessage
             self.objectWillChange.send()
-            
+
         } else {
             // New message - add it
             self.parsedMessages.append(updatedMessage)
@@ -861,6 +895,7 @@ class CoTViewModel: ObservableObject {
             }
         }
     }
+
     
     private func handleCAAMessage(_ message: CoTMessage) {
         // Special handling for CAA messages that don't generate a signature

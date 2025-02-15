@@ -290,7 +290,7 @@ public final class DroneSignatureGenerator {
             let speeds = calculateSpeedsBetweenPoints(history.signatures)
             if let maxSpeed = speeds.max(), maxSpeed > 100 {
                 reasons.append(String(format: "Unrealistic speed: %.1f m/s", maxSpeed))
-                confidenceScore += 0.4
+                confidenceScore += 0.3
             }
             
             // Check for static RSSI while moving
@@ -808,19 +808,12 @@ public final class DroneSignatureGenerator {
 
     func calculateExpectedRSSI(distance: Double) -> Double? {
         // Constants
-        let frequency = 2.4e9     // 2.4 GHz
-        let speedOfLight = 3e8    // meters per second
-        let txPower = 20.0        // dBm
+        let frequency = 2.4e9     // 2.4 GHz for Bluetooth/WiFi
+        let txPower = -59.0       // Reference power at 1 meter distance
+        let pathLossExponent = 2.0 // Path loss exponent for free space
         
-        // Free-space path loss formula
-        let wavelength = speedOfLight / frequency
-        let fspl = 20 * log10(distance / wavelength) + 32.44
-        
-        // Additional loss factors
-        let additionalLoss = 10.0  // Environmental/atmospheric losses
-        
-        // Calculate expected RSSI
-        let expectedRSSI = txPower - fspl - additionalLoss
+        // Basic path loss calculation using log-distance model
+        let expectedRSSI = txPower - (10 * pathLossExponent * log10(max(distance, 1.0)))
         
         return round(expectedRSSI * 10) / 10.0
     }

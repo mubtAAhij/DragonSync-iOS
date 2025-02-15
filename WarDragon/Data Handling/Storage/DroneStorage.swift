@@ -42,17 +42,22 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
     }
     
     var maxAltitude: Double {
-        flightPath.map { $0.altitude }.max() ?? 0
+        let validAltitudes = flightPath.map { $0.altitude }.filter { $0 > 0 }
+        return validAltitudes.max() ?? 0
     }
-    
+
     var maxSpeed: Double {
-        signatures.map { $0.speed }.max() ?? 0
+        let validSpeeds = signatures.map { $0.speed }.filter { $0 > 0 }
+        return validSpeeds.max() ?? 0
     }
+
     
     var averageRSSI: Double {
-        guard !signatures.isEmpty else { return 0 }
-        return signatures.map { $0.rssi }.reduce(0, +) / Double(signatures.count)
+        let validRSSI = signatures.map { $0.rssi }.filter { $0 != 0 }
+        guard !validRSSI.isEmpty else { return 0 }
+        return validRSSI.reduce(0, +) / Double(validRSSI.count)
     }
+
     
     var totalFlightTime: TimeInterval {
         lastSeen.timeIntervalSince(firstSeen)
@@ -88,7 +93,22 @@ struct SignatureData: Codable, Hashable {
     let speed: Double
     let height: Double
     let mac: String?
+    
+    // Ensure the charts are not messed up by mac randos
+    var isValid: Bool {
+        return rssi != 0 || speed != 0 || height != 0
+    }
+    
+    init?(timestamp: TimeInterval, rssi: Double, speed: Double, height: Double, mac: String?) {
+        guard rssi != 0 || speed != 0 || height != 0 else { return nil } // Skip invalid data
+        self.timestamp = timestamp
+        self.rssi = rssi
+        self.speed = speed
+        self.height = height
+        self.mac = mac
+    }
 }
+
 
 extension DroneEncounter {
     static func csvHeaders() -> String {
@@ -166,9 +186,15 @@ class DroneStorageManager: ObservableObject {
     }
     
     func saveEncounter(_ message: CoTViewModel.CoTMessage) {
+        // Validate coordinates before saving
+        guard let lat = Double(message.lat),
+              let lon = Double(message.lon),
+              lat != 0 || lon != 0 else {
+            return // Skip invalid coordinates
+        }
+        
         let droneId = message.uid
         
-        // If this is a CAA ID, look for existing encounter with same MAC
         if message.idType.contains("CAA"),
            let mac = message.mac,
            let existingId = encounters.first(where: { $0.value.metadata["mac"] == mac })?.key {
@@ -191,10 +217,9 @@ class DroneStorageManager: ObservableObject {
         
         encounter.lastSeen = Date()
         
-        // Get coordinates including home location directly from message
         let point = FlightPathPoint(
-            latitude: Double(message.lat) ?? 0.0,
-            longitude: Double(message.lon) ?? 0.0,
+            latitude: lat,
+            longitude: lon,
             altitude: Double(message.alt) ?? 0.0,
             timestamp: Date().timeIntervalSince1970,
             homeLatitude: Double(message.homeLat),
@@ -209,21 +234,20 @@ class DroneStorageManager: ObservableObject {
             }
         }
         
-        // Also check for MAC in message.mac as fallback
         if let mac = message.mac, !mac.isEmpty {
             encounter.macHistory.insert(mac)
         }
         
-        
-        // Add signature data
-        let sig = SignatureData(
+        // Validate the new signature before adding
+        if let sig = SignatureData(
             timestamp: Date().timeIntervalSince1970,
             rssi: Double(message.rssi ?? 0),
             speed: Double(message.speed) ?? 0.0,
             height: Double(message.height ?? "0.0") ?? 0.0,
             mac: String(message.mac ?? "")
-        )
-        encounter.signatures.append(sig)
+        ) {
+            encounter.signatures.append(sig) // Only add valid signatures
+        }
         
         var updatedMetadata = encounter.metadata
         if let mac = message.mac {
@@ -233,11 +257,12 @@ class DroneStorageManager: ObservableObject {
         if let caaReg = message.caaRegistration {
             updatedMetadata["caaRegistration"] = caaReg
         }
+        
         if let manufacturer = message.manufacturer {
             updatedMetadata["manufacturer"] = manufacturer
         }
-        encounter.metadata = updatedMetadata
         
+        encounter.metadata = updatedMetadata
         encounters[droneId] = encounter
         saveToStorage()
     }
