@@ -99,6 +99,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         if elementName == "event" {
             eventAttributes = attributes
             remarks = ""
+            // Skip pilot and home messages
+            if Settings.shared.connectionMode == .multicast {
+                let uid = attributes["uid"] ?? ""
+                if uid.starts(with: "pilot-") || uid.starts(with: "home-") {
+                    return
+                }
+            }
         } else if elementName == "point" {
             pointAttributes = attributes
             // For multicast message altitude is in hae
