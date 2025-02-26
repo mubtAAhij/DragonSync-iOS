@@ -143,10 +143,10 @@ struct ContentView: View {
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             if newValue != 3 { // Spectrum tab
-                spectrumViewModel.stopListening()
+//                spectrumViewModel.stopListening()
             } else if settings.isListening {
                 let port = UInt16(UserDefaults.standard.integer(forKey: "spectrumPort"))
-                spectrumViewModel.startListening(port: port)
+//                spectrumViewModel.startListening(port: port)
             }
         }
         .onChange(of: settings.connectionMode) {
