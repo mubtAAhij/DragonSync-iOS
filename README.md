@@ -213,15 +213,17 @@ Set proximity warnings based on signal strength - useful for:
 ### Option 2: DIY Setup
 
 #### Hardware Requirements
-* ESP32
-* Sniffle compatible BT dongle
-* ANTSDR E200
-* GPS unit
+* ESP32 with WiFi RID [Firmware](https://github.com/alphafox02/T-Halow) or compatible WiFi adapter running DroneID wifi_sniffer. 
+* Sniffle compatible BT dongle (flashed with latest sniffle FW)
+* ANTSDR E200 (Optional: For ocusync decoding)
+* GPS unit (Optional: For spoof detection and status location)
 
 #### Software Requirements
 * [Sniffle](https://github.com/nccgroup/Sniffle)
 * [DroneID](https://github.com/alphafox02/DroneID)
 * [DragonSync Python](https://github.com/alphafox02/DragonSync)
+
+Optional:
 * [DJI Firmware - E200](https://github.com/alphafox02/antsdr_dji_droneid)
 * [WiFi Remote ID Firmware - ESP32](https://github.com/alphafox02/T-Halow/tree/wifi_rid/examples/DragonOS_RID_Scanner)
 
@@ -229,6 +231,20 @@ Set proximity warnings based on signal strength - useful for:
 
 > [!NOTE]
 > Keep your DroneID and DragonSync repositories updated. Update by running `git pull` in both repository directories.
+
+> [!TIP]
+> **BYOD - Getting Started**
+>
+> *ZMQ offers several advantages over CoT XML messages. Firstly, it provides a direct device connection, utilizing only a single decoder. This design ensures greater reliability and robustness. Secondly, ZMQ uses all available data while CoT does not.*
+> - Use the `--dji` flag with zmq_decoder as demonstrated in the DroneID docs for SDR decoding.
+> - Using `wardragon-monitor.py` will report data on most any linux system: `wardragon_monitor.py --zmq_host 0.0.0.0 --zmq_port 4225 --interval 30`
+> - Running `zmq_decoder.py`
+>    - Using a wireless adapter:
+>        - First run the wifi sniffer
+>      `./wifi_receiver.py --interface wlan0 -z --zmqsetting 127.0.0.1:4223`
+>        - Start  `python3 zmq_decoder.py -z --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222,127.0.0.1:4223 -v`
+>    - Using ESP32: `python3 zmq_decoder.py -z --uart /dev/esp0 --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222 -v` (replace /dev/esp0 with your port)
+> - Starting Sniffle BT for Sonoff baud (CatSniffer, don't set -b): `python3 Sniffle/python_cli/sniff_receiver.py -l -e -a -z -b 2000000`
 
 ### Connection Methods
 
