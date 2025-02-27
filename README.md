@@ -233,18 +233,18 @@ Optional:
 > Keep your DroneID and DragonSync repositories updated. Update by running `git pull` in both repository directories.
 
 > [!TIP]
-> **BYOD - Getting Started**
+> **BYOD - Quickstart w/ZMQ**
 >
 > *ZMQ offers several advantages over CoT XML messages. Firstly, it provides a direct device connection, utilizing only a single decoder. This design ensures greater reliability and robustness. Secondly, ZMQ uses all available data while CoT does not.*
 > - Use the `--dji` flag with zmq_decoder as demonstrated in the DroneID docs for SDR decoding.
-> - Using `wardragon-monitor.py` will report data on most any linux system: `wardragon_monitor.py --zmq_host 0.0.0.0 --zmq_port 4225 --interval 30`
+> - Using `wardragon-monitor.py` will report data on most any linux system: `python3 wardragon_monitor.py --zmq_host 0.0.0.0 --zmq_port 4225 --interval 30`
 > - Running `zmq_decoder.py`
 >    - Using a wireless adapter:
 >        - First run the wifi sniffer
->      `./wifi_receiver.py --interface wlan0 -z --zmqsetting 127.0.0.1:4223`
+>      `python3 wifi_receiver.py --interface wlan0 -z --zmqsetting 127.0.0.1:4223`
 >        - Start  `python3 zmq_decoder.py -z --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222,127.0.0.1:4223 -v`
 >    - Using ESP32: `python3 zmq_decoder.py -z --uart /dev/esp0 --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222 -v` (replace /dev/esp0 with your port)
-> - Starting Sniffle BT for Sonoff baud (CatSniffer, don't set -b): `python3 Sniffle/python_cli/sniff_receiver.py -l -e -a -z -b 2000000`
+> - Starting Sniffle BT for Sonoff baud (CatSniffer, don't set -b). Run this and point to your Sniffle folder: `python3 Sniffle/python_cli/sniff_receiver.py -l -e -a -z -b 2000000`
 
 ### Connection Methods
 
