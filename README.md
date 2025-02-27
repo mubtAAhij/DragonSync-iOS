@@ -225,7 +225,7 @@ Set proximity warnings based on signal strength - useful for:
 Optional:
 * [DJI Firmware - E200](https://github.com/alphafox02/antsdr_dji_droneid)
 * [WiFi Remote ID Firmware - ESP32](https://github.com/alphafox02/T-Halow/tree/wifi_rid/examples/DragonOS_RID_Scanner)
-  * [DragonSync Python](https://github.com/alphafox02/DragonSync) - Multicast TAK/ATAK & system monitor. 
+* [DragonSync Python](https://github.com/alphafox02/DragonSync) - Multicast TAK/ATAK & system monitor. 
 
 ## Usage
 
