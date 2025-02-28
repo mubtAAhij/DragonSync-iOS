@@ -46,8 +46,6 @@ Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSy
   - [ZMQ Server (JSON) - Recommended](#zmq-server-json---recommended)  
   - [Multicast (CoT) - Experimental](#multicast-cot---experimental)  
 - [Setup Instructions](#setup-instructions)  
-  - [ZMQ Connection](#zmq-connection)  
-  - [Multicast Setup](#multicast-setup)  
 - [Settings Configuration](#settings-configuration)  
 
 ### Building from Source
@@ -232,20 +230,6 @@ Optional:
 > [!NOTE]
 > Keep your DroneID and DragonSync repositories updated. Update by running `git pull` in both repository directories.
 
-> [!TIP]
-> **BYOD - Quickstart w/ZMQ**
->
-> *ZMQ offers several advantages over CoT XML messages. Firstly, it provides a direct device connection, utilizing only a single decoder. This design ensures greater reliability and robustness. Secondly, ZMQ uses all available data while CoT does not.*
-> - Use the `--dji` flag with zmq_decoder as demonstrated in the DroneID docs for SDR decoding.
-> - Using `wardragon-monitor.py` will report data on most any linux system: `python3 wardragon_monitor.py --zmq_host 0.0.0.0 --zmq_port 4225 --interval 30`
-> - Running `zmq_decoder.py`
->    - Using a wireless adapter:
->        - First run the wifi sniffer
->      `python3 wifi_receiver.py --interface wlan0 -z --zmqsetting 127.0.0.1:4223`
->        - Start  `python3 zmq_decoder.py -z --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222,127.0.0.1:4223 -v`
->    - Using ESP32: `python3 zmq_decoder.py -z --uart /dev/esp0 --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222 -v` (replace /dev/esp0 with your port)
-> - Starting Sniffle BT for Sonoff baud (CatSniffer, don't set -b). Run this and point to your Sniffle folder: `python3 Sniffle/python_cli/sniff_receiver.py -l -e -a -z -b 2000000`
-
 ### Connection Methods
 
 #### ZMQ Server (JSON) - Recommended
@@ -261,18 +245,50 @@ Optional:
 
 ### Setup Instructions
 
-#### ZMQ Connection
-1. Connect your device to the WarDragon network
-2. Select ZMQ in app settings
-3. Enter WarDragon IP address
-4. Start the listener
-5. Monitor status and detection data
+> [!TIP]  
+> **BYOH - Quickstart**
+>
+> #### ZMQ Commands
+>  
+>  **Monitoring & Decoding Options**  
+>  
+> | **Task** | **Command** | **Notes** |  
+> |---------|------------|-----------|  
+> | **System Monitor** | `python3 wardragon_monitor.py --zmq_host 0.0.0.0 --zmq_port 4225 --interval 30` | Works on most Linux systems |  
+> | **Use ZMQ for SDR decoding** | `--dji` flag in `zmq_decoder.py` | Required for DroneID SDR decoding |  
+>  
+>  **Starting Sniffers & Decoders**  
+>  
+> | **Sniffer Type** | **Command** | **Notes** |  
+> |---------------|------------|-----------|
+> | **BT Sniffer for Sonoff (CatSniffer, no `-b`)** | `python3 Sniffle/python_cli/sniff_receiver.py -l -e -a -z -b 2000000` | Requires Sniffle |
+> | **WiFi Sniffer (Wireless Adapter)** | `python3 wifi_receiver.py --interface wlan0 -z --zmqsetting 127.0.0.1:4223` | Requires compatible WiFi adapter |  
+> | **WiFi Adapter/BT Decoder** | `python3 zmq_decoder.py -z --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222,127.0.0.1:4223 -v` | Use after starting WiFi sniffer |  
+> | **ESP32/BT Decoder** | `python3 zmq_decoder.py -z --uart /dev/esp0 --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222 -v` | Replace `/dev/esp0` with the actual port |  
+>  
+> **Notes:**  
+> - Replace IP addresses and ports as needed for your setup.  
+> - Ensure your hardware supports the sniffing method you are using.
 
-#### Multicast Setup
-1. Start `dragonsync.py` and `wardragon-monitor.py`
-2. Launch `zmq_decoder.py` and WiFi/BT sniffer
-3. Configure network for multicast
-4. Enable multicast in app settings
+> [!TIP]  
+> ### Multicast Commands 
+> **Use `dragonsync.py` for CoT to TAK/ATAK or Kismet**
+>
+> | **Description** | **Command** |  
+> |-------------------------|------------|  
+> | **Multicast Only (No TAK Server)** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969` |  
+> | **With TAK Server (TCP)** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP` |  
+> | **With TAK Server (TCP) + TLS Encryption** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP --tak-tls-p12 /path/to/cert.p12 --tak-tls-p12-pass yourpassword` |  
+> | **With TAK Server (UDP)** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8999 --tak-protocol UDP` |  
+> | **Start Kismet with ZMQ output** | `kismet --no-ncurses --log-types=kismet,pcapng,pcap --log-title=drone_hunt --log-prefix=/path/to/logs` |  
+> | **Use Kismet data with DragonSync** | `python3 dragonsync.py --zmq-host 127.0.0.1 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --max-drones 50 --inactivity-timeout 120` | > 
+> | **Rate-Limited Tracking** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --rate-limit 2.5 --max-drones 100` |  
+> | **Combined Multicast and TAK Server** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-host 192.168.1.100 --tak-port 8089` |  
+> | **With Specific Network Interface** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-multicast-interface eth0` |  
+> | **With Debug Logging** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 -d` |  
+
+
+
 
 ### Settings Configuration
 
