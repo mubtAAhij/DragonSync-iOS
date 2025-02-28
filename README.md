@@ -33,7 +33,8 @@ Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSy
 - [Encounter History](#encounter-history-1)  
 
 ### App Settings Configuration  
-- [Warning Dials](#warning-dials)  
+- [Warning Dials](#warning-dials)
+- [App Settings](#settings-configuration) 
 
 ### Requirements  
 - [Option 1: WarDragon/Pro](#option-1-wardragonpro)  
@@ -41,24 +42,15 @@ Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSy
   - [Hardware Requirements](#hardware-requirements)  
   - [Software Requirements](#software-requirements)  
 
-### Usage  
-- [Connection Methods](#connection-methods)  
+### Usage   
+- [Connection Choices](#connection-methods)  
   - [ZMQ Server (JSON) - Recommended](#zmq-server-json---recommended)  
   - [Multicast (CoT) - Experimental](#multicast-cot---experimental)  
-- [Setup Instructions](#setup-instructions)  
-- [Settings Configuration](#settings-configuration)  
-
-### Building from Source
-- [Xcode](#build-instructions)  
-
-### Community & Legal  
-- [Credits](#credits)  
-- [Disclaimer](#disclaimer)  
-- [License](#license)  
-- [Contributing](#contributing)  
-- [Contact](#contact)  
-- [Notes](#notes)  
-
+  
+ ### Backend Data Feed
+  - [ZMQ Commands](#zmq-commands)
+  - [Multicast Commands](#multicast-commands)
+  
 
 ## Features
 
@@ -183,6 +175,18 @@ Access this data through the History tab:
 
 ## App Settings Configuration
 
+### Settings
+
+<div align="center">
+ <img src="https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0" width="60%" alt="Settings Configuration">
+</div>
+
+* Adjustable warning thresholds
+* Custom proximity alerts
+* System monitoring preferences
+* Display customization
+* Connection configuration
+
 #### Warning Dials
 Customize dashboard alerts with the control dials:
 * CPU Usage threshold
@@ -243,12 +247,11 @@ Optional:
 * Supports multiple simultaneous instances
 * Missing some advanced features
 
-### Setup Instructions
+## Backend Data Feed
+*Configure the data acquisition mechanism for the application. ZeroMQ and multicast provide distinct advantages. Utilize them independently or in conjunction to fulfill your specific requirements.*
 
 > [!TIP]  
-> **BYOH - Quickstart**
->
-> #### ZMQ Commands
+> ### ZMQ Commands
 >  
 >  **Monitoring & Decoding Options**  
 >  
@@ -269,7 +272,7 @@ Optional:
 > **Notes:**  
 > - Replace IP addresses and ports as needed for your setup.  
 > - Ensure your hardware supports the sniffing method you are using.
-
+---
 > [!TIP]  
 > ### Multicast Commands 
 > **Use `dragonsync.py` for CoT to TAK/ATAK or Kismet**
@@ -287,20 +290,6 @@ Optional:
 > | **With Specific Network Interface** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-multicast-interface eth0` |  
 > | **With Debug Logging** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 -d` |  
 
-
-
-
-### Settings Configuration
-
-<div align="center">
- <img src="https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0" width="60%" alt="Settings Configuration">
-</div>
-
-* Adjustable warning thresholds
-* Custom proximity alerts
-* System monitoring preferences
-* Display customization
-* Connection configuration
 
 ## Build Instructions
 
