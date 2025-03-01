@@ -293,20 +293,40 @@ Optional:
 
 ## Build Instructions
 
+[![TestFlight Beta](https://img.shields.io/badge/TestFlight-Join_Beta-blue.svg)](https://testflight.apple.com/join/QKDKMSfA) 
+
+Compile from source:
+
 1. Clone the repository:
 repository:
 `git clone https://github.com/Root-Down-Digital/DragonSync-iOS.git`
 
-3. Install dependencies:
+2. Build the iOS App
 ```
 cd DragonSync-iOS
 pod install
 ```
 
-4. Open in Xcode:
+3. Open in Xcode:
 Open `WarDragon.xcworkspace`
 
-5. Build and deploy to your iOS device
+4. Backend Dependencies:
+```
+# Install DroneID
+git clone https://github.com/alphafox02/DroneID.git
+cd DroneID
+git submodule init
+git submodule update
+./setup.sh
+
+# Install Dragonsync Python
+sudo apt update && sudo apt install lm-sensors
+sudo apt install gpsd gpsd-clients
+cd ..
+git clone https://github.com/alphafox02/DragonSync/
+```
+
+5. Run the scripts as described above. Build and deploy to your iOS device or use TestFlight
 
 ## Credits
 
