@@ -14,7 +14,7 @@ struct StoredEncountersView: View {
     @ObservedObject var storage = DroneStorageManager.shared
     @State private var showingDeleteConfirmation = false
     @State private var searchText = ""
-    @State private var sortOrder: SortOrder = .lastSeen
+    @State private var sortOrder: SortOrder = .firstSeen
     
     enum SortOrder {
         case lastSeen, firstSeen, maxAltitude, maxSpeed
@@ -38,7 +38,7 @@ struct StoredEncountersView: View {
         return filtered.sorted { first, second in
             switch sortOrder {
             case .lastSeen: return first.lastSeen > second.lastSeen
-            case .firstSeen: return first.firstSeen > second.firstSeen
+            case .firstSeen: return first.firstSeen < second.firstSeen
             case .maxAltitude: return first.maxAltitude > second.maxAltitude
             case .maxSpeed: return first.maxSpeed > second.maxSpeed
             }
@@ -295,10 +295,41 @@ struct StoredEncountersView: View {
                     StatItem(title: "Points", value: "\(encounter.flightPath.count)")
                     StatItem(title: "Signatures", value: "\(encounter.signatures.count)")
                 }
+                Text("ENCOUNTER TIMELINE")
+                    .font(.appHeadline)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("First Detected")
+                            .font(.appCaption)
+                            .foregroundStyle(.secondary)
+                        Text(formatDateTime(encounter.firstSeen))
+                            .font(.appHeadline)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("Last Contact")
+                            .font(.appCaption)
+                            .foregroundStyle(.secondary)
+                        Text(formatDateTime(encounter.lastSeen))
+                            .font(.appHeadline)
+                    }
+                }
             }
             .padding()
             .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(12)
+            
+        }
+        
+        private func formatDateTime(_ date: Date) -> String {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .medium
+            return formatter.string(from: date)
         }
         
         private var macSection: some View {
