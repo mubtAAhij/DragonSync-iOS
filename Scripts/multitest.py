@@ -316,8 +316,7 @@ class DroneMessageGenerator:
 		distance = math.sqrt((lat - center_lat)**2 + (lon - center_lon)**2) * 111000  # Meters
 		
 		# Calculate RSSI that perfectly matches this distance  
-		#rssi = -40 - int(20 * math.log10(distance))
-		
+		rssi = -40 - int(20 * math.log10(distance))
 		
 		# Home position stays fixed
 		homeLat = center_lat 
@@ -340,7 +339,7 @@ class DroneMessageGenerator:
 		mac = "E0:4E:7A:9A:67:99"
 		#mac = "DJI"
 		#rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
-		rssi = random.randint(-90, -10)
+		#rssi = random.randint(-90, -10)
 		protocol_version = "1.0"
 		desc = f"DJI {100}"
 		height_type = "AGL"
@@ -362,8 +361,10 @@ class DroneMessageGenerator:
 		#mac = ':'.join([f'{random.randint(0x00, 0xff):02X}' for _ in range(6)])
 		
 		# Operator follows drone with slight delay
-		operator_lat = center_lat + radius_lat * math.sin(t - 0.5)
-		operator_lon = center_lon + radius_lon * math.sin((t - 0.5) * 2)
+#		operator_lat = center_lat + radius_lat * math.sin(t - 0.5)
+#		operator_lon = center_lon + radius_lon * math.sin((t - 0.5) * 2)
+		operator_lat = center_lat
+		operator_lon = center_lon
 		operator_alt_geo = 50  # Operator stays at ground level
 		
 		classification = "Class A"
@@ -390,15 +391,23 @@ class DroneMessageGenerator:
 		"""Generate a telemetry message in ESP32-compatible format"""
 		now = datetime.now(timezone.utc)
 		
-		# Get base lat/lon from status message
-		base_lat = round(random.uniform(*self.lat_range), 6)
-		base_lon = round(random.uniform(*self.lon_range), 6)
-	
+		# Use fixed base coordinates instead of randomly generating them each time
+		if not hasattr(self, 'fixed_base_lat') or not hasattr(self, 'fixed_base_lon'):
+			# Initialize fixed base coordinates only once
+			self.fixed_base_lat = round(random.uniform(*self.lat_range), 6)
+			self.fixed_base_lon = round(random.uniform(*self.lon_range), 6)
+			
+		# Get base coordinates from the saved attributes
+		base_lat = self.fixed_base_lat
+		base_lon = self.fixed_base_lon
+		
 		# Add small random variation
 		latitude = round(base_lat + random.uniform(-0.0004, 0.0004), 6)
 		longitude = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
-		homeLat = round(base_lat + random.uniform(-0.0001, 0.0001), 6)
-		homeLon = round(base_lon + random.uniform(-0.0001, 0.0001), 6)
+		homeLat = base_lat
+		homeLon = base_lon
+		pilotLat = base_lat
+		pilotLng = base_lon
 		speed = random.choice([0, 50, 65])
 		#speed = round(random.uniform(20, 50), 1)
 		alt = round(random.uniform(50, 400), 1)
@@ -407,15 +416,15 @@ class DroneMessageGenerator:
 		#mac = ':'.join([f'{random.randint(0x00, 0xff):02X}' for _ in range(6)])
 		mac = "E3:4E:7A:9A:67:96"
 		# RSSI modification to cycle through values
-				
+		
 		message = {
-#			"index": 10,
-#			"runtime": 20,
+			"index": 10,
+			"runtime": 20,
 			"Basic ID": {
 				"id": "112624150A90E3AE1EC0",
 				"id_type": "Serial Number (ANSI/CTA-2063-A)",
-#				"id_type": "CAA Assigned Registration ID",
-#				"id": "112624150A",
+				# "id_type": "CAA Assigned Registration ID",
+				# "id": "112624150A",
 				"ua_type": 0,
 				"MAC": mac,
 				"RSSI": rssi
@@ -442,22 +451,22 @@ class DroneMessageGenerator:
 				"speed_acc": 3
 			},
 			"Self-ID Message": {
-#				"text": "UAV 8c:17:59:f5:95:65 operational",
+				# "text": "UAV 8c:17:59:f5:95:65 operational",
 				"description_type": 0,
 				"description": "Drone ID test flight---"
 			},
 			"System Message": {
 				"latitude": 51.4791,
 				"longitude": -145.0013,
-				"operator_lat": 51.4391,
-				"operator_lon": -145.0113,
+				"operator_lat": pilotLat,
+				"operator_lon": pilotLng,
 				"operator_id": "NotMe",
 				"home_lat": homeLat,
 				"home_lon": homeLon,
-#				"area_count": 1,
-#				"area_radius": 0,
-#				"area_ceiling": 0,
-#				"area_floor": 0,
+				# "area_count": 1,
+				# "area_radius": 0,
+				# "area_ceiling": 0,
+				# "area_floor": 0,
 				"operator_alt_geo": 20,
 				"classification": 1,
 				"timestamp": 28056789
@@ -467,17 +476,16 @@ class DroneMessageGenerator:
 				"operator_id_type": "Operator ID",
 				"operator_id": "NotMe"
 			}
-#			"Auth Message": {
-##				"type": 1,
-##				"page": 0,
-##				"length": 63,
-##				"timestamp": 28000000,
-#				"data": "12345678901234567"
-#			}
+			# "Auth Message": {
+			## "type": 1,
+			## "page": 0,
+			## "length": 63,
+			## "timestamp": 28000000,
+			# "data": "12345678901234567"
+			# }
 		}
 		
-		return json.dumps(message, indent=4)
-	
+		return json.dumps(message, indent=4)	
 	def generate_status_message(self):
 				runtime = int(time.time() - self.start_time)
 				current_time = datetime.now(timezone.utc)
