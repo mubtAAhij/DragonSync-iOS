@@ -1,372 +1,287 @@
-# DragonSync iOS  
+# DragonSync iOS
 
 <div align="center">
- <img src="https://github.com/user-attachments/assets/d21ab909-7dba-4b42-8996-a741248e9223" width="80%" alt="DragonSync Logo">
+  <img src="https://github.com/user-attachments/assets/d21ab909-7dba-4b42-8996-a741248e9223" width="80%" alt="DragonSync Logo">
 </div>
 <br>
-<div align="center"> 
-Real-time drone detection and monitoring for iOS, powered by WarDragon. DragonSync brings professional-grade drone detection to your mobile device with advanced signal analysis and comprehensive tracking capabilities.
-</div>
-   
 <div align="center">
+  Real-time drone detection and monitoring for iOS, powered by WarDragon. Enjoy professional-grade detection with advanced signal analysis and tracking.
+</div>
 <br>
-
-[![TestFlight Beta](https://img.shields.io/badge/TestFlight-Join_Beta-blue.svg)](https://testflight.apple.com/join/QKDKMSfA)
-
+<div align="center">
+  
+ [![TestFlight Beta](https://img.shields.io/badge/TestFlight-Join_Beta-blue.svg)](https://testflight.apple.com/join/QKDKMSfA)
+ 
 </div>
 
-## Table of Contents  
+## Table of Contents
+- [Features](#features)
+- [Detection & Tracking](#detection--tracking)
+- [History & Analysis](#history--analysis)
+- [App Settings](#app-settings)
+- [Requirements & Setup](#requirements--setup)
+ - [Python Setup](#python-setup)
+ - [Connection Choices](#connection-choices)
+ - [Using the Backend](#backend-data)
+ - [Build Instructions](#build-instructions)
+- [Credits, Disclaimer & License](#credits-disclaimer--license)
+- [Contributing & Contact](#contributing--contact)
+- [Notes](#notes)
 
-### Features  
-- [Real-Time Monitoring](#real-time-monitoring)  
-- [Spoof Detection](#spoof-detection)  
-- [MAC Randomization Detection](#mac-randomization-detection)  
-- [Multi-Source Signal Analysis](#multi-source-signal-analysis)  
-- [System Monitoring](#system-monitoring)  
-- [Encounter History](#encounter-history)  
-
-### Detection & Tracking  
-- [Dashboard Display](#dashboard-display)  
-- [Live Drone View](#live-drone-view)  
-
-### History & Analysis  
-- [Encounter History](#encounter-history-1)  
-
-### App Settings Configuration  
-- [Warning Dials](#warning-dials)
-- [App Settings](#settings-configuration) 
-
-### Requirements  
-- [Option 1: WarDragon/Pro](#option-1-wardragonpro)  
-- [Option 2: DIY Setup](#option-2-diy-setup)  
-  - [Hardware Requirements](#hardware-requirements)  
-  - [Software Requirements](#software-requirements)  
-
-### Usage   
-- [Connection Choices](#connection-methods)  
-  - [ZMQ Server (JSON) - Recommended](#zmq-server-json---recommended)  
-  - [Multicast (CoT) - Experimental](#multicast-cot---experimental)  
-  
- ### Backend Data Feed
-  - [ZMQ Commands](#zmq-commands)
-  - [Multicast Commands](#multicast-commands)
-  
+---
 
 ## Features
 
 ### Real-Time Monitoring
-* Live tracking of Remote ID-compliant drones.
-* Decodes Ocusync and others that do not use Remote ID
-* Instant flight path visualization
-* Comprehensive telemetry data
-* Multi-protocol (ZMQ and multicast)
-* Simultaneous tri-source detection
-
-<div align="center">
- <img src="https://github.com/user-attachments/assets/58a6861d-5a06-4e6b-b862-566f2f8a988b" width="60%" alt="Drone Detection Screenshot">
-</div>
-  
+- Live tracking of Remote/Drone ID–compliant drones
+- Decodes Ocusync and others
+- Instant flight path visualization and telemetry
+- Multi-protocol (ZMQ & multicast) with tri-source detection
 
 ### Spoof Detection
-Advanced signal analysis algorithms identify potential spoofed transmissions through:
-* Signal strength validation
-* Position consistency checks
-* Transmission pattern analysis
-* Flight physics validation
+- Advanced analysis: signal strength, position consistency, transmission patterns, and flight physics
 
 <div align="center">
- <img src="https://github.com/user-attachments/assets/b06547b7-4f04-4e80-a562-232b96cc8a5b" width="60%" alt="Spoof Detection Screenshot">
+  <img src="https://github.com/user-attachments/assets/b06547b7-4f04-4e80-a562-232b96cc8a5b" width="60%" alt="Spoof Detection Screenshot">
 </div>
 
 ### MAC Randomization Detection
-Automatically identifies and tracks MAC address changes:
-* Real-time MAC change alerts
-* Association with origin IDs
-* Historical MAC tracking
-* Randomization pattern detection
+- Real-time alerts for MAC changes with historical tracking and origin ID association
 
 <div align="center">
- <img src="https://github.com/user-attachments/assets/a6c0698f-944d-4a41-b38c-fca75778a5e8" width="60%" alt="MAC Randomization Detection Screenshot">
+  <img src="https://github.com/user-attachments/assets/a6c0698f-944d-4a41-b38c-fca75778a5e8" width="60%" alt="MAC Randomization Detection Screenshot">
 </div>
 
 ### Multi-Source Signal Analysis
-* Signal type identification (WiFi/BT/SDR)
-* Source MAC address tracking
-* Signal strength monitoring
+- Identifies WiFi, BT, and SDR signals with source MAC tracking and signal strength monitoring
+
 <div align="center">
- <img src="https://github.com/user-attachments/assets/4763ffb4-f8ef-4e42-af17-a22c27b798a5" width="70%" alt="Signal Analysis Interface">
+  <img src="https://github.com/user-attachments/assets/4763ffb4-f8ef-4e42-af17-a22c27b798a5" width="70%" alt="Signal Analysis Interface">
 </div>
-
-
 <div align="center">
- <img src="https://github.com/user-attachments/assets/4477787a-8877-4421-88b8-ffd7ec38e26b" width="70%" alt="Signal Analysis Interface">
+  <img src="https://github.com/user-attachments/assets/4477787a-8877-4421-88b8-ffd7ec38e26b" width="70%" alt="Signal Analysis Interface">
 </div>
 
 ### System Monitoring
-* Real-time performance metrics
-* Memory usage tracking
-* CPU load & temperature displays
-* GPS status tracking
-* ANTSDR temperature monitoring
+- Real-time performance metrics: memory, CPU load, temperature, GPS & ANTSDR status
 
 <div align="center">
- <img src="https://github.com/user-attachments/assets/b384b0b1-8a90-48c6-bf3a-bcf41b599703" width="60%" alt="System Monitoring Dashboard">
+  <img src="https://github.com/user-attachments/assets/b384b0b1-8a90-48c6-bf3a-bcf41b599703" width="60%" alt="System Monitoring Dashboard">
 </div>
 
 ### Encounter History
-* Automatic drone encounter logging
-* Searchable history database
-* CSV/KML export options
-* Detailed flight data review
-* Historical path visualization
+- Automatic logging with search, CSV/KML export, and detailed flight review
 
 <div align="center">
- <img src="https://github.com/user-attachments/assets/816debe7-6c05-4c7a-9e88-14a6a4f0989a" width="60%" alt="Encounter History View">
+  <img src="https://github.com/user-attachments/assets/816debe7-6c05-4c7a-9e88-14a6a4f0989a" width="60%" alt="Encounter History View">
 </div>
 
 
 ## Detection & Tracking
 
-#### Dashboard Display
-Keep tabs on your entire system at a glance:
-* Live signal detection counts
-* System health status 
-* Critical services tracking
-* Warning monitoring
-* Active drones display
-* Proximity and randomization
+### Dashboard Display
+- Overview of live signal counts, system health, and active drones with proximity alerts
 
 <div align="center">
   <img src="https://github.com/user-attachments/assets/063c2922-1dc5-468d-8378-bb7940d32919" width="60%" alt="Dashboard View">
 </div>
 
-#### Live Drone View
-Track multiple drones in real-time with interactive maps and detailed signal analysis. Every detected drone appears in the Drones tab with:
-* Live flight path tracking 
-* Signal source identification
-* Manufacturer detection
-* Spoof analysis
-* MAC randomization monitoring
+### Live Drone View
+- Interactive maps with live flight paths, spoof analysis, and MAC randomization details
 
-> [!TIP]
-> To get a better view:
-> * Tap the "Live" map button for full-screen tracking
-> * Select from Active Drones to view full details
-> * Watch for color changes indicating signal strength or alerts
-
-### History & Analysis
-
-#### Encounter History
-Every detected drone is automatically logged with:
-* Flight paths
-* Signal data
-* Location information
-* Operator positions when available
-* Takeoff locations (SDR only)
-* MAC history
-
-Access this data through the History tab:
-* Search by ID or CAA registration
-* Sort by various metrics
-* Review flight details
-* Export data in CSV/KML formats
-* Delete individual records with left swipe
-* Clear all history via menu
-
-## App Settings Configuration
-
-### Settings
-
-<div align="center">
- <img src="https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0" width="60%" alt="Settings Configuration">
+  <div align="center">
+  <img src="https://github.com/user-attachments/assets/58a6861d-5a06-4e6b-b862-566f2f8a988b" width="60%" alt="Drone Detection Screenshot">
 </div>
 
-* Adjustable warning thresholds
-* Custom proximity alerts
-* System monitoring preferences
-* Display customization
-* Connection configuration
-
-#### Warning Dials
-Customize dashboard alerts with the control dials:
-* CPU Usage threshold
-* System temperature limits
-* Memory usage warnings
-* PLUTO temperature monitoring
-* ZYNQ temperature alerts
-* Proximity warning RSSI
+> **Tip:** Tap the "Live" map button for full-screen tracking and select an active drone for details.
 
 
+## History & Analysis
+
+### Encounter History
+- Logs each drone encounter automatically with options to search, sort, review, export, or delete records.
+
+## App Settings
+
+### Settings & Warning Dials
+- Customize warning thresholds, proximity alerts, and display preferences.
+- Set limits for CPU usage, temperature (including PLUTO and ZYNQ), memory, and RSSI.
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0" width="60%" alt="Settings Configuration">
+</div>
 <div align="center">
   <img src="https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0" width="70%" alt="Warning Configuration">
 </div>
 
-Set proximity warnings based on signal strength - useful for:
-* Close range detection
-* Approach alerts
-* Zone monitoring
-* Signal strength tracking
+---
 
-
-## Requirements
+## Requirements & Setup
 
 ### Option 1: [WarDragon/Pro](https://cemaxecuter.com/?post_type=product)
 
 ### Option 2: DIY Setup
 
-#### Hardware Requirements
-* ESP32 with WiFi RID [Firmware](https://github.com/alphafox02/T-Halow) or compatible WiFi adapter running DroneID wifi_sniffer. 
-* Sniffle compatible BT dongle (flashed with latest sniffle FW)
-* ANTSDR E200 (Optional: For ocusync decoding)
-* GPS unit (Optional: For spoof detection and status location)
+#### Hardware
+- ESP32 with WiFi RID Firmware or compatible DroneID wifi_sniffer.
+- Sniffle-compatible BT dongle.
+- (Optional) ANTSDR E200 & GPS unit.
 
-#### Software Requirements
-* [Sniffle](https://github.com/nccgroup/Sniffle)
-* [DroneID](https://github.com/alphafox02/DroneID)
+#### Software
+- [Sniffle](https://github.com/nccgroup/Sniffle)
+- [DroneID](https://github.com/alphafox02/DroneID)
+- Optional: [DJI Firmware - E200](https://github.com/alphafox02/antsdr_dji_droneid), [WiFi Remote ID Firmware](https://github.com/alphafox02/T-Halow/tree/wifi_rid/examples/DragonOS_RID_Scanner), [DragonSync Python](https://github.com/alphafox02/DragonSync)
 
-Optional:
-* [DJI Firmware - E200](https://github.com/alphafox02/antsdr_dji_droneid)
-* [WiFi Remote ID Firmware - ESP32](https://github.com/alphafox02/T-Halow/tree/wifi_rid/examples/DragonOS_RID_Scanner)
-* [DragonSync Python](https://github.com/alphafox02/DragonSync) - Multicast TAK/ATAK & system monitor. 
-
-## Usage
-
-> [!NOTE]
-> Keep your DroneID and DragonSync repositories updated. Update by running `git pull` in both repository directories.
-
-### Connection Methods
-
-#### ZMQ Server (JSON) - Recommended
-* Full data access
-* Direct ZMQ connection
-* Minimal configuration needed
-* Complete feature support
-
-#### Multicast (CoT) - Experimental
-* Limited data compared to ZMQ
-* Supports multiple simultaneous instances
-* Missing some advanced features
-
-## Backend Data Feed
-*Configure the data acquisition mechanism for the application. ZeroMQ and multicast provide distinct advantages. Utilize them independently or in conjunction to fulfill your specific requirements.*
-
-> [!TIP]  
-> ### ZMQ Commands
->  
->  **Monitoring & Decoding Options**  
->  
-> | **Task** | **Command** | **Notes** |  
-> |---------|------------|-----------|  
-> | **System Monitor** | `python3 wardragon_monitor.py --zmq_host 0.0.0.0 --zmq_port 4225 --interval 30` | Works on most Linux systems |  
-> | **Use ZMQ for SDR decoding** | `--dji` flag in `zmq_decoder.py` | Required for DroneID SDR decoding |  
->  
->  **Starting Sniffers & Decoders**  
->  
-> | **Sniffer Type** | **Command** | **Notes** |  
-> |---------------|------------|-----------|
-> | **BT Sniffer for Sonoff (CatSniffer, no `-b`)** | `python3 Sniffle/python_cli/sniff_receiver.py -l -e -a -z -b 2000000` | Requires Sniffle |
-> | **WiFi Sniffer (Wireless Adapter)** | `python3 wifi_receiver.py --interface wlan0 -z --zmqsetting 127.0.0.1:4223` | Requires compatible WiFi adapter |  
-> | **WiFi Adapter/BT Decoder** | `python3 zmq_decoder.py -z --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222,127.0.0.1:4223 -v` | Use after starting WiFi sniffer |  
-> | **ESP32/BT Decoder** | `python3 zmq_decoder.py -z --uart /dev/esp0 --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222 -v` | Replace `/dev/esp0` with the actual port |  
->  
-> **Notes:**  
-> - Replace IP addresses and ports as needed for your setup.  
-> - Ensure your hardware supports the sniffing method you are using.
 ---
-> [!TIP]  
-> ### Multicast Commands 
-> **Use `dragonsync.py` for CoT to TAK/ATAK or Kismet**
->
-> | **Description** | **Command** |  
-> |-------------------------|------------|  
-> | **Multicast Only (No TAK Server)** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969` |  
-> | **With TAK Server (TCP)** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP` |  
-> | **With TAK Server (TCP) + TLS Encryption** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP --tak-tls-p12 /path/to/cert.p12 --tak-tls-p12-pass yourpassword` |  
-> | **With TAK Server (UDP)** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8999 --tak-protocol UDP` |  
-> | **Start Kismet with ZMQ output** | `kismet --no-ncurses --log-types=kismet,pcapng,pcap --log-title=drone_hunt --log-prefix=/path/to/logs` |  
-> | **Use Kismet data with DragonSync** | `python3 dragonsync.py --zmq-host 127.0.0.1 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --max-drones 50 --inactivity-timeout 120` | > 
-> | **Rate-Limited Tracking** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --rate-limit 2.5 --max-drones 100` |  
-> | **Combined Multicast and TAK Server** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-host 192.168.1.100 --tak-port 8089` |  
-> | **With Specific Network Interface** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-multicast-interface eth0` |  
-> | **With Debug Logging** | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 -d` |  
 
+## Python Setup
+
+This section covers setting up the backend Python environment on Linux, macOS, and Windows.
+
+### Setup Instructions
+
+#### Linux
+1. **Install Dependencies:**
+
+       sudo apt update && sudo apt install -y python3 python3-pip git gpsd gpsd-clients lm-sensors
+
+2. **Clone & Setup:**
+
+       git clone https://github.com/alphafox02/DroneID.git
+       git clone https://github.com/alphafox02/DragonSync.git
+       cd DroneID
+       git submodule update --init
+       ./setup.sh
+
+#### macOS
+1. **Install Homebrew & Dependencies:**
+
+       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+       brew install python3 git gpsd
+
+2. **Clone & Setup:**
+
+       git clone https://github.com/alphafox02/DroneID.git
+       git clone https://github.com/alphafox02/DragonSync.git
+       cd DroneID
+       git submodule update --init
+       ./setup.sh
+
+#### Windows (Using WSL or Native)
+- **WSL (Recommended):**  
+  Install WSL (`wsl --install`) and follow the Linux instructions.
+- **Native Setup:**  
+  Install Python and Git from [python.org](https://www.python.org/downloads/) and [git-scm.com](https://git-scm.com/download/win), then clone and set up using Git commands above.
+
+## Connection Choices
+
+### ZMQ Server (JSON) – Recommended
+
+The ZMQ Server option provides direct JSON-based communication with full data access. Ideal for detailed monitoring and SDR decoding.
+
+### Multicast (CoT) – Experimental
+
+The Multicast option uses Cursor on Target (CoT) to transmit data for integration with TAK/ATAK systems. It supports multiple instances but may offer less detailed data compared to ZMQ.
+
+---
+
+## Backend Data
+
+### ZMQ Commands
+
+> **Monitoring & Decoding Options**
+
+| **Task**                     | **Command**                                                                               | **Notes**                         |
+|------------------------------|-------------------------------------------------------------------------------------------|-----------------------------------|
+| **System Monitor**           | `python3 wardragon_monitor.py --zmq_host 0.0.0.0 --zmq_port 4225 --interval 30`             | Works on most Linux systems       |
+| **SDR Decoding (DroneID)**   | `python3 zmq_decoder.py --dji -z --zmqsetting 0.0.0.0:4224`                                 | Required for DroneID SDR decoding |
+
+> **Starting Sniffers & Decoders**
+
+| **Sniffer Type**                      | **Command**                                                                                                    | **Notes**                           |
+|---------------------------------------|----------------------------------------------------------------------------------------------------------------|-------------------------------------|
+| **BT Sniffer for Sonoff (no `-b`)**     | `python3 Sniffle/python_cli/sniff_receiver.py -l -e -a -z -b 2000000`                                             | Requires Sniffle                    |
+| **WiFi Sniffer (Wireless Adapter)**   | `python3 wifi_receiver.py --interface wlan0 -z --zmqsetting 127.0.0.1:4223`                                       | Requires compatible WiFi adapter    |
+| **WiFi Adapter/BT Decoder**           | `python3 zmq_decoder.py -z --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222,127.0.0.1:4223 -v`                | Run after starting WiFi sniffer     |
+| **ESP32/BT Decoder**                  | `python3 zmq_decoder.py -z --uart /dev/esp0 --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222 -v`             | Replace `/dev/esp0` with actual port |
+
+### Multicast Commands
+
+> **For CoT to TAK/ATAK or Kismet**
+
+| **Description**                           | **Command**                                                                                                                                    |
+|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Multicast Only (No TAK Server)**        | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969` |
+| **With TAK Server (TCP)**                 | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP`            |
+| **With TAK Server (TCP) + TLS Encryption**| `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP --tak-tls-p12 /path/to/cert.p12 --tak-tls-p12-pass yourpassword` |
+| **With TAK Server (UDP)**                 | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8999 --tak-protocol UDP`                                      |
+| **Start Kismet with ZMQ output**          | `kismet --no-ncurses --log-types=kismet,pcapng,pcap --log-title=drone_hunt --log-prefix=/path/to/logs`                                          |
+| **Use Kismet data with DragonSync**       | `python3 dragonsync.py --zmq-host 127.0.0.1 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --max-drones 50 --inactivity-timeout 120` |
+| **Rate-Limited Tracking**                 | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --rate-limit 2.5 --max-drones 100`                                                   |
+| **Combined Multicast and TAK Server**     | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-host 192.168.1.100 --tak-port 8089` |
+| **With Specific Network Interface**       | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-multicast-interface eth0`         |
+| **With Debug Logging**                    | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 -d`                                         |
+
+---
 
 ## Build Instructions
 
-[![TestFlight Beta](https://img.shields.io/badge/TestFlight-Join_Beta-blue.svg)](https://testflight.apple.com/join/QKDKMSfA) 
+1. **Clone Repository:**
 
-Compile from source:
+       git clone https://github.com/Root-Down-Digital/DragonSync-iOS.git
 
-1. Clone the repository:
-repository:
-`git clone https://github.com/Root-Down-Digital/DragonSync-iOS.git`
+2. **Build the iOS App:**
 
-2. Build the iOS App
-```
-cd DragonSync-iOS
-pod install
-```
+       cd DragonSync-iOS
+       pod install
 
-3. Open in Xcode:
-Open `WarDragon.xcworkspace`
+3. **Open in Xcode:**  
+   Open `WarDragon.xcworkspace`
 
-4. Backend Dependencies:
-```
-# Install DroneID
-git clone https://github.com/alphafox02/DroneID.git
-cd DroneID
-git submodule init
-git submodule update
-./setup.sh
+4. **Backend Dependencies:**
 
-# Install Dragonsync Python
-sudo apt update && sudo apt install lm-sensors
-sudo apt install gpsd gpsd-clients
-cd ..
-git clone https://github.com/alphafox02/DragonSync/
-```
+       # DroneID Setup
+       git clone https://github.com/alphafox02/DroneID.git
+       cd DroneID
+       git submodule update --init
+       ./setup.sh
 
-5. Run the scripts as described above. Build and deploy to your iOS device or use TestFlight
+       # Install additional dependencies:
+       sudo apt update && sudo apt install lm-sensors gpsd gpsd-clients
+       cd ..
+       git clone https://github.com/alphafox02/DragonSync/
 
-## Credits
+5. **Deploy:**  
+   Run the backend scripts as described; then build and deploy to your iOS device or use TestFlight.
 
-Special thanks to:
-* [DragonSync](https://github.com/alphafox02/DragonSync)
-* [DroneID](https://github.com/bkerler/DroneID)
-* [Sniffle](https://github.com/nccgroup/Sniffle)
-* [@alphafox02](https://github.com/alphafox02) - WarDragon creator
-* [@bkerler](https://github.com/bkerler) - DroneID development
+---
 
-## Disclaimer
+## Credits, Disclaimer & License
 
-> [!WARNING]
-> This software is provided as-is, without warranty. Use at your own risk. Root Down Digital and associated developers are not responsible for damages, legal issues, or misuse. Operate in compliance with local regulations.
+- **Credits:**  
+  - [DragonSync](https://github.com/alphafox02/DragonSync)  
+  - [DroneID](https://github.com/alphafox02/DroneID)  
+  - [Sniffle](https://github.com/nccgroup/Sniffle)  
+  - Special thanks to [@alphafox02](https://github.com/alphafox02) and [@bkerler](https://github.com/bkerler)
 
-## License
+- **Disclaimer:**  
+  This software is provided as-is without warranty. Use at your own risk and in compliance with local regulations.
 
-MIT License. See LICENSE.md for details.
+- **License:**  
+  MIT License. See `LICENSE.md` for details.
 
-## Contributing
+---
 
-We welcome contributions! Please submit pull requests or open issues in this repository.
+## Contributing & Contact
 
-## Contact
+- **Contributing:** Contributions are welcome via pull requests or by opening an issue.
+- **Contact:** For support, please open an issue in this repository.
 
-For support, please open an issue in this repository.
+---
 
 ## Notes
 
-> [!NOTE]
-> DragonSync is currently in active development. Some features may be incomplete or subject to change.
-
-> [!IMPORTANT]
-> Ensure that your WarDragon DragonOS image is updated for optimal compatibility with DragonSync.
-
-> [!TIP]
-> Keep your iOS device and WarDragon system on the same local network to ensure seamless communication.
-
-> [!CAUTION]
-> Always operate in compliance with local regulations and guidelines to ensure safety and legality.
-
-> [!WARNING]
-> Use of this application with systems other than WarDragon may result in unexpected behavior or system instability
+> **Note:** DragonSync is under active development; features may change.  
+> **Important:** Keep your WarDragon DragonOS image updated for optimal compatibility.  
+> **Tip:** Ensure your iOS device and backend system are on the same local network for best performance.  
+> **Caution:** Use in compliance with local regulations to avoid legal issues.
