@@ -22,7 +22,7 @@
 - [Requirements & Setup](#requirements--setup)
  - [Python Setup](#python-setup)
  - [Connection Choices](#connection-choices)
- - [Using the Backend](#backend-data)
+ - [Command Guide](#backend-data)
  - [Build Instructions](#build-instructions)
 - [Credits, Disclaimer & License](#credits-disclaimer--license)
 - [Contributing & Contact](#contributing--contact)
@@ -173,6 +173,20 @@ This section covers setting up the backend Python environment on Linux, macOS, a
 - **Native Setup:**  
   Install Python and Git from [python.org](https://www.python.org/downloads/) and [git-scm.com](https://git-scm.com/download/win), then clone and set up using Git commands above.
 
+### Backend Dependencies
+
+       # DroneID Setup
+       git clone https://github.com/alphafox02/DroneID.git
+       cd DroneID
+       git submodule update --init
+       ./setup.sh
+
+       # Install additional dependencies:
+       sudo apt update && sudo apt install lm-sensors gpsd gpsd-clients
+       cd ..
+       git clone https://github.com/alphafox02/DragonSync/
+
+
 ## Connection Choices
 
 ### ZMQ Server (JSON) – Recommended
@@ -238,20 +252,7 @@ The Multicast option uses Cursor on Target (CoT) to transmit data for integratio
 3. **Open in Xcode:**  
    Open `WarDragon.xcworkspace`
 
-4. **Backend Dependencies:**
-
-       # DroneID Setup
-       git clone https://github.com/alphafox02/DroneID.git
-       cd DroneID
-       git submodule update --init
-       ./setup.sh
-
-       # Install additional dependencies:
-       sudo apt update && sudo apt install lm-sensors gpsd gpsd-clients
-       cd ..
-       git clone https://github.com/alphafox02/DragonSync/
-
-5. **Deploy:**  
+4. **Deploy:**  
    Run the backend scripts as described; then build and deploy to your iOS device or use TestFlight.
 
 ---
