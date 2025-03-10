@@ -5,25 +5,29 @@
 </div>
 <br>
 <div align="center">
-  Real-time drone detection and monitoring for iOS, powered by WarDragon. Enjoy professional-grade detection with advanced signal analysis and tracking.
+  Real-time drone detection and monitoring for iOS, powered by local Python decoding. Enjoy professional-grade detection with advanced signal analysis and tracking. 
 </div>
 <br>
 <div align="center">
   
- [![TestFlight Beta](https://img.shields.io/badge/TestFlight-Join_Beta-blue.svg)](https://testflight.apple.com/join/QKDKMSfA)
+ [![TestFlight Beta](https://img.shields.io/badge/TestFlight-Join_Beta-blue.svg?style=for-the-badge&logo=apple)](https://testflight.apple.com/join/QKDKMSfA)
  
 </div>
 
-## Table of Contents
+**App**
 - [Features](#features)
 - [Detection & Tracking](#detection--tracking)
 - [History & Analysis](#history--analysis)
-- [App Settings](#app-settings)
+- [App Settings Config](#app-settings)
+
+**Backend Data**
 - [Requirements & Setup](#requirements--setup)
  - [Python Setup](#python-setup)
  - [Connection Choices](#connection-choices)
  - [Command Guide](#backend-data)
  - [Build Instructions](#build-instructions)
+
+**About**
 - [Credits, Disclaimer & License](#credits-disclaimer--license)
 - [Contributing & Contact](#contributing--contact)
 - [Notes](#notes)
