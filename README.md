@@ -5,7 +5,7 @@
 </div>
 <br>
 <div align="center">
-  Real-time drone detection and monitoring for iOS, powered by local Python decoding. Enjoy professional-grade detection with advanced signal analysis and tracking. 
+  Real-time drone detection and monitoring for iOS, powered by locally-hosted decoding. Enjoy professional-grade detection with advanced signal analysis and tracking. 
 </div>
 <br>
 <div align="center">
@@ -22,10 +22,10 @@
  - [Build Instructions](#build-instructions)
 
 **Backend Data**
-- [Requirements & Setup](#requirements--setup)
- - [Python Setup](#python-setup)
+- [Hardware Requirements](#hardware-requirements)
+ - [Software Setup](#software-requirements)
  - [Connection Choices](#connection-choices)
- - [Command Reference](#backend-data)
+ - [Command Reference](#backend-data-guide)
 
 **About**
 - [Credits, Disclaimer & License](#credits-disclaimer--license)
@@ -120,29 +120,31 @@
 
 ---
 
-## Requirements & Setup
+## Hardware Requirements
 
 ### Option 1: [WarDragon/Pro](https://cemaxecuter.com/?post_type=product)
 
 ### Option 2: DIY Setup
 
-#### Hardware
-- ESP32 with WiFi RID Firmware or compatible DroneID wifi_sniffer.
-- Sniffle-compatible BT dongle.
-- (Optional) ANTSDR E200 & GPS unit.
-
-#### Software
-- [Sniffle](https://github.com/nccgroup/Sniffle)
-- [DroneID](https://github.com/alphafox02/DroneID)
-- Optional: [DJI Firmware - E200](https://github.com/alphafox02/antsdr_dji_droneid), [WiFi Remote ID Firmware](https://github.com/alphafox02/T-Halow/tree/wifi_rid/examples/DragonOS_RID_Scanner), [DragonSync Python](https://github.com/alphafox02/DragonSync)
+- ESP32 with WiFi RID Firmware, or a a WiFi adapter using DroneID `wifi_sniffer` below
+- Sniffle-compatible BT dongle (Catsniffer, Sonoff) flashed with latest Sniffle FW 
+- (Optional) ANTSDR E200 & GPS unit
 
 ---
 
-## Python Setup
+## Software Requirements
 
 This section covers setting up the backend Python environment on Linux, macOS, and Windows.
 
-### Setup Instructions
+**Required**
+- [Sniffle](https://github.com/nccgroup/Sniffle)
+- [DroneID](https://github.com/alphafox02/DroneID)
+
+**Optional**
+- [DJI Firmware - E200](https://github.com/alphafox02/antsdr_dji_droneid), [WiFi Remote ID Firmware](https://github.com/alphafox02/T-Halow/tree/wifi_rid/examples/DragonOS_RID_Scanner), [DragonSync Python](https://github.com/alphafox02/DragonSync)
+
+
+### Python Tools Setup Instructions
 
 #### Linux
 1. **Install Dependencies:**
@@ -176,8 +178,7 @@ This section covers setting up the backend Python environment on Linux, macOS, a
   Install WSL (`wsl --install`) and follow the Linux instructions.
 - **Native Setup:**  
   Install Python and Git from [python.org](https://www.python.org/downloads/) and [git-scm.com](https://git-scm.com/download/win), then clone and set up using Git commands above.
-
-### Backend Dependencies
+- **Install Backend Dependencies**
 
        # DroneID Setup
        git clone https://github.com/alphafox02/DroneID.git
@@ -203,7 +204,7 @@ The Multicast option uses Cursor on Target (CoT) to transmit data for integratio
 
 ---
 
-## Backend Data
+## Backend Data Guide
 
 ### ZMQ Commands
 
@@ -286,7 +287,13 @@ The Multicast option uses Cursor on Target (CoT) to transmit data for integratio
 
 ## Notes
 
-> **Note:** DragonSync is under active development; features may change.  
-> **Important:** Keep your WarDragon DragonOS image updated for optimal compatibility.  
-> **Tip:** Ensure your iOS device and backend system are on the same local network for best performance.  
-> **Caution:** Use in compliance with local regulations to avoid legal issues.
+**DragonSync is under active development; features may change or have bugs. Feedback welcome**
+
+> [!IMPORTANT]
+> Keep your WarDragon DragonOS image updated for optimal compatibility.  
+
+> [!TIP]
+> Ensure your iOS device and backend system are on the same local network for best performance.  
+
+> [!CAUTION]
+> Use in compliance with local regulations to avoid legal issues.
