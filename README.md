@@ -19,13 +19,13 @@
 - [Detection & Tracking](#detection--tracking)
 - [History & Analysis](#history--analysis)
 - [App Settings Config](#app-settings)
+ - [Build Instructions](#build-instructions)
 
 **Backend Data**
 - [Requirements & Setup](#requirements--setup)
  - [Python Setup](#python-setup)
  - [Connection Choices](#connection-choices)
- - [Command Guide](#backend-data)
- - [Build Instructions](#build-instructions)
+ - [Command Reference](#backend-data)
 
 **About**
 - [Credits, Disclaimer & License](#credits-disclaimer--license)
