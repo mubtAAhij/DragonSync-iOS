@@ -15,6 +15,7 @@ class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
     @Published var droneSignatures: [DroneSignature] = []
     @Published var randomMacIdHistory: [String: Set<String>] = [:]
+    @Published var alertRings: [AlertRing] = []
     private let signatureGenerator = DroneSignatureGenerator()
     private var spectrumViewModel: SpectrumData.SpectrumViewModel?
     private var zmqHandler: ZMQHandler?
@@ -35,6 +36,14 @@ class CoTViewModel: ObservableObject {
     
     private var currentMessageFormat: ZMQHandler.MessageFormat {
         return zmqHandler?.messageFormat ?? .bluetooth
+    }
+    
+    struct AlertRing: Identifiable {
+        let id = UUID()
+        let centerCoordinate: CLLocationCoordinate2D
+        let radius: Double
+        let droneId: String
+        let rssi: Int
     }
      
     struct SignalSource: Hashable {
@@ -68,7 +77,6 @@ class CoTViewModel: ObservableObject {
         }
     }
 
-    
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
         var caaRegistration: String?
@@ -626,6 +634,9 @@ class CoTViewModel: ObservableObject {
             var updatedMessage = message
             updatedMessage.uid = droneId
             
+            // Update alert ring if zero coordinate drone
+            self.updateAlertRing(for: message)
+            
             // Determine signal type and update sources
             let signalType = self.determineSignalType(message: message, mac: mac, rssi: updatedMessage.rssi, updatedMessage: &updatedMessage)
             
@@ -782,6 +793,46 @@ class CoTViewModel: ObservableObject {
         }
     }
     
+    private func updateAlertRing(for message: CoTMessage) {
+        let latValue = Double(message.lat) ?? 0
+        let lonValue = Double(message.lon) ?? 0
+        
+        // Check if we have a drone with zero coordinates but valid RSSI
+        if (latValue == 0 && lonValue == 0) && message.rssi != nil && message.rssi != 0 {
+            // Use the latest status message for monitor location
+            if let monitorStatus = statusViewModel.statusMessages.last {
+                let monitorLocation = CLLocationCoordinate2D(
+                    latitude: monitorStatus.gpsData.latitude,
+                    longitude: monitorStatus.gpsData.longitude
+                )
+                
+                // Use the SignatureGenerator to calculate distance
+                let signatureGenerator = DroneSignatureGenerator()
+                let distance = signatureGenerator.calculateDistance(Double(message.rssi!))
+                
+                // Add or update alert ring
+                if let index = alertRings.firstIndex(where: { $0.droneId == message.uid }) {
+                    alertRings[index] = AlertRing(
+                        centerCoordinate: monitorLocation,
+                        radius: distance,
+                        droneId: message.uid,
+                        rssi: message.rssi!
+                    )
+                } else {
+                    alertRings.append(AlertRing(
+                        centerCoordinate: monitorLocation,
+                        radius: distance,
+                        droneId: message.uid,
+                        rssi: message.rssi!
+                    ))
+                }
+            }
+        } else {
+            // Remove alert ring if coordinates are now valid
+            alertRings.removeAll(where: { $0.droneId == message.uid })
+        }
+    }
+    
     private func updateMACHistory(droneId: String, mac: String?) {
         guard let mac = mac, !mac.isEmpty else { return }
         
@@ -805,7 +856,6 @@ class CoTViewModel: ObservableObject {
         if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == updatedMessage.mac || $0.uid == updatedMessage.uid }) {
             var existingMessage = self.parsedMessages[existingIndex]
 
-            // Consolidate sources maintaining original order and updating only with newer sources
             var consolidatedSources: [SignalSource.SignalType: SignalSource] = [:]
 
             // Process existing sources first to maintain original order
@@ -963,6 +1013,21 @@ class CoTViewModel: ObservableObject {
         print("All listeners stopped and connections cleaned up.")
     }
     
+}
+
+// Redundant TODO clean this up use just signatureGenerator
+public func calculateDistanceFromRSSI(_ rssi: Double) -> Double {
+    // Free space path loss formula
+    let frequency = 2400.0              // 2.4 GHz for Bluetooth/WiFi
+    let referenceDistance: Double = 1.0 // Reference distance in meters
+    let txPower: Double = -59.0         // Reference power at 1 meter
+    
+    // Calculate distance in meters
+    let ratio = (txPower - rssi) / (10 * 2.0)  // Path loss exponent of 2 for free space
+    let distance = pow(10.0, ratio) * referenceDistance
+    
+    // Ensure distance is non-negative and reasonable
+    return min(max(distance, 10.0), 1000.0)  // Cap between 10m and 1km
 }
 
 extension CoTViewModel.SignalSource {

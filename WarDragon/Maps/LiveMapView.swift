@@ -97,13 +97,36 @@ struct LiveMapView: View {
                             .stroke(Color.blue, lineWidth: 2)
                     }
                 }
+                // Draw drone markers with valid coordinates
                 ForEach(uniqueDrones, id: \.uid) { message in
-                    if let coordinate = message.coordinate {
+                    if let coordinate = message.coordinate,
+                       coordinate.latitude != 0 || coordinate.longitude != 0 {
                         Annotation(message.uid, coordinate: coordinate) {
                             Circle()
                                 .fill(message.uid == uniqueDrones.last?.uid ? Color.red : Color.blue)
                                 .frame(width: 10, height: 10)
                         }
+                    }
+                }
+                
+                // Draw alert rings for drones with no valid coordinates
+
+                ForEach(cotViewModel.alertRings, id: \.id) { ring in
+                    MapCircle(center: ring.centerCoordinate, radius: ring.radius)
+                        .foregroundStyle(.yellow.opacity(0.1))
+                        .stroke(.yellow, lineWidth: 2)
+                    
+                    Annotation(ring.droneId, coordinate: ring.centerCoordinate) {
+                        VStack(spacing: 2) {
+                            Text("RSSI: \(ring.rssi) dBm")
+                                .font(.caption2)
+                            Text("\(Int(ring.radius))m radius")
+                                .font(.caption)
+                                .foregroundColor(.yellow)
+                        }
+                        .padding(4)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(4)
                     }
                 }
             }

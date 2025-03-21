@@ -21,8 +21,8 @@ class Config:
 		
 class DroneMessageGenerator:
 	def __init__(self):
-		self.lat_range = (0.0, 0.0)
-		self.lon_range = (0.0, 0.0)  
+		self.lat_range = (39.724129, 39.734129)
+		self.lon_range = (-105.060828, -105.080828)  
 		self.msg_index = 0
 		self.start_time = time.time()
 		
@@ -375,7 +375,7 @@ class DroneMessageGenerator:
 		
 		return f"""
 		<event version="2.0" uid="{uid}" type="a-f-G-U-C" time="{time_str}" start="{start_str}" stale="{stale_str}" how="m-g">
-			<point lat="{lat:.6f}" lon="{lon:.6f}" hae="{alt:.1f}" ce="35.0" le="999999"/>
+			<point lat="0.0" lon="0.0" hae="{alt:.1f}" ce="35.0" le="999999"/>
 			<detail>
 				<remarks>MAC: {mac}, RSSI: {rssi}dBm, Self-ID: {desc}, Location/Vector: [Speed: {speed:.1f} m/s, Vert Speed: {vspeed:.1f} m/s, Geodetic Altitude: {alt:.1f} m, Height AGL: {height_agl:.1f} m], System: [Operator Lat: {operator_lat:.6f}, Operator Lon: {operator_lon:.6f}, Home Lat: {homeLat:.6f}, Home Lon: {homeLon:.6f}]</remarks>
 				<contact endpoint="" phone="" callsign="drone-{desc.split()[-1]}"/>
@@ -737,4 +737,5 @@ if __name__ == "__main__":
 		print("\n\n👋 Program terminated by user")
 	except Exception as e:
 		print(f"\n❌ An error occurred: {e}")
+		
 		

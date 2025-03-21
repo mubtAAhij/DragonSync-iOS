@@ -63,7 +63,6 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
         lastSeen.timeIntervalSince(firstSeen)
     }
     
-    
 }
 
 struct FlightPathPoint: Codable, Hashable {
@@ -100,7 +99,7 @@ struct SignatureData: Codable, Hashable {
     }
     
     init?(timestamp: TimeInterval, rssi: Double, speed: Double, height: Double, mac: String?) {
-        guard rssi != 0 || speed != 0 || height != 0 else { return nil } // Skip invalid data
+        guard rssi != 0 else { return nil } // Skip invalid data - TODO decide how lean to be here for the elusive ones
         self.timestamp = timestamp
         self.rssi = rssi
         self.speed = speed
@@ -186,12 +185,9 @@ class DroneStorageManager: ObservableObject {
     }
     
     func saveEncounter(_ message: CoTViewModel.CoTMessage) {
-        // Validate coordinates before saving
-        guard let lat = Double(message.lat),
-              let lon = Double(message.lon),
-              lat != 0 || lon != 0 else {
-            return // Skip invalid coordinates
-        }
+        // Allow zero coordinates for encrypted messages
+        let lat = Double(message.lat)
+        let lon = Double(message.lon)
         
         let droneId = message.uid
         
@@ -218,8 +214,8 @@ class DroneStorageManager: ObservableObject {
         encounter.lastSeen = Date()
         
         let point = FlightPathPoint(
-            latitude: lat,
-            longitude: lon,
+            latitude: lat ?? 0.0,
+            longitude: lon ?? 0.0,
             altitude: Double(message.alt) ?? 0.0,
             timestamp: Date().timeIntervalSince1970,
             homeLatitude: Double(message.homeLat),

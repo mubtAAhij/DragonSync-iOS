@@ -27,20 +27,43 @@ struct DroneDetailView: View {
         ))
     }
     
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Map {
-                    Annotation(message.uid, coordinate: CLLocationCoordinate2D(
-                        latitude: Double(message.lat) ?? 0,
-                        longitude: Double(message.lon) ?? 0
-                    )) {
-                        Image(systemName: message.uaType.icon)
-                            .foregroundStyle(.blue)
+                    if message.lat != "0.0" && message.lon != "0.0" {
+                        Annotation(message.uid, coordinate: CLLocationCoordinate2D(
+                            latitude: Double(message.lat) ?? 0,
+                            longitude: Double(message.lon) ?? 0
+                        )) {
+                            Image(systemName: message.uaType.icon)
+                                .foregroundStyle(.blue)
+                        }
                     }
                     if flightPath.count > 1 {
                         MapPolyline(coordinates: flightPath)
                             .stroke(.blue, lineWidth: 2)
+                    }
+                    
+                    if let ring = cotViewModel.alertRings.first(where: { $0.droneId == message.uid }),
+                       Double(message.lat) ?? 0 == 0 && Double(message.lon) ?? 0 == 0 {
+                        MapCircle(center: ring.centerCoordinate, radius: ring.radius)
+                            .foregroundStyle(.yellow.opacity(0.1))
+                            .stroke(.yellow, lineWidth: 2)
+                        
+                        Annotation("RSSI: \(ring.rssi) dBm", coordinate: ring.centerCoordinate) {
+                            VStack {
+                                Text("No location data")
+                                    .font(.caption)
+                                Text("~\(Int(ring.radius))m radius")
+                                    .font(.caption)
+                                    .foregroundColor(.yellow)
+                            }
+                            .padding(6)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(6)
+                        }
                     }
                     
                     if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
@@ -68,6 +91,9 @@ struct DroneDetailView: View {
                 .frame(height: 300)
                 .cornerRadius(12)
                 .font(.appDefault)
+                .onAppear {
+                    updateRegionForAlertRing();
+                }
                 
                 Group {
                     if !message.signalSources.isEmpty {
@@ -379,5 +405,24 @@ struct DroneDetailView: View {
         default: return .green
         }
     }
+    
+    private func updateRegionForAlertRing() {
+        let lat = Double(message.lat) ?? 0
+        let lon = Double(message.lon) ?? 0
+        
+        if lat == 0 && lon == 0 {
+            if let ring = cotViewModel.alertRings.first(where: { $0.droneId == message.uid }) {
+                let spanDelta = max(ring.radius / 1000 * 2, 0.01)
+                region = MKCoordinateRegion(
+                    center: ring.centerCoordinate,
+                    span: MKCoordinateSpan(
+                        latitudeDelta: spanDelta,
+                        longitudeDelta: spanDelta
+                    )
+                )
+            }
+        }
+    }
+
 }
 

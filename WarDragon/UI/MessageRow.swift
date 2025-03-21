@@ -13,7 +13,6 @@ struct MessageRow: View {
     @ObservedObject var cotViewModel: CoTViewModel
     @State private var activeSheet: SheetType?
     @State private var showingSaveConfirmation = false
-
     
     enum SheetType: Identifiable {
         case liveMap
@@ -22,37 +21,54 @@ struct MessageRow: View {
         var id: Int { hashValue }
     }
     
+    // MARK: - Helper Properties
+    
     private var signature: DroneSignature? {
         cotViewModel.droneSignatures.first(where: { $0.primaryId.id == message.uid })
     }
     
+    // MARK: - Helper Methods
+    
     private func rssiColor(_ rssi: Double) -> Color {
-       switch rssi {
-       case ..<(-75): return .red
-       case -75..<(-50): return .yellow
-       case 0...0: return .red
-       default: return .green
-       }
+        switch rssi {
+        case ..<(-75): return .red
+        case -75..<(-50): return .yellow
+        case 0...0: return .red
+        default: return .green
+        }
     }
     
     private func getRSSI() -> Double? {
         // First check signal sources for strongest RSSI
         if !message.signalSources.isEmpty {
-            return Double(message.signalSources.max(by: { $0.rssi < $1.rssi })?.rssi ?? 0)
+            let strongestSource = message.signalSources.max(by: { $0.rssi < $1.rssi })
+            if let rssi = strongestSource?.rssi {
+                return Double(rssi)
+            }
         }
         
-        // Get RSSI from transmission info or raw message
-        if let signature = signature,
-           let rssi = signature.transmissionInfo.signalStrength {
+        // Get RSSI from transmission info
+        if let signature = signature, let rssi = signature.transmissionInfo.signalStrength {
             return rssi
         }
         
         // Fallback to raw message parsing
-        if let rssiValue = (message.rawMessage["Basic ID"] as? [String: Any])?["RSSI"] as? Double ??
-            (message.rawMessage["Basic ID"] as? [String: Any])?["rssi"] as? Double ??
-            (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["rssi"] as? Double ??
-            message.rssi.map(Double.init) {
-            return rssiValue
+        if let basicId = message.rawMessage["Basic ID"] as? [String: Any] {
+            if let rssi = basicId["RSSI"] as? Double {
+                return rssi
+            }
+            if let rssi = basicId["rssi"] as? Double {
+                return rssi
+            }
+        }
+        
+        if let auxAdvInd = message.rawMessage["AUX_ADV_IND"] as? [String: Any],
+           let rssi = auxAdvInd["rssi"] as? Double {
+            return rssi
+        }
+        
+        if let rssi = message.rssi {
+            return Double(rssi)
         }
         
         // Check remarks field for RSSI
@@ -61,16 +77,16 @@ struct MessageRow: View {
            let match = remarks.firstMatch(of: /RSSI[: ]*(-?\d+)/) {
             return Double(match.1)
         }
+        
         return nil
     }
-    
     
     private func getMAC() -> String? {
         // Function to validate MAC format
         func isValidMAC(_ mac: String) -> Bool {
             return mac.range(of: "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", options: .regularExpression) != nil
         }
-
+        
         // Check signature for MAC
         if let signature = signature,
            let mac = signature.transmissionInfo.macAddress,
@@ -78,31 +94,243 @@ struct MessageRow: View {
             return mac
         }
         
-        // Fallback to raw message parsing
-        if let macValue = (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String ??
-            (message.rawMessage["Basic ID"] as? [String: Any])?["mac"] as? String ??
-            (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["mac"] as? String,
-           isValidMAC(macValue) {
-            return macValue
+        // Check Basic ID in raw message
+        if let basicId = message.rawMessage["Basic ID"] as? [String: Any] {
+            if let mac = basicId["MAC"] as? String, isValidMAC(mac) {
+                return mac
+            }
+            if let mac = basicId["mac"] as? String, isValidMAC(mac) {
+                return mac
+            }
+        }
+        
+        // Check AUX_ADV_IND in raw message
+        if let auxAdvInd = message.rawMessage["AUX_ADV_IND"] as? [String: Any],
+           let mac = auxAdvInd["mac"] as? String,
+           isValidMAC(mac) {
+            return mac
         }
         
         // Check remarks field for MAC address
         if let details = message.rawMessage["detail"] as? [String: Any],
-           let remarks = details["remarks"] as? String,
-           let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/),
-           isValidMAC(String(match.1)) {
-            return String(match.1)
-        }
-        
-        if let details = message.rawMessage["detail"] as? [String: Any],
-           let remarks = details["remarks"] as? String,
-           let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/),
-           isValidMAC(String(match.1)) {
-            return String(match.1)
+           let remarks = details["remarks"] as? String {
+            if let match = remarks.firstMatch(of: /MAC[: ]*([0-9a-fA-F:]+)/),
+               isValidMAC(String(match.1)) {
+                return String(match.1)
+            }
         }
         
         return nil
     }
+    
+    // MARK: - Sub-View Builders
+    
+    @ViewBuilder
+    private func headerView() -> some View {
+        HStack {
+            Image(systemName: signature?.primaryId.uaType.icon ?? "airplane")
+                .foregroundColor(.blue)
+            Text("ID: \(message.id)")
+                .font(.appHeadline)
+            
+            if let caaReg = message.caaRegistration, !caaReg.isEmpty {
+                Text("CAA ID: \(caaReg)")
+                    .font(.appSubheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // Live Map Button
+            Button(action: { activeSheet = .liveMap }) {
+                HStack {
+                    Image(systemName: "map.fill")
+                    Text("Live")
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(8)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func typeInfoView() -> some View {
+        Text("Type: \(message.type)")
+            .font(.appSubheadline)
+    }
+    
+    @ViewBuilder
+    private func signalSourcesView() -> some View {
+        if !message.signalSources.isEmpty {
+            VStack(alignment: .leading) {
+                // Sort by timestamp (most recent first)
+                let sortedSources = message.signalSources.sorted(by: { $0.timestamp > $1.timestamp })
+                
+                ForEach(sortedSources, id: \.self) { source in
+                    signalSourceRow(source)
+                }
+            }
+        } else if let rssi = getRSSI() {
+            // Fallback for messages without signal sources
+            HStack(spacing: 8) {
+                Label("\(Int(rssi))dBm", systemImage: "antenna.radiowaves.left.and.right")
+                    .font(.appCaption)
+                    .fontWeight(.bold)
+                    .foregroundColor(rssiColor(rssi))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+                    .background(rssiColor(rssi).opacity(0.1))
+            }
+        }
+    }
+    
+    private func signalSourceRow(_ source: CoTViewModel.SignalSource) -> some View {
+        let iconName: String
+        let iconColor: Color
+        
+        // Determine icon and color based on source type
+        switch source.type {
+        case .bluetooth:
+            iconName = "antenna.radiowaves.left.and.right.circle"
+            iconColor = .blue
+        case .wifi:
+            iconName = "wifi.circle"
+            iconColor = .green
+        case .sdr:
+            iconName = "dot.radiowaves.left.and.right"
+            iconColor = .purple
+        default:
+            iconName = "questionmark.circle"
+            iconColor = .gray
+        }
+        
+        return HStack {
+            Image(systemName: iconName)
+                .foregroundColor(iconColor)
+            
+            VStack(alignment: .leading) {
+                HStack {
+                    Text(source.mac)
+                        .font(.appCaption)
+                    Text(source.type.rawValue)
+                        .font(.appCaption)
+                        .foregroundColor(.secondary)
+                }
+                HStack {
+                    Text("\(source.rssi) dBm")
+                        .font(.appCaption)
+                        .fontWeight(.bold)
+                        .foregroundColor(rssiColor(Double(source.rssi)))
+                    Spacer()
+                    Text(source.timestamp.formatted(.relative(presentation: .numeric)))
+                        .font(.appCaption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+        .background(rssiColor(Double(source.rssi)).opacity(0.1))
+        .cornerRadius(6)
+        .id("\(source.mac)-\(source.timestamp.timeIntervalSince1970)")
+    }
+    
+    @ViewBuilder
+    private func macRandomizationView() -> some View {
+        if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 2 {
+            let macCount = macs.count
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.yellow)
+                Text("MAC randomizing")
+                    .font(.appCaption)
+                    .foregroundColor(.secondary)
+                Text("(\(macCount > 10 ? "10+" : String(macCount)) MACs)")
+                    .font(.appCaption)
+                    .foregroundColor(.secondary)
+                
+                if cotViewModel.macProcessing[message.uid] == true {
+                    Image(systemName: "shield.lefthalf.filled")
+                        .foregroundColor(.yellow)
+                        .help("Random MAC addresses detected")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 4)
+            .background(Color.yellow.opacity(0.1))
+        }
+    }
+    
+    @ViewBuilder
+    private func mapSectionView() -> some View {
+        MapView(message: message, cotViewModel: cotViewModel)
+            .frame(height: 150)
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.gray, lineWidth: 1)
+            )
+    }
+    
+    @ViewBuilder
+    private func detailsView() -> some View {
+        Group {
+            if message.lat != "0.0" {
+                Text("Position: \(message.lat), \(message.lon)")
+            }
+            if message.alt != "0.0" {
+                Text("Altitude: \(message.alt)m")
+            }
+            if message.speed != "0.0" {
+                Text("Speed: \(message.speed)m/s")
+            }
+            if message.pilotLat != "0.0" {
+                Text("Pilot Location: \(message.pilotLat), \(message.pilotLon)")
+            }
+            if let operatorId = message.operator_id {
+                Text("Operator ID: \(operatorId)")
+            }
+            if let manufacturer = message.manufacturer, manufacturer != "Unknown" {
+                Text("Manufacturer: \(manufacturer)")
+            }
+            if let mac = message.mac, !mac.isEmpty {
+                Text("MAC: \(mac)")
+            }
+        }
+        .font(.appCaption)
+        .foregroundColor(.primary)
+    }
+    
+    @ViewBuilder
+    private func spoofDetectionView() -> some View {
+        if message.isSpoofed, let details = message.spoofingDetails {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.yellow)
+                    Text("Possible Spoofed Signal")
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Text(String(format: "Confidence: %.0f%%", details.confidence * 100))
+                        .foregroundColor(.primary)
+                }
+                
+                ForEach(details.reasons, id: \.self) { reason in
+                    Text("• \(reason)")
+                        .font(.appCaption)
+                        .foregroundColor(.primary)
+                }
+            }
+            .padding(.vertical, 4)
+            .background(Color.yellow.opacity(0.1))
+            .cornerRadius(8)
+        }
+    }
+    
+    // MARK: - Main View
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -110,179 +338,13 @@ struct MessageRow: View {
                 activeSheet = .detailView
             }) {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Image(systemName: signature?.primaryId.uaType.icon ?? "airplane")
-                            .foregroundColor(.blue)
-                        Text("ID: \(message.id)")
-                            .font(.appHeadline)
-                        if let caaReg = message.caaRegistration {
-                            if !caaReg.isEmpty {
-                                Text("CAA ID: \(caaReg)")
-                                    .font(.appSubheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        // Live Map Button
-                        Button(action: { activeSheet = .liveMap }) {
-                            HStack {
-                                Image(systemName: "map.fill")
-                                Text("Live")
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                        }
-                    }
-                    
-                    Text("Type: \(message.type)")
-                        .font(.appSubheadline)
-                    
-                    if !message.signalSources.isEmpty {
-                        VStack(alignment: .leading) {
-                            // Sort by timestamp (most recent first)
-                            ForEach(message.signalSources.sorted(by: { $0.timestamp > $1.timestamp }), id: \.self) { source in
-                                HStack {
-                                    Image(systemName: source.type == .bluetooth ? "antenna.radiowaves.left.and.right.circle" :
-                                            source.type == .wifi ? "wifi.circle" :
-                                            source.type == .sdr ? "dot.radiowaves.left.and.right" :
-                                            "questionmark.circle")
-                                    .foregroundColor(source.type == .bluetooth ? .blue :
-                                                        source.type == .wifi ? .green :
-                                                        source.type == .sdr ? .purple :
-                                            .gray)
-                                    
-                                    VStack(alignment: .leading) {
-                                        HStack {
-                                            Text(source.mac)
-                                                .font(.appCaption)
-                                            Text(source.type.rawValue)
-                                                .font(.appCaption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        HStack {
-                                            Text("\(source.rssi) dBm")
-                                                .font(.appCaption)
-                                                .fontWeight(.bold)
-                                                .foregroundColor(rssiColor(Double(source.rssi)))
-                                            Spacer()
-                                            Text(source.timestamp.formatted(.relative(presentation: .numeric)))
-                                                .font(.appCaption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 4)
-                                .background(rssiColor(Double(source.rssi)).opacity(0.1))
-                                .cornerRadius(6)
-                                .id("\(source.mac)-\(source.timestamp.timeIntervalSince1970)")
-                            }
-                        }
-                    } else if let mRSSI = getRSSI() {
-                        // Fallback for messages without signal sources
-                        HStack(spacing: 8) {
-                            Label("\(Int(mRSSI))dBm", systemImage: "antenna.radiowaves.left.and.right")
-                                .font(.appCaption)
-                                .fontWeight(.bold)
-                                .foregroundColor(rssiColor(mRSSI))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 4)
-                                .background(rssiColor(mRSSI).opacity(0.1))
-                        }
-                    }
-                    
-                    // MAC randomization indicator
-                    if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 2 {
-                        let macCount = macs.count
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.yellow)
-                            Text("MAC randomizing")
-                                .font(.appCaption)
-                                .foregroundColor(.secondary)
-                            Text("(\(macCount > 10 ? "10+" : String(macCount)) MACs)")
-                                .font(.appCaption)
-                                .foregroundColor(.secondary)
-                            if cotViewModel.macProcessing[message.uid] == true {
-                                Image(systemName: "shield.lefthalf.filled")
-                                    .foregroundColor(.yellow)
-                                    .help("Random MAC addresses detected")
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 4)
-                        .background(Color.yellow.opacity(0.1))
-                    }
-                    
-                    
-                    MapView(message: message)
-                        .frame(height: 150)
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.gray, lineWidth: 1)
-                        )
-                    
-                    Group {
-                        if message.lat != "0.0" {
-                            Text("Position: \(message.lat), \(message.lon)")
-                        }
-                        if message.alt != "0.0" {
-                            Text("Altitude: \(message.alt)m")
-                        }
-                        if message.speed != "0.0" {
-                            Text("Speed: \(message.speed)m/s")
-                        }
-                        if message.pilotLat != "0.0" {
-                            Text("Pilot Location: \(message.pilotLat), \(message.pilotLon)")
-                        }
-                        if message.operator_id != nil {
-                            Text("Operator ID: \(message.operator_id ?? "")")
-                        }
-                        if message.manufacturer != "Unknown" {
-                            Text("Manufacturer: \(message.manufacturer ?? "")")
-                        }
-                        if (message.mac != "") {
-                            Text("MAC: \(message.mac ?? "")")
-                        }
-                    }
-                    .font(.appCaption)
-                    .foregroundColor(.primary)
-                    
-                    // Spoof detection
-                    if message.isSpoofed, let details = message.spoofingDetails {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.yellow)
-                                Text("Possible Spoofed Signal")
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Text(String(format: "Confidence: %.0f%%", details.confidence * 100))
-                                    .foregroundColor(.primary)
-                            }
-                            
-                            VStack(alignment: .leading) {
-                                
-                            }
-                            .font(.appCaption)
-                            .foregroundColor(.secondary)
-                            
-                            ForEach(details.reasons, id: \.self) { reason in
-                                Text("• \(reason)")
-                                    .font(.appCaption)
-                                    .foregroundColor(.primary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                        .background(Color.yellow.opacity(0.1))
-                        .cornerRadius(8)
-                    }
+                    headerView()
+                    typeInfoView()
+                    signalSourcesView()
+                    macRandomizationView()
+                    mapSectionView()
+                    detailsView()
+                    spoofDetectionView()
                 }
             }
             .cornerRadius(8)

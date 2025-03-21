@@ -136,8 +136,8 @@ public final class DroneSignatureGenerator {
         
         // Look for CAA registration in multiple possible locations
         let caaReg = message["caaRegistration"] as? String ??
-                     message["caa_registration"] as? String ??
-                     message["CAA_registration"] as? String
+        message["caa_registration"] as? String ??
+        message["CAA_registration"] as? String
         
         if let caaReg = caaReg {
             metadata["caaRegistration"] = caaReg
@@ -223,6 +223,7 @@ public final class DroneSignatureGenerator {
         return matchStrength
     }
     
+    // TODO implement this (drone is approaching)
     func checkProximity(_ signature: DroneSignature) -> ProximityWarning? {
         guard let rssi = signature.transmissionInfo.signalStrength,
               Settings.shared.enableProximityWarnings,
@@ -253,14 +254,27 @@ public final class DroneSignatureGenerator {
         return rssi > averagePrevious
     }
     
-    private func calculateDistance(_ rssi: Double) -> Double {
-        // Free space path loss formula
-        let frequency = 2400.0 // 2.4GHz for BLE/WiFi
-        let pathLoss = -(rssi + 32.44 + 20 * log10(frequency))
-        let distance = pow(10.0, pathLoss/20.0) / 1000.0 // Convert to meters
-        return distance
+    public func calculateDistance(_ rssi: Double) -> Double {
+        let referenceDistance: Double = 1.0
+        let referenceRSSI: Double = -40.0
+        let pathLossExponent: Double = 2.2
+        let frequencyInGHz = 2.4
+        let signalFrequencyLoss = 20 * log10(frequencyInGHz)
+
+        // Calculate distance using log-distance path loss model
+        let distance = pow(10.0, (referenceRSSI - rssi - signalFrequencyLoss) / (10.0 * pathLossExponent)) * referenceDistance
+        
+        //    Using these values, we get:
+            
+        //    RSSI (dBm)   Distance (meters)   Distance (feet)
+        //    --------------------------------------------------
+        //    -22           0.133               0.436
+        //    -97           64.49               211.59
+
+        return max(distance, 0.0)
     }
     
+
     
     func detectSpoof(_ signature: DroneSignature, fromMonitor monitorStatus: StatusViewModel.StatusMessage) -> SpoofDetectionResult? {
         guard let rssi = signature.transmissionInfo.signalStrength else { return nil }
@@ -271,7 +285,8 @@ public final class DroneSignatureGenerator {
                                     longitude: signature.position.coordinate.longitude)
         let distance = monitorPoint.distance(from: dronePoint)
         
-        guard distance > 0 else { return nil } // distace change needed for a check
+        // Get expected distance for drones with no GPS
+        let expectedDistance = calculateDistance(rssi)
         
         // Calculate expected RSSI directly from the distance
         let expectedRssi = calculateExpectedRSSI(distance: distance) ?? 0.0
@@ -282,7 +297,7 @@ public final class DroneSignatureGenerator {
         
         if rssiDelta > 15 {
             reasons.append(String(format: "Signal strength deviation: %.1f dB", rssiDelta))
-            confidenceScore += 0.2 // lose the signal based confidence
+            confidenceScore += 0.2
         }
         
         // Check for impossible speeds
@@ -322,7 +337,6 @@ public final class DroneSignatureGenerator {
                 }
             }
         }
-        print("Spoof confidence: \(confidenceScore) for reasons \(reasons)")
         
         return SpoofDetectionResult(
             isSpoofed: confidenceScore >= 0.6,
@@ -330,7 +344,7 @@ public final class DroneSignatureGenerator {
             reasons: reasons,
             expectedRssi: expectedRssi,
             actualRssi: rssi,
-            distance: distance
+            distance: expectedDistance
         )
     }
     
@@ -382,7 +396,6 @@ public final class DroneSignatureGenerator {
         // Append the match to the history
         info?.matchHistory.append(match)
         
-        // Ensure we only try to remove the first element if the collection is not empty
         if let history = info?.matchHistory, history.count > 100 {
             info?.matchHistory.removeFirst()
         }
@@ -606,14 +619,14 @@ public final class DroneSignatureGenerator {
         var alt = 0.0
         var homeLocation: CLLocationCoordinate2D?
         var operatorLocation: CLLocationCoordinate2D?
-
+        
         // Handle XML point attributes
         if let pointLat = message["latitude"] as? String,
            let pointLon = message["longitude"] as? String {
             lat = Double(pointLat) ?? 0.0
             lon = Double(pointLon) ?? 0.0
         }
-
+        
         // Handle geodetic altitude from hae attribute
         if let haeAlt = message["hae"] as? String {
             alt = Double(haeAlt) ?? 0.0
@@ -639,7 +652,7 @@ public final class DroneSignatureGenerator {
             }
             
         }
-
+        
         // Handle operator location
         if let pilotLat = message["pilotLat"] as? String,
            let pilotLon = message["pilotLon"] as? String,
@@ -648,7 +661,7 @@ public final class DroneSignatureGenerator {
            latDouble != 0 && lonDouble != 0 {
             operatorLocation = CLLocationCoordinate2D(latitude: latDouble, longitude: lonDouble)
         }
-
+        
         return DroneSignature.PositionInfo(
             coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
             altitude: alt,
@@ -723,7 +736,7 @@ public final class DroneSignatureGenerator {
                 print("DEBUG extractTransmissionInfo Distance: \(distance) meters")
                 print("DEBUG extractTransmissionInfo Lat/Lon: \(lat), \(lon)")
                 print("DEBUG extractTransmissionInfo Monitor Location: \(monitorLoc.coordinate.latitude), \(monitorLoc.coordinate.longitude)")
-                print("DEBUG extractTransmissionInfo  Actual RSSI: \(String(describing: signalStrength)))")
+                print("DEBUG extractTransmissionInfo Actual RSSI: \(String(describing: signalStrength)))")
                 print("DEBUG extractTransmissionInfo Expected RSSI: \(String(describing: expectedSignalStrength)))")
             } else {
                 // Don't print error - just skip expected signal calculation if no monitor location
@@ -805,10 +818,10 @@ public final class DroneSignatureGenerator {
         )
         
     }
-
+    
     func calculateExpectedRSSI(distance: Double) -> Double? {
         // Constants
-        let frequency = 2.4e9     // 2.4 GHz for Bluetooth/WiFi
+        
         let txPower = -59.0       // Reference power at 1 meter distance
         let pathLossExponent = 2.0 // Path loss exponent for free space
         
