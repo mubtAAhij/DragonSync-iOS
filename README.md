@@ -5,7 +5,7 @@
 </div>
 <br>
 <div align="center">
-  Real-time drone detection and monitoring for iOS 17+, powered by locally-hosted decoding. Enjoy professional-grade detection with advanced signal analysis and tracking. 
+  Real-time drone detection and monitoring for iOS/macOS, powered by locally-hosted decoding. Enjoy professional-grade detection with advanced signal analysis and tracking. 
 </div>
 <br>
 <div align="center">
