@@ -15,7 +15,7 @@
                         <rect key="frame" x="0.0" y="0.0" width="402" height="874"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" alpha="0.10000000000000001" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="WickedDragon" translatesAutoresizingMaskIntoConstraints="NO" id="pYY-tY-Eh3">
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" alpha="0.25" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="WickedDragon" translatesAutoresizingMaskIntoConstraints="NO" id="pYY-tY-Eh3">
                                 <rect key="frame" x="-55.666666666666657" y="144.33333333333331" width="513.33333333333337" height="600.33333333333348"/>
                                 <constraints>
                                     <constraint firstAttribute="width" secondItem="pYY-tY-Eh3" secondAttribute="height" multiplier="253:296" id="ArC-Dt-W9j"/>
@@ -38,8 +38,8 @@
                                 <constraints>
                                     <constraint firstAttribute="height" constant="78.666666666666686" id="YTH-oh-k81"/>
                                 </constraints>
-                                <fontDescription key="fontDescription" name="PingFangTC-Thin" family="PingFang TC" pointSize="40"/>
-                                <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <fontDescription key="fontDescription" name="Menlo-Regular" family="Menlo" pointSize="40"/>
+                                <color key="textColor" red="0.9135699498422527" green="1" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="DRAGON" textAlignment="right" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="Cut-tv-xSt">
@@ -59,7 +59,7 @@
                             </label>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
-                        <color key="backgroundColor" red="0.41568627450980389" green="0.33333333333333331" blue="0.58823529411764708" alpha="1" colorSpace="calibratedRGB"/>
+                        <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="Cut-tv-xSt" firstAttribute="baseline" secondItem="acK-I7-Dfu" secondAttribute="baseline" id="7nh-M9-s9o"/>
                             <constraint firstItem="pYY-tY-Eh3" firstAttribute="top" secondItem="GJd-Yh-RWb" secondAttribute="bottom" constant="-339.66666666666669" id="G38-tq-EYF"/>
