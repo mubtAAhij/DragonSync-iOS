@@ -11,9 +11,11 @@ import CoreLocation
 
 struct DroneDetailView: View {
     @ObservedObject var cotViewModel: CoTViewModel
+    @State private var region: MKCoordinateRegion
+    @State private var showingInfoEditor = false
     let message: CoTViewModel.CoTMessage
     let flightPath: [CLLocationCoordinate2D]
-    @State private var region: MKCoordinateRegion
+    
     
     init(message: CoTViewModel.CoTMessage, flightPath: [CLLocationCoordinate2D], cotViewModel: CoTViewModel) {
         self.cotViewModel = cotViewModel
@@ -27,10 +29,48 @@ struct DroneDetailView: View {
         ))
     }
     
+    //MARK: - Main Detail View
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    let encounter = DroneStorageManager.shared.encounters[message.uid]
+                    let customName = encounter?.customName ?? ""
+                    let trustStatus = encounter?.trustStatus ?? .unknown
+                    
+                    VStack(alignment: .leading) {
+                        if !customName.isEmpty {
+                            Text(customName)
+                                .font(.system(.title3, design: .monospaced))
+                                .foregroundColor(.primary)
+                        }
+                        
+                        HStack {
+                            Text(message.uid)
+                                .font(.appCaption)
+                                .foregroundColor(.secondary)
+                            
+                            Image(systemName: trustStatus.icon)
+                                .foregroundColor(trustStatus.color)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: { showingInfoEditor = true }) {
+                        Label("Edit", systemImage: "pencil")
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.blue.opacity(0.2))
+                            .foregroundColor(.blue)
+                            .cornerRadius(8)
+                    }
+                }
+                .padding()
+                .background(Color(UIColor.secondarySystemBackground))
+                .cornerRadius(12)
+                
                 Map {
                     if message.lat != "0.0" && message.lon != "0.0" {
                         Annotation(message.uid, coordinate: CLLocationCoordinate2D(
@@ -369,6 +409,21 @@ struct DroneDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingInfoEditor) {
+            NavigationView {
+                DroneInfoEditor(droneId: message.uid)
+                    .navigationTitle("Edit Drone Info")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showingInfoEditor = false
+                            }
+                        }
+                    }
+            }
+            .presentationDetents([.medium])
+        }
     }
     
     struct InfoRow: View {
@@ -423,6 +478,6 @@ struct DroneDetailView: View {
             }
         }
     }
-
+    
 }
 

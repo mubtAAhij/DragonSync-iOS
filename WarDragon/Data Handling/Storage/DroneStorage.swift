@@ -30,6 +30,23 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
         }
     }
     
+    // User defined name/trust status
+    var customName: String {
+        get { metadata["customName"] ?? "" }
+        set { metadata["customName"] = newValue }
+    }
+
+    var trustStatus: DroneSignature.UserDefinedInfo.TrustStatus {
+        get {
+            if let statusString = metadata["trustStatus"],
+               let status = DroneSignature.UserDefinedInfo.TrustStatus(rawValue: statusString) {
+                return status
+            }
+            return .unknown
+        }
+        set { metadata["trustStatus"] = newValue.rawValue }
+    }
+    
     // Initialize with private flight path
     init(id: String, firstSeen: Date, lastSeen: Date, flightPath: [FlightPathPoint], signatures: [SignatureData], metadata: [String: String], macHistory: Set<String>) {
         self.id = id
@@ -109,6 +126,7 @@ struct SignatureData: Codable, Hashable {
 }
 
 
+//MARK: - CSV Export
 extension DroneEncounter {
     static func csvHeaders() -> String {
         return "First Seen,First Seen Latitude,First Seen Longitude,First Seen Altitude (m)," +
@@ -174,7 +192,8 @@ extension DroneEncounter {
     }
 }
 
-// Manager
+//MARK: - Storage Manager
+
 class DroneStorageManager: ObservableObject {
     static let shared = DroneStorageManager()
     
@@ -258,10 +277,29 @@ class DroneStorageManager: ObservableObject {
             updatedMetadata["manufacturer"] = manufacturer
         }
         
+        // TODO pick what metadata to display
         encounter.metadata = updatedMetadata
+        
+        // Update name or trust status
+        if encounters[droneId] != nil {
+            let existingName = encounters[droneId]?.customName ?? ""
+            let existingTrust = encounters[droneId]?.trustStatus ?? .unknown
+            
+            if !existingName.isEmpty {
+                encounter.customName = existingName
+            }
+            
+            if existingTrust != .unknown {
+                encounter.trustStatus = existingTrust
+            }
+        }
+        
+        // Save the drone encounters array and device
         encounters[droneId] = encounter
         saveToStorage()
     }
+    
+    //MARK: - Storage Functions/CRUD
     
     func deleteEncounter(id: String) {
         encounters.removeValue(forKey: id)
@@ -278,6 +316,9 @@ class DroneStorageManager: ObservableObject {
     func saveToStorage() {
         if let data = try? JSONEncoder().encode(encounters) {
             UserDefaults.standard.set(data, forKey: "DroneEncounters")
+            print("✅ Saved \(encounters.count) encounters to storage")
+        } else {
+            print("❌ Failed to encode encounters")
         }
     }
     

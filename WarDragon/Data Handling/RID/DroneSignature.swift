@@ -7,8 +7,42 @@
 
 import Foundation
 import CoreLocation
+import SwiftUI
+
 
 public struct DroneSignature: Hashable {
+    
+    public var userInfo: UserDefinedInfo?
+    
+    // User defined drone info
+    public struct UserDefinedInfo: Hashable {
+        var customName: String
+        var trustStatus: TrustStatus
+        
+        enum TrustStatus: String, Codable, Hashable {
+            case trusted
+            case untrusted
+            case unknown
+            
+            var color: Color {
+                switch self {
+                case .trusted: return .green
+                case .untrusted: return .red
+                case .unknown: return .gray
+                }
+            }
+            
+            var icon: String {
+                switch self {
+                case .trusted: return "checkmark.shield.fill"
+                case .untrusted: return "xmark.shield.fill"
+                case .unknown: return "shield.fill"
+                }
+            }
+        }
+    }
+
+    //MARK: - ID, MAC and broadcast data
     public struct IdInfo: Hashable {
         public let id: String
         public let type: IdType
@@ -73,6 +107,8 @@ public struct DroneSignature: Hashable {
             self.macAddress = macAddress
         }
     }
+    
+    // MARK: - Positioning & Location
     
     public struct PositionInfo: Hashable {
         public let coordinate: CLLocationCoordinate2D

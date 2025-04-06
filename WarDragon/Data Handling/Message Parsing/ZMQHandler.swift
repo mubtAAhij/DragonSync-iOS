@@ -388,7 +388,7 @@ class ZMQHandler: ObservableObject {
         var advMode: String?
         var deviceId: Int?
         var sequenceId: Int?
-        var advAddress: String?
+        var advAddress: String? //TODO use for BT differentiation
         
       
         var manufacturer = "Unknown"

@@ -13,6 +13,7 @@ struct MessageRow: View {
     @ObservedObject var cotViewModel: CoTViewModel
     @State private var activeSheet: SheetType?
     @State private var showingSaveConfirmation = false
+    @State private var showingInfoEditor = false
     
     enum SheetType: Identifiable {
         case liveMap
@@ -128,6 +129,12 @@ struct MessageRow: View {
     @ViewBuilder
     private func headerView() -> some View {
         HStack {
+            // Grab custom name and trust status
+            let encounter = DroneStorageManager.shared.encounters[message.uid]
+            let customName = encounter?.customName ?? ""
+            let trustStatus = encounter?.trustStatus ?? .unknown
+            
+            // Drone icon, TODO use a better UAV icon than airplane
             Image(systemName: signature?.primaryId.uaType.icon ?? "airplane")
                 .foregroundColor(.blue)
             Text("ID: \(message.id)")
@@ -140,6 +147,19 @@ struct MessageRow: View {
             }
             
             Spacer()
+            
+            // Trust status indicator
+            Image(systemName: trustStatus.icon)
+                .foregroundColor(trustStatus.color)
+                .font(.system(size: 18))
+                .padding(.trailing, 4)
+            
+            // Edit button
+            Button(action: { showingInfoEditor = true }) {
+                Image(systemName: "pencil.circle")
+                    .font(.system(size: 18))
+                    .foregroundColor(.blue)
+            }
             
             // Live Map Button
             Button(action: { activeSheet = .liveMap }) {
@@ -386,6 +406,21 @@ struct MessageRow: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showingInfoEditor) {
+            NavigationView {
+                DroneInfoEditor(droneId: message.uid)
+                    .navigationTitle("Edit Drone Info")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showingInfoEditor = false
+                            }
+                        }
+                    }
+            }
+            .presentationDetents([.medium])
         }
     }
 }

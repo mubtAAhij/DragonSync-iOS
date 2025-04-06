@@ -104,14 +104,28 @@ struct StoredEncountersView: View {
         var body: some View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(ensureDronePrefix(encounter.id))
-                        .font(.appHeadline)
+                    // Show custom/ID drone name
+                    if !encounter.customName.isEmpty {
+                        Text(encounter.customName)
+                            .font(.appHeadline)
+                            .foregroundColor(.primary)
+                        
+                        Text(ensureDronePrefix(encounter.id))
+                            .font(.appCaption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text(ensureDronePrefix(encounter.id))
+                            .font(.appHeadline)
+                    }
+                    
                     if let caaReg = encounter.metadata["caaRegistration"] {
                         Text("CAA: \(caaReg)")
                             .font(.appCaption)
                             .foregroundStyle(.secondary)
                     }
+
                     Spacer()
+                    
                     Image(systemName: "airplane")
                         .foregroundStyle(.blue)
                 }
@@ -171,6 +185,7 @@ struct StoredEncountersView: View {
         @Environment(\.dismiss) private var dismiss
         @StateObject private var storage = DroneStorageManager.shared
         @State private var showingDeleteConfirmation = false
+        @State private var showingInfoEditor = false
         @State private var selectedMapType: MapStyle = .standard
         
         enum MapStyle {
@@ -180,17 +195,73 @@ struct StoredEncountersView: View {
         var body: some View {
             ScrollView {
                 VStack(spacing: 16) {
+                    // Custom name and trust status section
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                if !encounter.customName.isEmpty {
+                                    Text(encounter.customName)
+                                        .font(.system(.title2, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                } else {
+                                    Text("Unnamed Drone")
+                                        .font(.system(.title2, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: encounter.trustStatus.icon)
+                                    .foregroundColor(encounter.trustStatus.color)
+                                    .font(.system(size: 24))
+                            }
+                            
+                            Text(encounter.id)
+                                .font(.appCaption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Button(action: { showingInfoEditor = true }) {
+                            Image(systemName: "pencil.circle")
+                                .font(.system(size: 24))
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .padding()
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(12)
+                    
+                    // Map and encounter stats sections
                     mapSection
                     encounterStats
-//                    metadataSection
+
+//                  metadataSection // TODO metadata section
+                    
                     if !encounter.macHistory.isEmpty && encounter.macHistory.count > 1 {
                         macSection
                     }
+                    
+                    // Flight data stats
                     flightDataSection
                 }
                 .padding()
             }
             .navigationTitle("Encounter Details")
+            .sheet(isPresented: $showingInfoEditor) {
+                NavigationView {
+                    DroneInfoEditor(droneId: encounter.id)
+                        .navigationTitle("Edit Drone Info")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Done") {
+                                    showingInfoEditor = false
+                                }
+                            }
+                        }
+                }
+                .presentationDetents([.medium])
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
