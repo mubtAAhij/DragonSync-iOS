@@ -115,14 +115,13 @@ struct ContentView: View {
                 Label("Settings", systemImage: "gear")
             }
             .tag(3)
-            
             NavigationStack {
-                StoredEncountersView()
+                StoredEncountersView(cotViewModel: cotViewModel)
             }
             .tabItem {
                 Label("History", systemImage: "clock.arrow.circlepath")
             }
-            .tag(4) 
+            .tag(4)
             
 //            NavigationStack {
 //                SpectrumView(viewModel: spectrumViewModel)

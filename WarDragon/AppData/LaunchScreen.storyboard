@@ -15,10 +15,10 @@
                         <rect key="frame" x="0.0" y="0.0" width="402" height="874"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" alpha="0.25" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="WickedDragon" translatesAutoresizingMaskIntoConstraints="NO" id="pYY-tY-Eh3">
-                                <rect key="frame" x="-55.666666666666657" y="144.33333333333331" width="513.33333333333337" height="600.33333333333348"/>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" alpha="0.14999999999999999" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="WickedDragon" translatesAutoresizingMaskIntoConstraints="NO" id="pYY-tY-Eh3">
+                                <rect key="frame" x="-295" y="60" width="992" height="817"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" secondItem="pYY-tY-Eh3" secondAttribute="height" multiplier="253:296" id="ArC-Dt-W9j"/>
+                                    <constraint firstAttribute="width" secondItem="pYY-tY-Eh3" secondAttribute="height" multiplier="253:296" constant="293.68581081081084" id="ArC-Dt-W9j"/>
                                 </constraints>
                             </imageView>
                             <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumFontSize="9" translatesAutoresizingMaskIntoConstraints="NO" id="obG-Y5-kRd">
@@ -39,17 +39,17 @@
                                     <constraint firstAttribute="height" constant="78.666666666666686" id="YTH-oh-k81"/>
                                 </constraints>
                                 <fontDescription key="fontDescription" name="Menlo-Regular" family="Menlo" pointSize="40"/>
-                                <color key="textColor" red="0.9135699498422527" green="1" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="DRAGON" textAlignment="right" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="Cut-tv-xSt">
-                                <rect key="frame" x="74.666666666666671" y="768" width="163.66666666666663" height="61.333333333333371"/>
+                                <rect key="frame" x="74.666666666666686" y="768" width="163.33333333333331" height="61.333333333333371"/>
                                 <fontDescription key="fontDescription" name="NotoSansMyanmar-Bold" family="Noto Sans Myanmar" pointSize="28"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="OS" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="acK-I7-Dfu">
-                                <rect key="frame" x="238.66666666666663" y="768" width="50" height="61.333333333333371"/>
+                                <rect key="frame" x="238.33333333333337" y="768" width="50" height="61.333333333333371"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="50" id="cZO-Bn-Cfk"/>
                                 </constraints>
@@ -62,7 +62,7 @@
                         <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="Cut-tv-xSt" firstAttribute="baseline" secondItem="acK-I7-Dfu" secondAttribute="baseline" id="7nh-M9-s9o"/>
-                            <constraint firstItem="pYY-tY-Eh3" firstAttribute="top" secondItem="GJd-Yh-RWb" secondAttribute="bottom" constant="-339.66666666666669" id="G38-tq-EYF"/>
+                            <constraint firstItem="pYY-tY-Eh3" firstAttribute="top" secondItem="GJd-Yh-RWb" secondAttribute="bottom" constant="-424" id="G38-tq-EYF"/>
                             <constraint firstItem="GJd-Yh-RWb" firstAttribute="leading" secondItem="HbC-Cc-9N0" secondAttribute="leading" id="Lfs-tz-5Iu"/>
                             <constraint firstItem="GJd-Yh-RWb" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="OiF-fV-B14"/>
                             <constraint firstItem="GJd-Yh-RWb" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" id="P80-Pn-tE4"/>
@@ -71,7 +71,7 @@
                             <constraint firstItem="obG-Y5-kRd" firstAttribute="top" secondItem="Cut-tv-xSt" secondAttribute="bottom" constant="24.666666666666629" id="UGu-Iv-FSo"/>
                             <constraint firstItem="HbC-Cc-9N0" firstAttribute="trailing" secondItem="obG-Y5-kRd" secondAttribute="trailing" id="Uo6-wQ-cUX"/>
                             <constraint firstItem="HbC-Cc-9N0" firstAttribute="leading" secondItem="obG-Y5-kRd" secondAttribute="leading" id="VAT-lf-vlh"/>
-                            <constraint firstItem="pYY-tY-Eh3" firstAttribute="centerY" secondItem="Bcu-3y-fUS" secondAttribute="centerY" constant="-6.5" id="Vdu-fV-VMI"/>
+                            <constraint firstItem="pYY-tY-Eh3" firstAttribute="centerY" secondItem="Bcu-3y-fUS" secondAttribute="centerY" constant="17.5" id="Vdu-fV-VMI"/>
                             <constraint firstItem="Bcu-3y-fUS" firstAttribute="bottom" secondItem="Cut-tv-xSt" secondAttribute="bottom" constant="10.666666666666629" id="WaA-Ya-zaZ"/>
                             <constraint firstItem="Cut-tv-xSt" firstAttribute="top" secondItem="HbC-Cc-9N0" secondAttribute="bottom" constant="-19.666666666666629" id="bPx-aB-xps"/>
                             <constraint firstItem="HbC-Cc-9N0" firstAttribute="centerX" secondItem="Bcu-3y-fUS" secondAttribute="centerX" id="c9Q-Q9-oUz"/>
@@ -79,9 +79,9 @@
                             <constraint firstItem="GJd-Yh-RWb" firstAttribute="trailing" secondItem="HbC-Cc-9N0" secondAttribute="trailing" id="ju8-C3-09W"/>
                             <constraint firstItem="acK-I7-Dfu" firstAttribute="leading" secondItem="Cut-tv-xSt" secondAttribute="trailing" constant="0.33333333333331439" id="koK-vS-YhG"/>
                             <constraint firstItem="pYY-tY-Eh3" firstAttribute="centerX" secondItem="Bcu-3y-fUS" secondAttribute="centerX" id="mGs-aW-TtK"/>
-                            <constraint firstItem="acK-I7-Dfu" firstAttribute="leading" secondItem="pYY-tY-Eh3" secondAttribute="trailing" constant="-219" id="nVp-W6-IE5"/>
-                            <constraint firstItem="pYY-tY-Eh3" firstAttribute="leading" secondItem="Cut-tv-xSt" secondAttribute="trailing" constant="-293.66666666666663" id="pn5-FC-eML"/>
-                            <constraint firstItem="Cut-tv-xSt" firstAttribute="leading" secondItem="pYY-tY-Eh3" secondAttribute="leading" constant="130" id="rE0-ks-q68"/>
+                            <constraint firstItem="acK-I7-Dfu" firstAttribute="leading" secondItem="pYY-tY-Eh3" secondAttribute="trailing" constant="-458.5" id="nVp-W6-IE5"/>
+                            <constraint firstItem="pYY-tY-Eh3" firstAttribute="leading" secondItem="Cut-tv-xSt" secondAttribute="trailing" constant="-533" id="pn5-FC-eML"/>
+                            <constraint firstItem="Cut-tv-xSt" firstAttribute="leading" secondItem="pYY-tY-Eh3" secondAttribute="leading" constant="369.5" id="rE0-ks-q68"/>
                             <constraint firstItem="Cut-tv-xSt" firstAttribute="top" secondItem="acK-I7-Dfu" secondAttribute="top" id="s9u-Em-NDi"/>
                             <constraint firstItem="Bcu-3y-fUS" firstAttribute="bottom" secondItem="HbC-Cc-9N0" secondAttribute="bottom" constant="52.333333333333371" id="zZU-qZ-Es9"/>
                         </constraints>
@@ -89,7 +89,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="51.145038167938928" y="373.94366197183098"/>
+            <point key="canvasLocation" x="50.581395348837212" y="373.25581395348837"/>
         </scene>
     </scenes>
     <resources>

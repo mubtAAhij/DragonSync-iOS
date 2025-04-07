@@ -5,32 +5,26 @@
 //  Created by Luke on 12/09/24.
 //
 
+
 import SwiftUI
 import MapKit
 import CoreLocation
 
 struct DroneDetailView: View {
     @ObservedObject var cotViewModel: CoTViewModel
-    @State private var region: MKCoordinateRegion
+    @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var showingInfoEditor = false
     let message: CoTViewModel.CoTMessage
     let flightPath: [CLLocationCoordinate2D]
-    
     
     init(message: CoTViewModel.CoTMessage, flightPath: [CLLocationCoordinate2D], cotViewModel: CoTViewModel) {
         self.cotViewModel = cotViewModel
         self.message = message
         self.flightPath = flightPath
-        let lat = Double(message.lat) ?? 0
-        let lon = Double(message.lon) ?? 0
-        _region = State(initialValue: MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-        ))
     }
-    
+
     //MARK: - Main Detail View
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -46,17 +40,21 @@ struct DroneDetailView: View {
                                 .foregroundColor(.primary)
                         }
                         
+                        
                         HStack {
                             Text(message.uid)
                                 .font(.appCaption)
                                 .foregroundColor(.secondary)
+                            
                             
                             Image(systemName: trustStatus.icon)
                                 .foregroundColor(trustStatus.color)
                         }
                     }
                     
+                    
                     Spacer()
+                    
                     
                     Button(action: { showingInfoEditor = true }) {
                         Label("Edit", systemImage: "pencil")
@@ -71,7 +69,8 @@ struct DroneDetailView: View {
                 .background(Color(UIColor.secondarySystemBackground))
                 .cornerRadius(12)
                 
-                Map {
+                
+                Map(position: $mapCameraPosition) {
                     if message.lat != "0.0" && message.lon != "0.0" {
                         Annotation(message.uid, coordinate: CLLocationCoordinate2D(
                             latitude: Double(message.lat) ?? 0,
@@ -86,17 +85,19 @@ struct DroneDetailView: View {
                             .stroke(.blue, lineWidth: 2)
                     }
                     
+                    
                     if let ring = cotViewModel.alertRings.first(where: { $0.droneId == message.uid }),
                        Double(message.lat) ?? 0 == 0 && Double(message.lon) ?? 0 == 0 {
                         MapCircle(center: ring.centerCoordinate, radius: ring.radius)
                             .foregroundStyle(.yellow.opacity(0.1))
                             .stroke(.yellow, lineWidth: 2)
                         
+                        
                         Annotation("RSSI: \(ring.rssi) dBm", coordinate: ring.centerCoordinate) {
                             VStack {
-                                Text("No location data")
+                                Text("Unmarked Drone")
                                     .font(.caption)
-                                Text("~\(Int(ring.radius))m radius")
+                                Text("\(Int(ring.radius))m radius")
                                     .font(.caption)
                                     .foregroundColor(.yellow)
                             }
@@ -105,6 +106,7 @@ struct DroneDetailView: View {
                             .cornerRadius(6)
                         }
                     }
+                    
                     
                     if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
                         let pilotCoord = CLLocationCoordinate2D(
@@ -116,6 +118,7 @@ struct DroneDetailView: View {
                                 .foregroundStyle(.green)
                         }
                     }
+                    
                     
                     if message.homeLat != "0.0" && message.homeLon != "0.0" {
                         let homeCoord = CLLocationCoordinate2D(
@@ -132,8 +135,9 @@ struct DroneDetailView: View {
                 .cornerRadius(12)
                 .font(.appDefault)
                 .onAppear {
-                    updateRegionForAlertRing();
+                    updateMapRegion()
                 }
+                
                 
                 Group {
                     if !message.signalSources.isEmpty {
@@ -154,6 +158,7 @@ struct DroneDetailView: View {
                                                             source.type == .sdr ? .purple :
                                                 .gray)
                                         
+                                        
                                         Text(source.type.rawValue)
                                             .font(.appCaption)
                                             .foregroundColor(source.type == .bluetooth ? .blue :
@@ -173,6 +178,7 @@ struct DroneDetailView: View {
                         }
                     }
                     
+                    
                     Group {
                         if let macs = cotViewModel.macIdHistory[message.uid], macs.count >= 3 {
                             SectionHeader(title: "MAC Randomization")
@@ -185,9 +191,11 @@ struct DroneDetailView: View {
                                 }
                                 .padding(.bottom, 4)
                                 
+                                
                                 Text("Last seen MACs:")
                                     .font(.appCaption)
                                     .foregroundColor(.secondary)
+                                
                                 
                                 ForEach(Array(macs).sorted(), id: \.self) { mac in
                                     HStack {
@@ -206,6 +214,7 @@ struct DroneDetailView: View {
                         }
                     }
                     
+                    
                     Group {
                         InfoRow(title: "ID", value: message.uid)
                         if message.caaRegistration != nil {
@@ -218,9 +227,11 @@ struct DroneDetailView: View {
                             InfoRow(title: "Info", value: message.selfIDText)
                         }
                         
+                        
                         if !message.uaType.rawValue.isEmpty {
                             InfoRow(title: "UA Type", value: message.uaType.rawValue)
                         }
+                        
                         
                         // MAC from multiple sources
                         if let mac = message.mac ??
@@ -229,6 +240,7 @@ struct DroneDetailView: View {
                             InfoRow(title: "MAC", value: mac)
                         }
                         
+                        
                         // RSSI from multiple sources
                         if let rssi = message.rssi ??
                             (message.rawMessage["Basic ID"] as? [String: Any])?["RSSI"] as? Int ??
@@ -236,12 +248,14 @@ struct DroneDetailView: View {
                             InfoRow(title: "RSSI", value: "\(rssi) dBm")
                         }
                         
+                        
                     }
                     
+                    
                     // Operator Section
-                    if message.pilotLat != "0.0" || ((message.operator_id?.isEmpty) == nil) || message.manufacturer != "Unknown"  {
+                    if message.pilotLat != "0.0" || ((message.operator_id?.isEmpty) == nil) || message.manufacturer != "Unknown" {
                         Group {
-                            if message.manufacturer != "Unknown"  {
+                            if message.manufacturer != "Unknown" {
                                 InfoRow(title: "Manufacturer", value: message.manufacturer ?? "Unknown")
                             }
                             SectionHeader(title: "Operator")
@@ -258,8 +272,10 @@ struct DroneDetailView: View {
                                 InfoRow(title: "Pilot Altitude", value: message.operatorAltGeo ?? "")
                             }
                             
+                            
                         }
                     }
+                    
                     
                     Group {
                         SectionHeader(title: "Position")
@@ -272,12 +288,15 @@ struct DroneDetailView: View {
                         if let heightType = message.heightType {
                             InfoRow(title: "Height Type", value: heightType)
                             
+                            
                         }
                         if message.op_status != "" {
                             InfoRow(title: "Operation Status", value: message.op_status ?? "Unknown")
                         }
                         
+                        
                     }
+                    
                     
                     Group {
                         if message.speed != "" {
@@ -291,24 +310,30 @@ struct DroneDetailView: View {
                         }
                     }
                     
+                    
                     Group {
                         if let auxAdvData = message.rawMessage.lazy
                             .compactMap({ $0.value as? [String: Any] })
                             .first(where: { $0.keys.contains("rssi") }) {
                             
+                            
                             SectionHeader(title: "Signal Data")
+                            
                             
                             if let rssi = auxAdvData["rssi"] as? Int {
                                 InfoRow(title: "RSSI", value: "\(rssi) dBm")
                             }
                             
+                            
                             if let channel = auxAdvData["chan"] as? Int {
                                 InfoRow(title: "Channel", value: "\(channel)")
                             }
                             
+                            
                             if let phy = auxAdvData["phy"] as? Int {
                                 InfoRow(title: "PHY", value: "\(phy)")
                             }
+                            
                             
                             if let aa = auxAdvData["aa"] as? Int {
                                 InfoRow(title: "Access Address", value: String(format: "0x%08X", aa))
@@ -320,6 +345,7 @@ struct DroneDetailView: View {
                     Group {
                         if message.horizAcc != nil || message.vertAcc != nil || message.baroAcc != nil || message.speedAcc != nil {
                             SectionHeader(title: "Accuracy")
+                            
                             
                             if let horizAcc = message.horizAcc {
                                 InfoRow(title: "Horizontal", value: "\(horizAcc)m")
@@ -336,8 +362,7 @@ struct DroneDetailView: View {
                         }
                     }
                     
-                    
-                    
+
                     if let aux = message.rawMessage["AUX_ADV_IND"] as? [String: Any],
                        let aext = message.rawMessage["aext"] as? [String: Any] {
                         Group {
@@ -365,6 +390,7 @@ struct DroneDetailView: View {
                         }
                     }
                     
+                    
                     if let areaCount = message.areaCount, areaCount != "0" {
                         Group {
                             SectionHeader(title: "Operation Area")
@@ -380,6 +406,7 @@ struct DroneDetailView: View {
                             }
                         }
                     }
+                    
                     
                     if let status = message.status {
                         Group {
@@ -424,11 +451,16 @@ struct DroneDetailView: View {
             }
             .presentationDetents([.medium])
         }
+        .onAppear {
+            updateMapRegion()
+        }
     }
+    
     
     struct InfoRow: View {
         let title: String
         let value: String
+        
         
         var body: some View {
             HStack {
@@ -441,8 +473,10 @@ struct DroneDetailView: View {
         }
     }
     
+    
     struct SectionHeader: View {
         let title: String
+        
         
         var body: some View {
             Text(title)
@@ -461,23 +495,29 @@ struct DroneDetailView: View {
         }
     }
     
-    private func updateRegionForAlertRing() {
+    
+    private func updateMapRegion() {
         let lat = Double(message.lat) ?? 0
         let lon = Double(message.lon) ?? 0
         
-        if lat == 0 && lon == 0 {
-            if let ring = cotViewModel.alertRings.first(where: { $0.droneId == message.uid }) {
-                let spanDelta = max(ring.radius / 1000 * 2, 0.01)
-                region = MKCoordinateRegion(
+        
+        // Prioritize alert ring if coordinates are 0,0
+        if lat == 0 && lon == 0,
+           let ring = cotViewModel.alertRings.first(where: { $0.droneId == message.uid }) {
+            withAnimation {
+                mapCameraPosition = .region(MKCoordinateRegion(
                     center: ring.centerCoordinate,
-                    span: MKCoordinateSpan(
-                        latitudeDelta: spanDelta,
-                        longitudeDelta: spanDelta
-                    )
-                )
+                    span: MKCoordinateSpan(latitudeDelta: max(ring.radius / 250, 0.0005),
+                                           longitudeDelta: max(ring.radius / 250, 0.0005))
+                ))
+            }
+        } else {
+            withAnimation {
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                    span: MKCoordinateSpan(latitudeDelta: 0.001, longitudeDelta: 0.001)
+                ))
             }
         }
     }
-    
 }
-
