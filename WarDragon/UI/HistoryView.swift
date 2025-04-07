@@ -333,17 +333,18 @@ struct StoredEncountersView: View {
                             .foregroundStyle(.yellow.opacity(0.1))
                             .stroke(.yellow, lineWidth: 2)
                         
-                        Annotation(ring.droneId, coordinate: ring.centerCoordinate) {
-                            VStack(spacing: 2) {
-                                Text("RSSI: \(ring.rssi) dBm")
-                                    .font(.caption2)
+                        
+                        Annotation("RSSI: \(ring.rssi) dBm", coordinate: ring.centerCoordinate) {
+                            VStack {
+                                Text("Unmarked Drone")
+                                    .font(.caption)
                                 Text("\(Int(ring.radius))m radius")
                                     .font(.caption)
                                     .foregroundColor(.primary)
                             }
-                            .padding(4)
+                            .padding(6)
                             .background(.ultraThinMaterial)
-                            .cornerRadius(4)
+                            .cornerRadius(6)
                         }
                     }
                 }
@@ -368,12 +369,12 @@ struct StoredEncountersView: View {
         }
         
         private func setupInitialMapPosition() {
-            // First check if there's an alert ring - EXACTLY as in LiveMapView
+            // First check if there's an alert ring for zero-coordinate points
             if let firstPoint = encounter.flightPath.first,
                firstPoint.latitude == 0 && firstPoint.longitude == 0,
                let ring = cotViewModel.alertRings.first(where: { $0.droneId == encounter.id }) {
                 
-                // Use the EXACT same formula as in LiveMapView for consistent results
+                // Use the alert ring's center and radius
                 mapCameraPosition = .region(MKCoordinateRegion(
                     center: ring.centerCoordinate,
                     span: MKCoordinateSpan(
@@ -381,52 +382,62 @@ struct StoredEncountersView: View {
                         longitudeDelta: max(ring.radius / 250, 0.1)
                     )
                 ))
+                return  // Exit after setting ring-based position
             }
-            // Handle valid coordinates in flight path
-            else if !encounter.flightPath.isEmpty {
-                // Filter out 0,0 coordinates
-                let validPoints = encounter.flightPath.filter { point in
-                    return (point.latitude != 0 || point.longitude != 0)
-                }
+            
+            // Filter out 0,0 coordinates
+            let validPoints = encounter.flightPath.filter { point in
+                point.latitude != 0 || point.longitude != 0
+            }
+            
+            // Handle multiple valid points
+            if validPoints.count > 1 {
+                let coordinates = validPoints.map { $0.coordinate }
+                let latitudes = coordinates.map { $0.latitude }
+                let longitudes = coordinates.map { $0.longitude }
                 
-                if validPoints.count > 1 {
-                    // Calculate bounding box
-                    let coordinates = validPoints.map { $0.coordinate }
-                    let latitudes = coordinates.map { $0.latitude }
-                    let longitudes = coordinates.map { $0.longitude }
-                    
-                    let minLat = latitudes.min()!
-                    let maxLat = latitudes.max()!
-                    let minLon = longitudes.min()!
-                    let maxLon = longitudes.max()!
-                    
-                    let center = CLLocationCoordinate2D(
-                        latitude: (minLat + maxLat) / 2,
-                        longitude: (minLon + maxLon) / 2
+                let minLat = latitudes.min()!
+                let maxLat = latitudes.max()!
+                let minLon = longitudes.min()!
+                let maxLon = longitudes.max()!
+                
+                let center = CLLocationCoordinate2D(
+                    latitude: (minLat + maxLat) / 2,
+                    longitude: (minLon + maxLon) / 2
+                )
+                
+                // Set region with some padding
+                let latDelta = max((maxLat - minLat) * 1.2, 0.05)
+                let lonDelta = max((maxLon - minLon) * 1.2, 0.05)
+                
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: center,
+                    span: MKCoordinateSpan(
+                        latitudeDelta: latDelta,
+                        longitudeDelta: lonDelta
                     )
-                    
-                    // Set region with some padding
-                    let latDelta = max((maxLat - minLat) * 1.2, 0.05)
-                    let lonDelta = max((maxLon - minLon) * 1.2, 0.05)
-                    
-                    mapCameraPosition = .region(MKCoordinateRegion(
-                        center: center,
-                        span: MKCoordinateSpan(
-                            latitudeDelta: latDelta,
-                            longitudeDelta: lonDelta
-                        )
-                    ))
-                }
-                // Just one valid point
-                else if !validPoints.isEmpty {
-                    mapCameraPosition = .region(MKCoordinateRegion(
-                        center: validPoints[0].coordinate,
-                        span: MKCoordinateSpan(
-                            latitudeDelta: 0.05,
-                            longitudeDelta: 0.05
-                        )
-                    ))
-                }
+                ))
+            }
+            // Handle single valid point
+            else if let singlePoint = validPoints.first {
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: singlePoint.coordinate,
+                    span: MKCoordinateSpan(
+                        latitudeDelta: 0.05,
+                        longitudeDelta: 0.05
+                    )
+                ))
+            }
+            // Fallback for no valid points
+            else if let ring = cotViewModel.alertRings.first(where: { $0.droneId == encounter.id }) {
+                // Fallback to alert ring if no valid points
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: ring.centerCoordinate,
+                    span: MKCoordinateSpan(
+                        latitudeDelta: max(ring.radius / 250, 0.1),
+                        longitudeDelta: max(ring.radius / 250, 0.1)
+                    )
+                ))
             }
         }
         

@@ -137,7 +137,9 @@ struct DroneDetailView: View {
                 .onAppear {
                     updateMapRegion()
                 }
-                
+                .onChange(of: [message.lat, message.lon]) { oldValue, newValue in
+                    updateMapRegion()
+                }
                 
                 Group {
                     if !message.signalSources.isEmpty {
@@ -495,29 +497,33 @@ struct DroneDetailView: View {
         }
     }
     
-    
     private func updateMapRegion() {
         let lat = Double(message.lat) ?? 0
         let lon = Double(message.lon) ?? 0
         
+        let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
         
-        // Prioritize alert ring if coordinates are 0,0
+        // Proximity ring alert if 0/0
         if lat == 0 && lon == 0,
            let ring = cotViewModel.alertRings.first(where: { $0.droneId == message.uid }) {
             withAnimation {
                 mapCameraPosition = .region(MKCoordinateRegion(
                     center: ring.centerCoordinate,
-                    span: MKCoordinateSpan(latitudeDelta: max(ring.radius / 250, 0.0005),
-                                           longitudeDelta: max(ring.radius / 250, 0.0005))
+                    span: MKCoordinateSpan(
+                        latitudeDelta: max(ring.radius / 111000, 0.05),
+                        longitudeDelta: max(ring.radius / 111000, 0.05)
+                    )
                 ))
             }
         } else {
             withAnimation {
                 mapCameraPosition = .region(MKCoordinateRegion(
                     center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                    span: MKCoordinateSpan(latitudeDelta: 0.001, longitudeDelta: 0.001)
+                    span: defaultSpan
                 ))
             }
         }
     }
+
+
 }

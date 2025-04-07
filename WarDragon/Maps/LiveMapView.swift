@@ -126,17 +126,18 @@ struct LiveMapView: View {
                         .foregroundStyle(.yellow.opacity(0.1))
                         .stroke(.yellow, lineWidth: 2)
                     
-                    Annotation(ring.droneId, coordinate: ring.centerCoordinate) {
-                        VStack(spacing: 2) {
-                            Text("RSSI: \(ring.rssi) dBm")
-                                .font(.caption2)
+                    
+                    Annotation("RSSI: \(ring.rssi) dBm", coordinate: ring.centerCoordinate) {
+                        VStack {
+                            Text("Unmarked Drone")
+                                .font(.caption)
                             Text("\(Int(ring.radius))m radius")
                                 .font(.caption)
                                 .foregroundColor(.primary)
                         }
-                        .padding(4)
+                        .padding(6)
                         .background(.ultraThinMaterial)
-                        .cornerRadius(4)
+                        .cornerRadius(6)
                     }
                 }
             }
