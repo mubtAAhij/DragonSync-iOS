@@ -21,8 +21,9 @@ class Config:
 		
 class DroneMessageGenerator:
 	def __init__(self):
-		self.lat_range = (0.0, 0.0)
-		self.lon_range = (0.0, 0.0)  
+		# Area 51
+		self.lat_range = (37.2, 37.3)
+		self.lon_range = (-115.8, -115.7)  
 		self.msg_index = 0
 		self.start_time = time.time()
 		
@@ -338,7 +339,7 @@ class DroneMessageGenerator:
 		# Fixed values
 		mac = "E0:4E:7A:9A:67:99"
 		#mac = "DJI"
-		#rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
+		rssi = -60 + int(10 * math.sin(t))  # RSSI varies with time
 		#rssi = random.randint(-90, -10)
 		protocol_version = "1.0"
 		desc = f"DJI {100}"
@@ -408,10 +409,11 @@ class DroneMessageGenerator:
 		homeLon = base_lon
 		pilotLat = base_lat
 		pilotLng = base_lon
-		speed = random.choice([0, 50, 65])
+		speed = random.choice([0, 250, 2365])
 		#speed = round(random.uniform(20, 50), 1)
 		alt = round(random.uniform(50, 400), 1)
-		rssi = random.choice([0, 50, 65])
+		#rssi = random.choice([0, -50, -65])
+		rssi = random.randint(-90, -10)
 		
 		#mac = ':'.join([f'{random.randint(0x00, 0xff):02X}' for _ in range(6)])
 		mac = "E3:4E:7A:9A:67:96"
@@ -430,8 +432,8 @@ class DroneMessageGenerator:
 				"RSSI": rssi
 			},
 			"Location/Vector Message": {
-				"latitude": latitude,
-				"longitude": longitude,
+				"latitude": 0.0,
+				"longitude": 0.0,
 				"speed": speed,
 				"vert_speed": 10,
 				"geodetic_altitude": alt,
@@ -456,8 +458,8 @@ class DroneMessageGenerator:
 				"description": "Drone ID test flight---"
 			},
 			"System Message": {
-				"latitude": 51.4791,
-				"longitude": -145.0013,
+				"latitude": homeLat,
+				"longitude": homeLon,
 				"operator_lat": pilotLat,
 				"operator_lon": pilotLng,
 				"operator_id": "NotMe",
@@ -737,4 +739,5 @@ if __name__ == "__main__":
 		print("\n\n👋 Program terminated by user")
 	except Exception as e:
 		print(f"\n❌ An error occurred: {e}")
+		
 		

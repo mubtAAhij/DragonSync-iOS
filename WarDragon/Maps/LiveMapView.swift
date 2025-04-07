@@ -10,7 +10,7 @@ import MapKit
 
 struct LiveMapView: View {
     @ObservedObject var cotViewModel: CoTViewModel
-    @State private var mapCameraPosition: MapCameraPosition
+    @State public var mapCameraPosition: MapCameraPosition
     @State private var showDroneList = false
     @State private var showDroneDetail = false
     @State private var selectedDrone: CoTViewModel.CoTMessage?
@@ -25,10 +25,21 @@ struct LiveMapView: View {
         self.cotViewModel = cotViewModel
         let lat = Double(initialMessage.lat) ?? 0
         let lon = Double(initialMessage.lon) ?? 0
-        _mapCameraPosition = State(initialValue: .region(MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-        )))
+        
+        // Prioritize alert ring if coordinates are 0,0
+        if lat == 0 && lon == 0,
+           let ring = cotViewModel.alertRings.first(where: { $0.droneId == initialMessage.uid }) {
+            _mapCameraPosition = State(initialValue: .region(MKCoordinateRegion(
+                center: ring.centerCoordinate,
+                span: MKCoordinateSpan(latitudeDelta: max(ring.radius / 250, 0.1),
+                                        longitudeDelta: max(ring.radius / 250, 0.1))
+            )))
+        } else {
+            _mapCameraPosition = State(initialValue: .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )))
+        }
     }
     
     private func cleanOldPathPoints() {
@@ -110,7 +121,6 @@ struct LiveMapView: View {
                 }
                 
                 // Draw alert rings for drones with no valid coordinates
-
                 ForEach(cotViewModel.alertRings, id: \.id) { ring in
                     MapCircle(center: ring.centerCoordinate, radius: ring.radius)
                         .foregroundStyle(.yellow.opacity(0.1))
@@ -122,7 +132,7 @@ struct LiveMapView: View {
                                 .font(.caption2)
                             Text("\(Int(ring.radius))m radius")
                                 .font(.caption)
-                                .foregroundColor(.yellow)
+                                .foregroundColor(.primary)
                         }
                         .padding(4)
                         .background(.ultraThinMaterial)

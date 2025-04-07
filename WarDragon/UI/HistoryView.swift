@@ -15,6 +15,7 @@ struct StoredEncountersView: View {
     @State private var showingDeleteConfirmation = false
     @State private var searchText = ""
     @State private var sortOrder: SortOrder = .firstSeen
+    @ObservedObject var cotViewModel: CoTViewModel
     
     enum SortOrder {
         case lastSeen, firstSeen, maxAltitude, maxSpeed
@@ -49,7 +50,8 @@ struct StoredEncountersView: View {
         NavigationStack {
             List {
                 ForEach(sortedEncounters) { encounter in
-                    NavigationLink(destination: EncounterDetailView(encounter: encounter)) {
+                    NavigationLink(destination: EncounterDetailView(encounter: encounter)
+                                      .environmentObject(cotViewModel)) {
                         EncounterRow(encounter: encounter)
                     }
                 }
@@ -187,6 +189,8 @@ struct StoredEncountersView: View {
         @State private var showingDeleteConfirmation = false
         @State private var showingInfoEditor = false
         @State private var selectedMapType: MapStyle = .standard
+        @State private var mapCameraPosition: MapCameraPosition = .automatic
+        @EnvironmentObject var cotViewModel: CoTViewModel
         
         enum MapStyle {
             case standard, satellite, hybrid
@@ -247,6 +251,9 @@ struct StoredEncountersView: View {
                 .padding()
             }
             .navigationTitle("Encounter Details")
+            .onAppear {
+                setupInitialMapPosition()
+            }
             .sheet(isPresented: $showingInfoEditor) {
                 NavigationView {
                     DroneInfoEditor(droneId: encounter.id)
@@ -297,7 +304,7 @@ struct StoredEncountersView: View {
         }
         
         private var mapSection: some View {
-            Map {
+            Map(position: $mapCameraPosition) {
                 if !encounter.flightPath.isEmpty {
                     MapPolyline(coordinates: encounter.flightPath.map {
                         CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
@@ -320,26 +327,108 @@ struct StoredEncountersView: View {
                         }
                     }
                     
-                    // Home location
-                    if let firstPoint = encounter.flightPath.first,
-                       let homeLat = firstPoint.homeLatitude,
-                       let homeLon = firstPoint.homeLongitude {
-                        let homeCoord = CLLocationCoordinate2D(
-                            latitude: homeLat,
-                            longitude: homeLon
-                        )
-                        Annotation("Home", coordinate: homeCoord) {
-                            Image(systemName: "house.fill")
-                                .foregroundStyle(.orange)
+                    // Draw alert rings from cotViewModel like in other views
+                    ForEach(cotViewModel.alertRings.filter { $0.droneId == encounter.id }, id: \.id) { ring in
+                        MapCircle(center: ring.centerCoordinate, radius: ring.radius)
+                            .foregroundStyle(.yellow.opacity(0.1))
+                            .stroke(.yellow, lineWidth: 2)
+                        
+                        Annotation(ring.droneId, coordinate: ring.centerCoordinate) {
+                            VStack(spacing: 2) {
+                                Text("RSSI: \(ring.rssi) dBm")
+                                    .font(.caption2)
+                                Text("\(Int(ring.radius))m radius")
+                                    .font(.caption)
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(4)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(4)
                         }
                     }
                 }
+                
+                    // Home location - TODO, ensure correctness here with our logic im tired, get the true ones...
+//                    if let firstPoint = encounter.flightPath.first,
+//                       let homeLat = firstPoint.homeLatitude,
+//                       let homeLon = firstPoint.homeLongitude {
+//                        let homeCoord = CLLocationCoordinate2D(
+//                            latitude: homeLat,
+//                            longitude: homeLon
+//                        )
+//                        Annotation("Home", coordinate: homeCoord) {
+//                            Image(systemName: "house.fill")
+//                                .foregroundStyle(.orange)
+//                        }
+//                    }
             }
             .mapStyle(mapStyleForSelectedType())
             .frame(height: 300)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         
+        private func setupInitialMapPosition() {
+            // First check if there's an alert ring - EXACTLY as in LiveMapView
+            if let firstPoint = encounter.flightPath.first,
+               firstPoint.latitude == 0 && firstPoint.longitude == 0,
+               let ring = cotViewModel.alertRings.first(where: { $0.droneId == encounter.id }) {
+                
+                // Use the EXACT same formula as in LiveMapView for consistent results
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: ring.centerCoordinate,
+                    span: MKCoordinateSpan(
+                        latitudeDelta: max(ring.radius / 250, 0.1),
+                        longitudeDelta: max(ring.radius / 250, 0.1)
+                    )
+                ))
+            }
+            // Handle valid coordinates in flight path
+            else if !encounter.flightPath.isEmpty {
+                // Filter out 0,0 coordinates
+                let validPoints = encounter.flightPath.filter { point in
+                    return (point.latitude != 0 || point.longitude != 0)
+                }
+                
+                if validPoints.count > 1 {
+                    // Calculate bounding box
+                    let coordinates = validPoints.map { $0.coordinate }
+                    let latitudes = coordinates.map { $0.latitude }
+                    let longitudes = coordinates.map { $0.longitude }
+                    
+                    let minLat = latitudes.min()!
+                    let maxLat = latitudes.max()!
+                    let minLon = longitudes.min()!
+                    let maxLon = longitudes.max()!
+                    
+                    let center = CLLocationCoordinate2D(
+                        latitude: (minLat + maxLat) / 2,
+                        longitude: (minLon + maxLon) / 2
+                    )
+                    
+                    // Set region with some padding
+                    let latDelta = max((maxLat - minLat) * 1.2, 0.05)
+                    let lonDelta = max((maxLon - minLon) * 1.2, 0.05)
+                    
+                    mapCameraPosition = .region(MKCoordinateRegion(
+                        center: center,
+                        span: MKCoordinateSpan(
+                            latitudeDelta: latDelta,
+                            longitudeDelta: lonDelta
+                        )
+                    ))
+                }
+                // Just one valid point
+                else if !validPoints.isEmpty {
+                    mapCameraPosition = .region(MKCoordinateRegion(
+                        center: validPoints[0].coordinate,
+                        span: MKCoordinateSpan(
+                            latitudeDelta: 0.05,
+                            longitudeDelta: 0.05
+                        )
+                    ))
+                }
+            }
+        }
         
         private func mapStyleForSelectedType() -> MapKit.MapStyle {
             switch selectedMapType {
