@@ -11,6 +11,7 @@ import MapKit
 struct MessageRow: View {
     let message: CoTViewModel.CoTMessage
     @ObservedObject var cotViewModel: CoTViewModel
+    @ObservedObject private var droneStorage = DroneStorageManager.shared
     @State private var activeSheet: SheetType?
     @State private var showingSaveConfirmation = false
     @State private var showingInfoEditor = false
@@ -124,26 +125,37 @@ struct MessageRow: View {
         return nil
     }
     
-    // MARK: - Sub-View Builders
+    // MARK: - Subview Builders
     
     @ViewBuilder
     private func headerView() -> some View {
         HStack {
-            // Grab custom name and trust status
-            let encounter = DroneStorageManager.shared.encounters[message.uid]
+            // Dynamically fetch encounter information
+            let encounter = droneStorage.encounters[message.uid]
             let customName = encounter?.customName ?? ""
             let trustStatus = encounter?.trustStatus ?? .unknown
             
-            // Drone icon, TODO use a better UAV icon than airplane
-            Image(systemName: signature?.primaryId.uaType.icon ?? "airplane")
-                .foregroundColor(.blue)
-            Text("ID: \(message.id)")
-                .font(.appHeadline)
-            
-            if let caaReg = message.caaRegistration, !caaReg.isEmpty {
-                Text("CAA ID: \(caaReg)")
-                    .font(.appSubheadline)
-                    .foregroundColor(.secondary)
+            VStack(alignment: .leading) {
+                if !customName.isEmpty {
+                    Text(customName)
+                        .font(.system(.title3, design: .monospaced))
+                        .foregroundColor(.primary)
+                }
+                
+                HStack {
+                    Text(message.id)
+                        .font(.appCaption)
+                        .foregroundColor(.secondary)
+                    
+                    Image(systemName: trustStatus.icon)
+                        .foregroundColor(trustStatus.color)
+                }
+                
+                if let caaReg = message.caaRegistration, !caaReg.isEmpty {
+                    Text("CAA ID: \(caaReg)")
+                        .font(.appSubheadline)
+                        .foregroundColor(.secondary)
+                }
             }
             
             Spacer()

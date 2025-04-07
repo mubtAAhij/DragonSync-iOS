@@ -771,11 +771,11 @@ class CoTViewModel: ObservableObject {
         // Update encounters
         let encounters = DroneStorageManager.shared.encounters
 
-        // Validate coordinates first
-        guard signature.position.coordinate.latitude != 0 &&
-              signature.position.coordinate.longitude != 0 else {
-            return // Skip update if coordinates are 0,0
-        }
+//        // Validate coordinates first - UNCOMMENT THIS TO DISALLOW ZERO COORDINATE DETECTIONS
+//        guard signature.position.coordinate.latitude != 0 &&
+//              signature.position.coordinate.longitude != 0 else {
+//            return // Skip update if coordinates are 0,0
+//        }
 
         if encounters[signature.primaryId.id] != nil {
             let existing = encounters[signature.primaryId.id]!
