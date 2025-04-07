@@ -68,18 +68,15 @@ struct DroneEncounter: Codable, Identifiable, Hashable {
         return validSpeeds.max() ?? 0
     }
 
-    
     var averageRSSI: Double {
         let validRSSI = signatures.map { $0.rssi }.filter { $0 != 0 }
         guard !validRSSI.isEmpty else { return 0 }
         return validRSSI.reduce(0, +) / Double(validRSSI.count)
     }
 
-    
     var totalFlightTime: TimeInterval {
         lastSeen.timeIntervalSince(firstSeen)
     }
-    
 }
 
 struct FlightPathPoint: Codable, Hashable {
@@ -112,7 +109,7 @@ struct SignatureData: Codable, Hashable {
     
     // Ensure the charts are not messed up by mac randos
     var isValid: Bool {
-        return rssi != 0 || speed != 0 || height != 0
+        return rssi != 0
     }
     
     init?(timestamp: TimeInterval, rssi: Double, speed: Double, height: Double, mac: String?) {
@@ -261,6 +258,7 @@ class DroneStorageManager: ObservableObject {
             height: Double(message.height ?? "0.0") ?? 0.0,
             mac: String(message.mac ?? "")
         ) {
+            
             encounter.signatures.append(sig) // Only add valid signatures
         }
         
@@ -277,7 +275,7 @@ class DroneStorageManager: ObservableObject {
             updatedMetadata["manufacturer"] = manufacturer
         }
         
-        // TODO pick what metadata to display
+        // TODO metadata to display from above
         encounter.metadata = updatedMetadata
         
         // Update name or trust status
@@ -300,6 +298,16 @@ class DroneStorageManager: ObservableObject {
     }
     
     //MARK: - Storage Functions/CRUD
+    
+    func updateDroneInfo(id: String, name: String, trustStatus: DroneSignature.UserDefinedInfo.TrustStatus) {
+        if var encounter = encounters[id] {
+            encounter.metadata["customName"] = name
+            encounter.metadata["trustStatus"] = trustStatus.rawValue
+            encounters[id] = encounter
+            saveToStorage()
+            objectWillChange.send()
+        }
+    }
     
     func deleteEncounter(id: String) {
         encounters.removeValue(forKey: id)

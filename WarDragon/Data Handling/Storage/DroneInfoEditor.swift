@@ -75,23 +75,12 @@ struct DroneInfoEditor: View {
     }
     
     private func saveChanges() {
-        // Get and modify the encounter
-        if var encounter = DroneStorageManager.shared.encounters[droneId] {
-            // Update metadata
-            var updatedMetadata = encounter.metadata
-            updatedMetadata["customName"] = customName
-            updatedMetadata["trustStatus"] = trustStatus.rawValue
-            encounter.metadata = updatedMetadata
-            
-            // Put the updated encounter back
-            var encounters = DroneStorageManager.shared.encounters
-            encounters[droneId] = encounter
-            
-            // Force save and notify
-            DroneStorageManager.shared.saveToStorage()
-            DroneStorageManager.shared.objectWillChange.send()
-        }
-        
+        // Use the proper method in DroneStorageManager
+        DroneStorageManager.shared.updateDroneInfo(
+            id: droneId,
+            name: customName,
+            trustStatus: trustStatus
+        )
         dismiss()
     }
 
