@@ -198,7 +198,7 @@ struct MemoryBarView: View {
 struct SystemStatsView: View {
     let stats: StatusViewModel.StatusMessage.SystemStats
     let antStats: StatusViewModel.StatusMessage.ANTStats
-    @State private var showingMemoryDetail = false
+    @Binding var showingMemoryDetail: Bool
     
     var body: some View {
         VStack(spacing: 16) {
@@ -245,9 +245,7 @@ struct SystemStatsView: View {
                     )
                 }
             }
-            
-            
-            
+
             // Memory and Disk section
             VStack(spacing: 12) {
                 Button(action: { showingMemoryDetail.toggle() }) {
@@ -363,6 +361,9 @@ struct SystemStatsView: View {
 // MARK: - Main StatusMessageView
 struct StatusMessageView: View {
     let message: StatusViewModel.StatusMessage
+    @State private var showingMemoryDetail = false
+    @State private var showingMapDetail = false
+    
     
     var body: some View {
         VStack(spacing: 8) {
@@ -391,7 +392,8 @@ struct StatusMessageView: View {
                 // System Stats
                 SystemStatsView(
                     stats: message.systemStats,
-                    antStats: message.antStats
+                    antStats: message.antStats,
+                    showingMemoryDetail: $showingMemoryDetail // Pass binding
                 )
                 .frame(maxWidth: .infinity)
                 
@@ -407,16 +409,36 @@ struct StatusMessageView: View {
             .padding(8)
             
             // Map
-            Map {
-                Marker(message.serialNumber, coordinate: message.gpsData.coordinate)
-                    .tint(.green)
+            Button(action: { showingMapDetail.toggle() }) {
+                Map {
+                    Marker(message.serialNumber, coordinate: message.gpsData.coordinate)
+                        .tint(.green)
+                }
+                .frame(height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.green, lineWidth: 1)
+                )
             }
-            .frame(height: 120)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.green, lineWidth: 1)
-            )
+            .sheet(isPresented: $showingMapDetail) {
+                NavigationView {
+                    Map {
+                        Marker(message.serialNumber, coordinate: message.gpsData.coordinate)
+                            .tint(.green)
+                    }
+                    .navigationTitle("Map Details")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showingMapDetail = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium, .large])
+            }
         }
         .background(Color.black)
         .cornerRadius(12)
@@ -424,6 +446,21 @@ struct StatusMessageView: View {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.green, lineWidth: 1)
         )
+        .sheet(isPresented: $showingMemoryDetail) {
+            NavigationView {
+                MemoryDetailView(memory: message.systemStats.memory)
+                    .navigationTitle("Memory Details")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showingMemoryDetail = false
+                            }
+                        }
+                    }
+            }
+            .presentationDetents([.medium])
+        }
     }
     
     private func formatUptime(_ uptime: Double) -> String {
@@ -433,3 +470,4 @@ struct StatusMessageView: View {
         return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 }
+

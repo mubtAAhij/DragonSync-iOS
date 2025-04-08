@@ -95,7 +95,7 @@ struct DroneDetailView: View {
                         
                         Annotation("RSSI: \(ring.rssi) dBm", coordinate: ring.centerCoordinate) {
                             VStack {
-                                Text("Unmarked Drone")
+                                Text("Encrypted Drone")
                                     .font(.caption)
                                 Text("\(Int(ring.radius))m radius")
                                     .font(.caption)

@@ -344,7 +344,7 @@ struct StoredEncountersView: View {
                             
                             Annotation("RSSI: \(Int(rssi)) dBm", coordinate: point.coordinate) {
                                 VStack {
-                                    Text("Unmarked Drone")
+                                    Text("Encrypted Drone")
                                         .font(.caption)
                                     Text("\(Int(radius))m radius")
                                         .font(.caption)
