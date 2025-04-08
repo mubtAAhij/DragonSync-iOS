@@ -767,9 +767,6 @@ class CoTViewModel: ObservableObject {
             print("Added new signature")
             self.droneSignatures.append(signature)
         }
-        
-        // Update encounters
-        let encounters = DroneStorageManager.shared.encounters
 
 //        // Validate coordinates first - UNCOMMENT THIS TO DISALLOW ZERO COORDINATE DETECTIONS
 //        guard signature.position.coordinate.latitude != 0 &&
@@ -777,6 +774,10 @@ class CoTViewModel: ObservableObject {
 //            return // Skip update if coordinates are 0,0
 //        }
 
+        // Update encounters storage history
+        let encounters = DroneStorageManager.shared.encounters
+        let currentMonitorStatus = self.statusViewModel.statusMessages.last
+        
         if encounters[signature.primaryId.id] != nil {
             let existing = encounters[signature.primaryId.id]!
             let hasNewPosition = existing.flightPath.last?.latitude != signature.position.coordinate.latitude ||
@@ -784,11 +785,11 @@ class CoTViewModel: ObservableObject {
             existing.flightPath.last?.altitude != signature.position.altitude
             
             if hasNewPosition {
-                DroneStorageManager.shared.saveEncounter(message)
+                DroneStorageManager.shared.saveEncounter(message, monitorStatus: currentMonitorStatus)
                 print("Updated existing encounter with new position")
             }
         } else {
-            DroneStorageManager.shared.saveEncounter(message)
+            DroneStorageManager.shared.saveEncounter(message, monitorStatus: currentMonitorStatus)
             print("Added new encounter to storage")
         }
     }
@@ -1013,26 +1014,4 @@ class CoTViewModel: ObservableObject {
         print("All listeners stopped and connections cleaned up.")
     }
     
-}
-
-// Redundant TODO clean this up use just signatureGenerator
-public func calculateDistanceFromRSSI(_ rssi: Double) -> Double {
-    // Free space path loss formula
-    let frequency = 2400.0              // 2.4 GHz for Bluetooth/WiFi
-    let referenceDistance: Double = 1.0 // Reference distance in meters
-    let txPower: Double = -59.0         // Reference power at 1 meter
-    
-    // Calculate distance in meters
-    let ratio = (txPower - rssi) / (10 * 2.0)  // Path loss exponent of 2 for free space
-    let distance = pow(10.0, ratio) * referenceDistance
-    
-    // Ensure distance is non-negative and reasonable
-    return min(max(distance, 10.0), 1000.0)  // Cap between 10m and 1km
-}
-
-extension CoTViewModel.SignalSource {
-    // comparison for time-based sorting
-    static func byTimestamp(_ s1: CoTViewModel.SignalSource, _ s2: CoTViewModel.SignalSource) -> Bool {
-        return s1.timestamp > s2.timestamp
-    }
 }

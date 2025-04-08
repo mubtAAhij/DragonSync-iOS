@@ -86,6 +86,12 @@ struct FlightPathPoint: Codable, Hashable {
     let timestamp: TimeInterval
     let homeLatitude: Double?
     let homeLongitude: Double?
+    let isProximityPoint: Bool
+    let proximityRssi: Double?
+    
+    enum CodingKeys: String, CodingKey {
+            case latitude, longitude, altitude, timestamp, homeLatitude, homeLongitude, isProximityPoint, proximityRssi
+        }
     
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -200,7 +206,7 @@ class DroneStorageManager: ObservableObject {
         loadFromStorage()
     }
     
-    func saveEncounter(_ message: CoTViewModel.CoTMessage) {
+    func saveEncounter(_ message: CoTViewModel.CoTMessage, monitorStatus: StatusViewModel.StatusMessage? = nil) {
         // Allow zero coordinates for encrypted messages
         let lat = Double(message.lat)
         let lon = Double(message.lon)
@@ -229,15 +235,37 @@ class DroneStorageManager: ObservableObject {
         
         encounter.lastSeen = Date()
         
-        let point = FlightPathPoint(
-            latitude: lat ?? 0.0,
-            longitude: lon ?? 0.0,
-            altitude: Double(message.alt) ?? 0.0,
-            timestamp: Date().timeIntervalSince1970,
-            homeLatitude: Double(message.homeLat),
-            homeLongitude: Double(message.homeLon)
-        )
-        encounter.flightPath.append(point)
+        /// Check if this is a zero-coordinate drone with RSSI
+        if (lat == 0 && lon == 0) && message.rssi != nil && message.rssi != 0 {
+            // Try to use provided monitor status for proximity point
+            if let monitor = monitorStatus {
+                let point = FlightPathPoint(
+                    latitude: monitor.gpsData.latitude,
+                    longitude: monitor.gpsData.longitude,
+                    altitude: monitor.gpsData.altitude,
+                    timestamp: Date().timeIntervalSince1970,
+                    homeLatitude: nil,
+                    homeLongitude: nil,
+                    isProximityPoint: true,
+                    proximityRssi: Double(message.rssi!)
+                )
+                encounter.flightPath.append(point)
+                encounter.metadata["hasProximityPoints"] = "true"
+            }
+        } else {
+            // Regular drone position point
+            let point = FlightPathPoint(
+                latitude: lat ?? 0.0,
+                longitude: lon ?? 0.0,
+                altitude: Double(message.alt) ?? 0.0,
+                timestamp: Date().timeIntervalSince1970,
+                homeLatitude: Double(message.homeLat),
+                homeLongitude: Double(message.homeLon),
+                isProximityPoint: false,
+                proximityRssi: nil
+            )
+            encounter.flightPath.append(point)
+        }
         
         // Update MAC history from signal sources
         for source in message.signalSources {

@@ -306,50 +306,59 @@ struct StoredEncountersView: View {
         private var mapSection: some View {
             Map(position: $mapCameraPosition) {
                 if !encounter.flightPath.isEmpty {
-                    MapPolyline(coordinates: encounter.flightPath.map {
-                        CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
-                    })
-                    .stroke(.blue, lineWidth: 2)
+                    // Draw regular flight path points only
+                    let normalPoints = encounter.flightPath.filter { !$0.isProximityPoint }
+                    if normalPoints.count > 1 {
+                        MapPolyline(coordinates: normalPoints.map { $0.coordinate })
+                            .stroke(.blue, lineWidth: 2)
+                    }
                     
-                    // Start point
-                    if let start = encounter.flightPath.first {
+                    // Start point (only for normal points)
+                    if let start = normalPoints.first {
                         Annotation("Start", coordinate: start.coordinate) {
                             Image(systemName: "airplane.departure")
                                 .foregroundStyle(.green)
                         }
                     }
                     
-                    // End point
-                    if let end = encounter.flightPath.last {
+                    // End point (only for normal points)
+                    if let end = normalPoints.last {
                         Annotation("End", coordinate: end.coordinate) {
                             Image(systemName: "airplane.arrival")
                                 .foregroundStyle(.red)
                         }
                     }
                     
-                    // Draw alert rings from cotViewModel like in other views
-                    ForEach(cotViewModel.alertRings.filter { $0.droneId == encounter.id }, id: \.id) { ring in
-                        MapCircle(center: ring.centerCoordinate, radius: ring.radius)
-                            .foregroundStyle(.yellow.opacity(0.1))
-                            .stroke(.yellow, lineWidth: 2)
-                        
-                        
-                        Annotation("RSSI: \(ring.rssi) dBm", coordinate: ring.centerCoordinate) {
-                            VStack {
-                                Text("Unmarked Drone")
-                                    .font(.caption)
-                                Text("\(Int(ring.radius))m radius")
-                                    .font(.caption)
-                                    .foregroundColor(.primary)
+                    // Draw proximity rings based on stored data
+                    
+                    ForEach(encounter.flightPath.indices, id: \.self) { index in
+                        let point = encounter.flightPath[index]
+                        if point.isProximityPoint, let rssi = point.proximityRssi {
+                            // Use the proper DroneSignatureGenerator calculation
+                            let generator = DroneSignatureGenerator()
+                            let radius = generator.calculateDistance(rssi)
+                            
+                            MapCircle(center: point.coordinate, radius: radius)
+                                .foregroundStyle(.yellow.opacity(0.1))
+                                .stroke(.yellow, lineWidth: 2)
+                            
+                            Annotation("RSSI: \(Int(rssi)) dBm", coordinate: point.coordinate) {
+                                VStack {
+                                    Text("Unmarked Drone")
+                                        .font(.caption)
+                                    Text("\(Int(radius))m radius")
+                                        .font(.caption)
+                                        .foregroundColor(.primary)
+                                }
+                                .padding(6)
+                                .background(.ultraThinMaterial)
+                                .cornerRadius(6)
                             }
-                            .padding(6)
-                            .background(.ultraThinMaterial)
-                            .cornerRadius(6)
                         }
                     }
                 }
                 
-                    // Home location - TODO, ensure correctness here with our logic im tired, get the true ones...
+                // Home location - TODO, ensure correctness here with our logic im tired, get the true ones...
 //                    if let firstPoint = encounter.flightPath.first,
 //                       let homeLat = firstPoint.homeLatitude,
 //                       let homeLon = firstPoint.homeLongitude {
@@ -818,3 +827,4 @@ extension StoredEncountersView.EncounterDetailView {
 //            .background(Color(UIColor.secondarySystemBackground))
 //            .cornerRadius(12)
 //        }
+
