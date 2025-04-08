@@ -147,8 +147,8 @@ struct MessageRow: View {
                         .font(.appCaption)
                         .foregroundColor(.secondary)
                     
-                    Image(systemName: trustStatus.icon)
-                        .foregroundColor(trustStatus.color)
+//                    Image(systemName: trustStatus.icon)  // 11.2 hotfix for UI: iPhones need only one icon for size reasons,
+//                        .foregroundColor(trustStatus.color)
                 }
                 
                 if let caaReg = message.caaRegistration, !caaReg.isEmpty {
