@@ -54,6 +54,11 @@ class Settings: ObservableObject {
             UIApplication.shared.isIdleTimerDisabled = keepScreenOn
         }
     }
+    @AppStorage("enableBackgroundDetection") var enableBackgroundDetection = false {
+        didSet {
+            objectWillChange.send()
+        }
+    }
     @AppStorage("multicastPort") var multicastPort: Int = 6969 {
         didSet {
             objectWillChange.send()
@@ -148,6 +153,7 @@ class Settings: ObservableObject {
 
     private init() {
         toggleListening(false)
+        UIApplication.shared.isIdleTimerDisabled = keepScreenOn
     }
     
     func updateConnection(mode: ConnectionMode, host: String? = nil, isZmqHost: Bool = false) {
@@ -181,6 +187,12 @@ class Settings: ObservableObject {
         isListening = active
         objectWillChange.send()
         
+        // Start or stop background processing if enabled
+        if isListening && enableBackgroundDetection {
+            BackgroundManager.shared.startBackgroundProcessing()
+        } else if !isListening {
+            BackgroundManager.shared.stopBackgroundProcessing()
+        }
     }
     
     var zmqHostHistory: [String] {

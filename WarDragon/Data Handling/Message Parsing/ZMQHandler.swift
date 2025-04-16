@@ -99,6 +99,11 @@ class ZMQHandler: ObservableObject {
     private var poller: SwiftyZeroMQ.Poller?
     private var pollingQueue: DispatchQueue?
     private var shouldContinueRunning = false
+    private var lastHost = ""
+    private var lastTelemetryPort: UInt16 = 0
+    private var lastStatusPort: UInt16 = 0
+    private var lastTelemetryHandler: MessageHandler = { _ in }
+    private var lastStatusHandler: MessageHandler = { _ in }
     
     typealias MessageHandler = (String) -> Void
     
@@ -109,6 +114,13 @@ class ZMQHandler: ObservableObject {
         onTelemetry: @escaping MessageHandler,
         onStatus: @escaping MessageHandler
     ) {
+        // Store parameters for reconnection
+        self.lastHost = host
+        self.lastTelemetryPort = zmqTelemetryPort
+        self.lastStatusPort = zmqStatusPort
+        self.lastTelemetryHandler = onTelemetry
+        self.lastStatusHandler = onStatus
+        
         guard !host.isEmpty && zmqTelemetryPort > 0 && zmqStatusPort > 0 else {
             print("Invalid connection parameters")
             return
@@ -685,7 +697,7 @@ class ZMQHandler: ObservableObject {
         }
     }
     
-    //MARK: - Cleanup
+    //MARK: - Connection helpers
     
     func disconnect() {
         print("ZMQ: Disconnecting...")
@@ -705,6 +717,24 @@ class ZMQHandler: ObservableObject {
         poller = nil
         isConnected = false
         print("ZMQ: Disconnected")
+    }
+    
+    func reconnect() {
+        if isConnected || lastHost.isEmpty || lastTelemetryPort == 0 || lastStatusPort == 0 {
+            return
+        }
+        
+        // Disconnect first to clean up
+        disconnect()
+        
+        // Reconnect with stored parameters
+        connect(
+            host: lastHost,
+            zmqTelemetryPort: lastTelemetryPort,
+            zmqStatusPort: lastStatusPort,
+            onTelemetry: lastTelemetryHandler,
+            onStatus: lastStatusHandler
+        )
     }
     
 }

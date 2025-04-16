@@ -33,7 +33,7 @@ class CoTViewModel: ObservableObject {
     private var lastNotificationTime: Date?
     private var macToCAA: [String: String] = [:]
     private var macToHomeLoc: [String: (lat: Double, lon: Double)] = [:]
-    
+    private let backgroundManager = BackgroundManager.shared
     private var currentMessageFormat: ZMQHandler.MessageFormat {
         return zmqHandler?.messageFormat ?? .bluetooth
     }
@@ -399,11 +399,25 @@ class CoTViewModel: ObservableObject {
         stopListening()  // Clean up any existing connections
         isListeningCot = true
         
+        // Setup background processing notification observer
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(checkConnections),
+            name: Notification.Name("RefreshNetworkConnections"),
+            object: nil
+        )
+        
+        // Start the appropriate connection type
         switch Settings.shared.connectionMode {
         case .multicast:
             startMulticastListening()
         case .zmq:
             startZMQListening()
+        }
+        
+        // Start background processing if enabled
+        if Settings.shared.enableBackgroundDetection {
+            backgroundManager.startBackgroundProcessing()
         }
     }
     
@@ -934,7 +948,6 @@ class CoTViewModel: ObservableObject {
         }
     }
 
-    
     private func handleCAAMessage(_ message: CoTMessage) {
         // Special handling for CAA messages that don't generate a signature
         if let mac = message.mac {
@@ -951,6 +964,7 @@ class CoTViewModel: ObservableObject {
         }
     }
     
+    //MARK: - Helper functions
     
     private func sendNotification(for message: CoTViewModel.CoTMessage) {
         guard Settings.shared.notificationsEnabled else { return }
@@ -997,6 +1011,13 @@ class CoTViewModel: ObservableObject {
         
         isListeningCot = false
         
+        // Remove notification observer
+        NotificationCenter.default.removeObserver(
+            self,
+            name: Notification.Name("RefreshNetworkConnections"),
+            object: nil
+        )
+        
         // Clean up multicast if using it
         multicastConnection?.cancel()
         multicastConnection = nil
@@ -1011,7 +1032,27 @@ class CoTViewModel: ObservableObject {
             self.zmqHandler = nil
         }
         
+        // Stop background processing
+        backgroundManager.stopBackgroundProcessing()
+        
         print("All listeners stopped and connections cleaned up.")
+    }
+    
+    @objc private func checkConnections() {
+        // Only check if we're supposed to be listening
+        guard isListeningCot else { return }
+        
+        if Settings.shared.connectionMode == .zmq {
+            if zmqHandler == nil || zmqHandler?.isConnected != true {
+                print("ZMQ connection lost in background, reconnecting...")
+                startZMQListening()
+            }
+        } else if Settings.shared.connectionMode == .multicast {
+            if cotListener == nil || statusListener == nil {
+                print("Multicast connection lost in background, reconnecting...")
+                startMulticastListening()
+            }
+        }
     }
     
 }
