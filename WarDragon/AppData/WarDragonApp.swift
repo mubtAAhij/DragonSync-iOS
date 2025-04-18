@@ -32,6 +32,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Register notifications
         UNUserNotificationCenter.current().delegate = self
         
+        // Register background tasks
+        BackgroundManager.shared.registerBackgroundTasks()
+        
         // Register for app lifecycle notifications
         setupAppLifecycleObservers()
         
