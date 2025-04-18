@@ -387,8 +387,8 @@ struct StoredEncountersView: View {
                 mapCameraPosition = .region(MKCoordinateRegion(
                     center: ring.centerCoordinate,
                     span: MKCoordinateSpan(
-                        latitudeDelta: max(ring.radius / 250, 0.1),
-                        longitudeDelta: max(ring.radius / 250, 0.1)
+                        latitudeDelta: max(ring.radius / 111000 * 0.5, 0.005),
+                        longitudeDelta: max(ring.radius / 111000 * 0.5, 0.005)
                     )
                 ))
                 return  // Exit after setting ring-based position
@@ -416,8 +416,8 @@ struct StoredEncountersView: View {
                 )
                 
                 // Set region with some padding
-                let latDelta = max((maxLat - minLat) * 1.2, 0.05)
-                let lonDelta = max((maxLon - minLon) * 1.2, 0.05)
+                let latDelta = max((maxLat - minLat) * 1.2, 0.01)
+                let lonDelta = max((maxLon - minLon) * 1.2, 0.01)
                 
                 mapCameraPosition = .region(MKCoordinateRegion(
                     center: center,
@@ -432,8 +432,8 @@ struct StoredEncountersView: View {
                 mapCameraPosition = .region(MKCoordinateRegion(
                     center: singlePoint.coordinate,
                     span: MKCoordinateSpan(
-                        latitudeDelta: 0.05,
-                        longitudeDelta: 0.05
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01
                     )
                 ))
             }
@@ -443,8 +443,8 @@ struct StoredEncountersView: View {
                 mapCameraPosition = .region(MKCoordinateRegion(
                     center: ring.centerCoordinate,
                     span: MKCoordinateSpan(
-                        latitudeDelta: max(ring.radius / 250, 0.1),
-                        longitudeDelta: max(ring.radius / 250, 0.1)
+                        latitudeDelta: max(ring.radius / 111000 * 1.5, 0.01),
+                        longitudeDelta: max(ring.radius / 111000 * 1.5, 0.01)
                     )
                 ))
             }

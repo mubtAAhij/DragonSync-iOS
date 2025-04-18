@@ -501,7 +501,7 @@ struct DroneDetailView: View {
         let lat = Double(message.lat) ?? 0
         let lon = Double(message.lon) ?? 0
         
-        let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
         
         // Proximity ring alert if 0/0
         if lat == 0 && lon == 0,
@@ -510,8 +510,8 @@ struct DroneDetailView: View {
                 mapCameraPosition = .region(MKCoordinateRegion(
                     center: ring.centerCoordinate,
                     span: MKCoordinateSpan(
-                        latitudeDelta: max(ring.radius / 111000, 0.05),
-                        longitudeDelta: max(ring.radius / 111000, 0.05)
+                        latitudeDelta: max(ring.radius / 1000 * 2, 0.01),
+                        longitudeDelta: max(ring.radius / 1000 * 2, 0.01)
                     )
                 ))
             }
