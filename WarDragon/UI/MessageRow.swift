@@ -144,8 +144,8 @@ struct MessageRow: View {
                 
                 HStack {
                     Text(message.id)
-                        .font(.appCaption)
-                        .foregroundColor(.secondary)
+                        .font(.system(.title3, design: .monospaced))
+                        .foregroundColor(.primary)
                     
 //                    Image(systemName: trustStatus.icon)  // 11.2 hotfix for UI: iPhones need only one icon for size reasons,
 //                        .foregroundColor(trustStatus.color)

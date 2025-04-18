@@ -13,6 +13,7 @@ class BackgroundManager {
     
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var timer: Timer?
+    private var lastRefreshTime: Date?
     @Published var isBackgroundModeActive = false
     
     func startBackgroundProcessing() {
@@ -57,13 +58,18 @@ class BackgroundManager {
     
     private func startKeepAliveTimer() {
         // Create a timer that periodically refreshes the background task
-        timer = Timer.scheduledTimer(withTimeInterval: 25, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             self?.refreshBackgroundTask()
         }
         RunLoop.current.add(timer!, forMode: .common)
     }
     
     private func refreshBackgroundTask() {
+        // Only refresh if enough time has passed since the last refresh (avoid too frequent refreshes)
+        if let lastTime = lastRefreshTime, Date().timeIntervalSince(lastTime) < 25 {
+            return
+        }
+        
         // End the current task and begin a new one to extend the runtime
         if backgroundTask != .invalid {
             let oldTask = backgroundTask
@@ -77,6 +83,7 @@ class BackgroundManager {
             UIApplication.shared.endBackgroundTask(oldTask)
             
             // Notify that connections should be checked
+            lastRefreshTime = Date()
             NotificationCenter.default.post(name: Notification.Name("RefreshNetworkConnections"), object: nil)
         }
     }
