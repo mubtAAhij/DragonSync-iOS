@@ -88,9 +88,10 @@ struct FlightPathPoint: Codable, Hashable {
     let homeLongitude: Double?
     let isProximityPoint: Bool
     let proximityRssi: Double?
+    let proximityRadius: Double?
     
     enum CodingKeys: String, CodingKey {
-            case latitude, longitude, altitude, timestamp, homeLatitude, homeLongitude, isProximityPoint, proximityRssi
+            case latitude, longitude, altitude, timestamp, homeLatitude, homeLongitude, isProximityPoint, proximityRssi, proximityRadius
         }
     
     var coordinate: CLLocationCoordinate2D {
@@ -199,17 +200,18 @@ extension DroneEncounter {
 
 class DroneStorageManager: ObservableObject {
     static let shared = DroneStorageManager()
-    
+    var cotViewModel: CoTViewModel?
     @Published private(set) var encounters: [String: DroneEncounter] = [:]
     
     init() {
         loadFromStorage()
+        updateProximityPointsWithCorrectRadius()
     }
     
     func saveEncounter(_ message: CoTViewModel.CoTMessage, monitorStatus: StatusViewModel.StatusMessage? = nil) {
         // Allow zero coordinates for encrypted messages
-        let lat = Double(message.lat)
-        let lon = Double(message.lon)
+        let lat = Double(message.lat) ?? 0
+        let lon = Double(message.lon) ?? 0
         
         let droneId = message.uid
         
@@ -234,37 +236,100 @@ class DroneStorageManager: ObservableObject {
         )
         
         encounter.lastSeen = Date()
+        var didAddPoint = false
         
-        /// Check if this is a zero-coordinate drone with RSSI
-        if (lat == 0 && lon == 0) && message.rssi != nil && message.rssi != 0 {
-            // Try to use provided monitor status for proximity point
-            if let monitor = monitorStatus {
-                let point = FlightPathPoint(
+        // Handle proximity points for FPV or encrypted devices
+        if ((lat == 0 && lon == 0) && message.rssi != nil && message.rssi != 0) {
+            var pointToAdd: FlightPathPoint? = nil
+            
+            // --- PRIORITY 1: Use monitorStatus if available ---
+            if let monitor = monitorStatus, let rssiValue = message.rssi {
+                var calculatedRadius: Double = 0.0 // Default to 0.0
+                
+                if rssiValue > 0 {
+                    // Get the ACTUAL radius from alert ring if available
+                    if let ring = cotViewModel?.alertRings.first(where: { $0.droneId == message.uid }) {
+                        calculatedRadius = ring.radius // Use the ACTUAL radius from the alert ring
+                        print("✅ Proximity: Using actual ring radius (\(calculatedRadius)m) for RSSI \(rssiValue)")
+                    }
+                } else {
+                    // RSSI is zero or otherwise unexpected
+                    print("⚠️ Proximity: RSSI (\(rssiValue)) is zero or invalid, using default radius.")
+                    calculatedRadius = 100.0 // Use a default radius instead of 0
+                }
+                
+                pointToAdd = FlightPathPoint(
                     latitude: monitor.gpsData.latitude,
                     longitude: monitor.gpsData.longitude,
-                    altitude: monitor.gpsData.altitude,
+                    altitude: monitor.gpsData.altitude, // Use monitor altitude
                     timestamp: Date().timeIntervalSince1970,
                     homeLatitude: nil,
                     homeLongitude: nil,
                     isProximityPoint: true,
-                    proximityRssi: Double(message.rssi!)
+                    proximityRssi: Double(rssiValue),
+                    proximityRadius: calculatedRadius
                 )
+                print("💾 Added proximity point using Monitor Status for \(droneId)")
+            }
+            
+            // Add the point if one was created
+            if let point = pointToAdd {
                 encounter.flightPath.append(point)
                 encounter.metadata["hasProximityPoints"] = "true"
+                didAddPoint = true
+            } else {
+                print("⚠️ Could not add proximity point for \(droneId) - No Monitor Status or CoT Ring found.")
             }
-        } else {
-            // Regular drone position point
+            
+            
+            // --- PRIORITY 2: Fallback to cotViewModel.alertRings if no point added yet ---
+            if pointToAdd == nil, let currentRing = cotViewModel?.alertRings.first(where: { $0.droneId == droneId }) {
+                // Use data from the existing alert ring
+                pointToAdd = FlightPathPoint(
+                    latitude: currentRing.centerCoordinate.latitude,
+                    longitude: currentRing.centerCoordinate.longitude,
+                    altitude: 0, // Altitude might not be known from the ring, default or use monitor if available?
+                    timestamp: Date().timeIntervalSince1970, // Use current time for the point
+                    homeLatitude: nil,
+                    homeLongitude: nil,
+                    isProximityPoint: true,
+                    proximityRssi: Double(currentRing.rssi),
+                    proximityRadius: Double(currentRing.radius)
+                )
+                print("💾 Added proximity point using CoTViewModel Ring for \(droneId)")
+            }
+            
+            // Add the point if one was created
+            if let point = pointToAdd {
+                encounter.flightPath.append(point)
+                encounter.metadata["hasProximityPoints"] = "true"
+                didAddPoint = true
+            } else {
+                print("⚠️ Could not add proximity point for \(droneId) - No Monitor Status or CoT Ring found.")
+            }
+            
+        }
+        
+        if !didAddPoint && (lat != 0 || lon != 0) {
             let point = FlightPathPoint(
-                latitude: lat ?? 0.0,
-                longitude: lon ?? 0.0,
+                latitude: lat,
+                longitude: lon,
                 altitude: Double(message.alt) ?? 0.0,
                 timestamp: Date().timeIntervalSince1970,
                 homeLatitude: Double(message.homeLat),
                 homeLongitude: Double(message.homeLon),
                 isProximityPoint: false,
-                proximityRssi: nil
+                proximityRssi: nil,
+                proximityRadius: nil
             )
             encounter.flightPath.append(point)
+            print("💾 Added regular flight point for \(droneId)")
+            didAddPoint = true
+        }
+        
+        // If no point was added at all (e.g., zero coords, no RSSI, no monitor, no ring), log it.
+        if !didAddPoint {
+            print("🚫 No flight point added for this update for \(droneId). Message: \(message)")
         }
         
         // Update MAC history from signal sources
@@ -363,6 +428,55 @@ class DroneStorageManager: ObservableObject {
            let loaded = try? JSONDecoder().decode([String: DroneEncounter].self, from: data) {
             encounters = loaded
         }
+    }
+    
+    func updateProximityPointsWithCorrectRadius() {
+        for (id, encounter) in encounters {
+            if encounter.metadata["type"] == "fpv" || encounter.metadata["hasProximityPoints"] == "true" {
+                var updatedEncounter = encounter
+                var updatedFlightPath: [FlightPathPoint] = []
+                
+                for point in encounter.flightPath {
+                    if point.isProximityPoint {
+                        var radius: Double
+                        
+                        // Calculate from RSSI if needed
+                        if let rssi = point.proximityRssi, (point.proximityRadius == nil || point.proximityRadius == 0) {
+                            let generator = DroneSignatureGenerator()
+                            radius = generator.calculateDistance(rssi)
+                            
+                            // Ensure minimum radius - TODO decide if needede
+                            
+                            radius = max(radius, 50.0)
+                            
+                            // Create new point with calculated radius
+                            let updatedPoint = FlightPathPoint(
+                                latitude: point.latitude,
+                                longitude: point.longitude,
+                                altitude: point.altitude,
+                                timestamp: point.timestamp,
+                                homeLatitude: point.homeLatitude,
+                                homeLongitude: point.homeLongitude,
+                                isProximityPoint: true,
+                                proximityRssi: point.proximityRssi,
+                                proximityRadius: radius
+                            )
+                            updatedFlightPath.append(updatedPoint)
+                        } else {
+                            updatedFlightPath.append(point)
+                        }
+                    } else {
+                        updatedFlightPath.append(point)
+                    }
+                }
+                
+                if updatedFlightPath.count > 0 {
+                    updatedEncounter.flightPath = updatedFlightPath
+                    encounters[id] = updatedEncounter
+                }
+            }
+        }
+        saveToStorage()
     }
     
     func exportToCSV() -> String {
