@@ -16,6 +16,7 @@ class CoTViewModel: ObservableObject {
     @Published var droneSignatures: [DroneSignature] = []
     @Published var randomMacIdHistory: [String: Set<String>] = [:]
     @Published var alertRings: [AlertRing] = []
+    @Published private(set) var isReconnecting = false
     private let signatureGenerator = DroneSignatureGenerator()
     private var spectrumViewModel: SpectrumData.SpectrumViewModel?
     private var zmqHandler: ZMQHandler?
@@ -393,10 +394,11 @@ class CoTViewModel: ObservableObject {
     }
     
     func startListening() {
-        // Prevent multiple starts
-        guard !isListeningCot else { return }
+        // Prevent multiple starts or starts during reconnection
+        guard !isListeningCot && !isReconnecting else { return }
         
-        stopListening()  // Clean up any existing connections
+        // Clean up any existing connections
+        stopListening()
         isListeningCot = true
         
         // Setup background processing notification observer
@@ -1018,13 +1020,20 @@ class CoTViewModel: ObservableObject {
             object: nil
         )
         
-        // Clean up multicast if using it
+        // Clean up multicast connections but give time for cleanup
         multicastConnection?.cancel()
-        multicastConnection = nil
         cotListener?.cancel()
         statusListener?.cancel()
-        cotListener = nil
-        statusListener = nil
+        
+        // Chill and let it die
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self = self else { return }
+            self.multicastConnection = nil
+            self.cotListener = nil
+            self.statusListener = nil
+            
+            print("Listeners properly released after delay")
+        }
         
         // Properly disconnect ZMQ if using it
         if let zmqHandler = zmqHandler {
@@ -1035,23 +1044,43 @@ class CoTViewModel: ObservableObject {
         // Stop background processing
         backgroundManager.stopBackgroundProcessing()
         
-        print("All listeners stopped and connections cleaned up.")
+        print("All listeners stopped and clean up initiated.")
     }
     
+    //MARK: - Helper methods
+    
+    // Helper
     @objc private func checkConnections() {
         // Only check if we're supposed to be listening
-        guard isListeningCot else { return }
+        guard isListeningCot && !isReconnecting else { return }
         
-        if Settings.shared.connectionMode == .zmq {
-            if zmqHandler == nil || zmqHandler?.isConnected != true {
-                print("ZMQ connection lost in background, reconnecting...")
-                startZMQListening()
+        isReconnecting = true
+        
+        // First ensure all connections are properly closed
+        multicastConnection?.cancel()
+        multicastConnection = nil
+        cotListener?.cancel()
+        statusListener?.cancel()
+        
+        if let zmqHandler = self.zmqHandler {
+            zmqHandler.disconnect()
+        }
+        
+        // Wait a short time to ensure sockets have fully released
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            // Then restart the appropriate connections
+            self.cotListener = nil
+            self.statusListener = nil
+            self.zmqHandler = nil
+            
+            switch Settings.shared.connectionMode {
+            case .multicast:
+                self.startMulticastListening()
+            case .zmq:
+                self.startZMQListening()
             }
-        } else if Settings.shared.connectionMode == .multicast {
-            if cotListener == nil || statusListener == nil {
-                print("Multicast connection lost in background, reconnecting...")
-                startMulticastListening()
-            }
+            
+            self.isReconnecting = false
         }
     }
     
