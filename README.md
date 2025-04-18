@@ -49,6 +49,13 @@
   <img src="https://github.com/user-attachments/assets/b06547b7-4f04-4e80-a562-232b96cc8a5b" width="60%" alt="Spoof Detection Screenshot">
 </div>
 
+### Visualize Encrypted Drones
+- No GPS, no problem. Using the RSSI lets us estimate distance to target.
+
+<div align="center">
+ <img src="https://github.com/user-attachments/assets/528c818a-9913-4d05-b9fa-eb38c937f356" width="60%" alt="Drone Encounter Screenshot">
+</div>
+
 ### MAC Randomization Detection
 - Real-time alerts for MAC changes with historical tracking and origin ID association
 
@@ -62,6 +69,7 @@
 <div align="center">
   <img src="https://github.com/user-attachments/assets/4763ffb4-f8ef-4e42-af17-a22c27b798a5" width="70%" alt="Signal Analysis Interface">
 </div>
+
 <div align="center">
   <img src="https://github.com/user-attachments/assets/4477787a-8877-4421-88b8-ffd7ec38e26b" width="70%" alt="Signal Analysis Interface">
 </div>
@@ -72,14 +80,6 @@
 <div align="center">
   <img src="https://github.com/user-attachments/assets/b384b0b1-8a90-48c6-bf3a-bcf41b599703" width="60%" alt="System Monitoring Dashboard">
 </div>
-
-### Encounter History
-- Automatic logging with search, CSV/KML export, and detailed flight review
-
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/816debe7-6c05-4c7a-9e88-14a6a4f0989a" width="60%" alt="Encounter History View">
-</div>
-
 
 ## Detection & Tracking
 
@@ -93,17 +93,21 @@
 ### Live Drone View
 - Interactive maps with live flight paths, spoof analysis, and MAC randomization details
 
-  <div align="center">
+<div align="center">
   <img src="https://github.com/user-attachments/assets/58a6861d-5a06-4e6b-b862-566f2f8a988b" width="60%" alt="Drone Detection Screenshot">
 </div>
 
 > **Tip:** Tap the "Live" map button for full-screen tracking and select an active drone for details.
 
-
 ## History & Analysis
 
 ### Encounter History
 - Logs each drone encounter automatically with options to search, sort, review, export, or delete records.
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/816debe7-6c05-4c7a-9e88-14a6a4f0989a" width="60%" alt="Encounter History View">
+</div>
+
 
 ## App Settings
 
