@@ -126,8 +126,12 @@ class ZMQHandler: ObservableObject {
             return
         }
         
-        guard !isConnected else {
-            print("Already connected")
+        // If already connected to the same host and ports, don't reconnect
+        if isConnected &&
+           host == lastHost &&
+           zmqTelemetryPort == lastTelemetryPort &&
+           zmqStatusPort == lastStatusPort {
+            print("Already connected to the same endpoints")
             return
         }
         
@@ -217,40 +221,91 @@ class ZMQHandler: ObservableObject {
     }
     
     private func startPolling(onTelemetry: @escaping MessageHandler, onStatus: @escaping MessageHandler) {
+        // Track failed poll attempts
+        var consecutiveFailures = 0
+        let maxFailures = 5
+        let lastActivityTime = Date()
+        
         pollingQueue?.async { [weak self] in
             guard let self = self else { return }
             
             while self.shouldContinueRunning {
                 do {
-                    if let items = try self.poller?.poll(timeout: 0.1) { // Reduce poll timeout
-                        for (socket, events) in items {
-                            if events.contains(.pollIn) {
-                                if let data = try socket.recv(bufferLength: 65536),
-                                   let jsonString = String(data: data, encoding: .utf8) {
-                                    // Process immediately instead of dispatching
-                                    if socket === self.telemetrySocket {
-                                        if let xmlMessage = self.convertTelemetryToXML(jsonString) {
-                                            print("Converting to xml: \(xmlMessage)")
-                                            onTelemetry(xmlMessage)
-                                        }
-                                    } else if socket === self.statusSocket {
-                                        if let xmlMessage = self.convertStatusToXML(jsonString) {
-                                            onStatus(xmlMessage)
+                    if let items = try self.poller?.poll(timeout: 0.1) { // Short poll timeout
+                        if !items.isEmpty {
+                            // Reset failures on success
+                            consecutiveFailures = 0
+                            
+                            for (socket, events) in items {
+                                if events.contains(.pollIn) {
+                                    if let data = try socket.recv(bufferLength: 65536),
+                                       let jsonString = String(data: data, encoding: .utf8) {
+                                        // Process immediately instead of dispatching
+                                        if socket === self.telemetrySocket {
+                                            if let xmlMessage = self.convertTelemetryToXML(jsonString) {
+                                                onTelemetry(xmlMessage)
+                                            }
+                                        } else if socket === self.statusSocket {
+                                            if let xmlMessage = self.convertStatusToXML(jsonString) {
+                                                onStatus(xmlMessage)
+                                            }
                                         }
                                     }
                                 }
+                            }
+                        } else {
+                            // No items but poll succeeded
+                            // Check if it's been too long since activity
+                            if Date().timeIntervalSince(lastActivityTime) > 30.0 {
+                                // Send a heartbeat through the status socket if possible
+                                try self.sendHeartbeat()
                             }
                         }
                     }
                 } catch let error as SwiftyZeroMQ.ZeroMQError {
                     if error.description != "Resource temporarily unavailable" && self.shouldContinueRunning {
                         print("ZMQ Polling Error: \(error)")
+                        consecutiveFailures += 1
                     }
                 } catch {
                     if self.shouldContinueRunning {
                         print("ZMQ Polling Error: \(error)")
+                        consecutiveFailures += 1
                     }
                 }
+                
+                // If we've had too many failures, try to reconnect
+                if consecutiveFailures >= maxFailures && self.shouldContinueRunning {
+                    print("Too many consecutive polling failures, attempting reconnection")
+                    
+                    // Attempt to reconnect if connection is lost
+                    DispatchQueue.main.async {
+                        self.reconnect()
+                    }
+                    
+                    // Reset counter
+                    consecutiveFailures = 0
+                    
+                    // Give time for reconnection before polling again
+                    Thread.sleep(forTimeInterval: 1.0)
+                }
+            }
+        }
+    }
+    
+    // Add a sendHeartbeat method to ZMQHandler to maintain connection
+    private func sendHeartbeat() throws {
+        if let statusSocket = statusSocket {
+            let heartbeat = [
+                "heartbeat": [
+                    "timestamp": Date().timeIntervalSince1970
+                ]
+            ]
+            
+            if let heartbeatData = try? JSONSerialization.data(withJSONObject: heartbeat),
+               let heartbeatString = String(data: heartbeatData, encoding: .utf8) {
+                try statusSocket.send(string: heartbeatString)
+                print("ZMQ: Sent heartbeat")
             }
         }
     }

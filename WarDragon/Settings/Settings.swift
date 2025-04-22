@@ -57,6 +57,19 @@ class Settings: ObservableObject {
     @AppStorage("enableBackgroundDetection") var enableBackgroundDetection = false {
         didSet {
             objectWillChange.send()
+            
+            // Check if the value really changed
+            if oldValue != enableBackgroundDetection {
+                if enableBackgroundDetection && isListening {
+                    // Start background mode if we're already listening
+                    print("Starting background processing due to setting change")
+                    BackgroundManager.shared.startBackgroundProcessing()
+                } else if !enableBackgroundDetection {
+                    // Stop background mode when the setting is turned off
+                    print("Stopping background processing due to setting change")
+                    BackgroundManager.shared.stopBackgroundProcessing()
+                }
+            }
         }
     }
     @AppStorage("multicastPort") var multicastPort: Int = 6969 {
@@ -77,6 +90,17 @@ class Settings: ObservableObject {
     @AppStorage("isListening") var isListening = false {
         didSet {
             objectWillChange.send()
+            
+            if oldValue != isListening {
+                // Start or stop background processing if enabled
+                if isListening && enableBackgroundDetection {
+                    print("Starting background processing due to listening state change")
+                    BackgroundManager.shared.startBackgroundProcessing()
+                } else if !isListening {
+                    print("Stopping background processing due to listening state change")
+                    BackgroundManager.shared.stopBackgroundProcessing()
+                }
+            }
         }
     }
     @AppStorage("spoofDetectionEnabled") var spoofDetectionEnabled = true {
