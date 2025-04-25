@@ -1062,59 +1062,33 @@ class CoTViewModel: ObservableObject {
         // Only check if we're supposed to be listening
         guard isListeningCot && !isReconnecting else { return }
         
-        print("Checking connections...")
+        isReconnecting = true
         
-        // Use a timeout so we don't hang waiting for connections
-        let timeout = DispatchTime.now() + 3.0
+        // First ensure all connections are properly closed
+        multicastConnection?.cancel()
+        multicastConnection = nil
+        cotListener?.cancel()
+        statusListener?.cancel()
         
-        // Check ZMQ connection
-        if Settings.shared.connectionMode == .zmq {
-            // Check if ZMQ is still connected
-            if let zmqHandler = self.zmqHandler, zmqHandler.isConnected {
-                print("ZMQ connection is active")
-                return
-            }
-            
-            print("ZMQ connection appears inactive, reconnecting...")
-            isReconnecting = true
-            
-            // Don't disconnect if it's already disconnected - just reconnect
-            if let zmqHandler = self.zmqHandler, zmqHandler.isConnected {
-                zmqHandler.disconnect()
-            }
-            
-            // Wait a moment for cleanup
-            DispatchQueue.main.asyncAfter(deadline: timeout) {
-                print("Starting new ZMQ connection")
-                self.zmqHandler = nil
-                self.startZMQListening()
-                self.isReconnecting = false
-            }
+        if let zmqHandler = self.zmqHandler {
+            zmqHandler.disconnect()
         }
-        else if Settings.shared.connectionMode == .multicast {
-            // Check if multicast connection is active
-            if cotListener != nil && multicastConnection != nil {
-                print("Multicast connection is active")
-                return
-            }
+        
+        // Wait a short time to ensure sockets have fully released
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            // Then restart the appropriate connections
+            self.cotListener = nil
+            self.statusListener = nil
+            self.zmqHandler = nil
             
-            print("Multicast connection appears inactive, reconnecting...")
-            isReconnecting = true
-            
-            // Only cancel if connections still exist
-            multicastConnection?.cancel()
-            cotListener?.cancel()
-            statusListener?.cancel()
-            
-            // Wait a moment for cleanup
-            DispatchQueue.main.asyncAfter(deadline: timeout) {
-                print("Starting new multicast connection")
-                self.multicastConnection = nil
-                self.cotListener = nil
-                self.statusListener = nil
+            switch Settings.shared.connectionMode {
+            case .multicast:
                 self.startMulticastListening()
-                self.isReconnecting = false
+            case .zmq:
+                self.startZMQListening()
             }
+            
+            self.isReconnecting = false
         }
     }
     
