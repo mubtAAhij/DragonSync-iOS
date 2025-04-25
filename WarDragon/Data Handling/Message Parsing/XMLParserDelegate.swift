@@ -248,12 +248,15 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         
         if let basicId = jsonData["Basic ID"] as? [String: Any] {
             let id = basicId["id"] as? String ?? UUID().uuidString
+            // Fix: Always use the original ID for the drone identifier
             let droneId = id.hasPrefix("drone-") ? id : "drone-\(id)"
             let idType = basicId["id_type"] as? String ?? ""
             var caaReg: String?
+            
+            // CAA registration should be stored separately, not as the primary ID
             if idType.contains("CAA") {
                 caaReg = id
-                print("CAA IN XML CONVERSION")
+                print("CAA IN XML CONVERSION - storing as registration, not primary ID")
             }
             
             let droneType = buildDroneType(jsonData)
@@ -307,9 +310,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             _ = operatorID?["protocol_version"] as? String ?? ""
             
             
-            // Skip if "None" Registration ID or blank multicast
-            if idType == "None" || id == "drone-" {
-                print("Skipping message with ID: \(id) and type \(idType)")
+            // Skip only if the ID itself is empty or explicitly "drone-" (empty after prefix)
+            if id.isEmpty || droneId == "drone-" {
+                print("Skipping message with empty ID")
                 return nil
             }
             

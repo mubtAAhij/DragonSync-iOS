@@ -51,21 +51,6 @@ struct MessageRow: View {
         // Remove from storage
         droneStorage.deleteEncounter(id: message.uid)
         
-        // Handle FPV devices with different ID formats
-        if message.isFPVDevice {
-            let components = message.uid.components(separatedBy: "-")
-            if components.count > 1 {
-                let hashPart = components.last ?? ""
-                
-                // Find and delete any matching FPV encounters
-                for (encounterId, _) in droneStorage.encounters {
-                    if encounterId.contains("fpv-") && encounterId.contains(hashPart) {
-                        droneStorage.deleteEncounter(id: encounterId)
-                    }
-                }
-            }
-        }
-        
         // After deleting from storage, also remove from tracking
         removeDroneFromTracking()
     }
@@ -75,21 +60,7 @@ struct MessageRow: View {
         if let encounter = droneStorage.encounters[id] {
             return encounter
         }
-        
-        // For FPV devices, try partial matching
-        if id.contains("fpv-") {
-            let components = id.components(separatedBy: "-")
-            if components.count > 1 {
-                let hashPart = components.last ?? ""
-                
-                // Find any matching FPV encounter
-                for (encounterId, encounter) in droneStorage.encounters {
-                    if encounterId.contains("fpv-") && encounterId.contains(hashPart) {
-                        return encounter
-                    }
-                }
-            }
-        }
+
         
         return nil
     }
@@ -224,6 +195,24 @@ struct MessageRow: View {
             
             Spacer()
             
+            // Add FAA lookup button if we have the necessary IDs
+            if message.idType.contains("Serial Number") ||
+                message.idType.contains("ANSI") ||
+                message.idType.contains("CTA-2063-A") {
+                FAALookupButton(mac: message.mac, remoteId: message.uid.replacingOccurrences(of: "drone-", with: ""))
+            }
+            
+            Image(systemName: trustStatus.icon)
+                .foregroundColor(trustStatus.color)
+                .font(.system(size: 18))
+                .padding(.trailing, 4)
+            
+            Button(action: { showingInfoEditor = true }) {
+                Image(systemName: "pencil.circle")
+                    .font(.system(size: 18))
+                    .foregroundColor(.blue)
+            }
+            
             Menu {
                 Button(action: { showingInfoEditor = true }) {
                     Label("Edit Info", systemImage: "pencil")
@@ -300,9 +289,6 @@ struct MessageRow: View {
         case .sdr:
             iconName = "dot.radiowaves.left.and.right"
             iconColor = .purple
-        case .fpv:
-            iconName = "camera.aperture"
-            iconColor = .orange
         default:
             iconName = "questionmark.circle"
             iconColor = .gray

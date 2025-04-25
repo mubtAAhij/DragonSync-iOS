@@ -634,9 +634,11 @@ class CoTViewModel: ObservableObject {
 //        }
         
         DispatchQueue.main.async {
+            // Collect the detection details
+            // Keep the original drone ID, don't replace with CAA
             let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
+        
             
-            // Safely extract MAC address with multiple fallback options
             var mac: String? = nil
             if let basicIdMac = (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String {
                 mac = basicIdMac
@@ -657,21 +659,27 @@ class CoTViewModel: ObservableObject {
             let signalType = self.determineSignalType(message: message, mac: mac, rssi: updatedMessage.rssi, updatedMessage: &updatedMessage)
             
             // Handle CAA and location mapping
-            if let safeMac = mac, !safeMac.isEmpty {
-                // Store CAA registration if present
+            if let mac = mac, !mac.isEmpty {
+                // Update the MAC-to-CAA mapping without changing the primary ID
                 if message.idType.contains("CAA") {
-                    self.macToCAA[safeMac] = message.id
-                }
-                
-                // Store/retrieve home location
-                if let homeLat = Double(message.homeLat),
-                   let homeLon = Double(message.homeLon),
-                   homeLat != 0 && homeLon != 0 {
-                    self.macToHomeLoc[safeMac] = (lat: homeLat, lon: homeLon)
-                } else if Double(updatedMessage.homeLat) == 0 || Double(updatedMessage.homeLon) == 0,
-                          let homeLoc = self.macToHomeLoc[safeMac] {
-                    updatedMessage.homeLat = String(homeLoc.lat)
-                    updatedMessage.homeLon = String(homeLoc.lon)
+                    if let mac = message.mac {
+                        // Find existing message with same MAC and update its CAA registration
+                        if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
+                            var existingMessage = self.parsedMessages[existingIndex]
+                            existingMessage.caaRegistration = message.caaRegistration ?? message.id
+                            // Keep the original ID type if it's a serial number
+                            if existingMessage.idType.contains("Serial") {
+                                // Don't overwrite serial number ID type with CAA
+                                existingMessage.idType = existingMessage.idType
+                            } else {
+                                existingMessage.idType = "CAA Assigned Registration ID"
+                            }
+                            self.parsedMessages[existingIndex] = existingMessage
+                            print("Updated CAA registration for existing drone with MAC: \(mac)")
+                        }
+                    }
+                    // Don't process CAA as a standalone message
+                    return
                 }
             }
             

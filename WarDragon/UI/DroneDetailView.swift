@@ -420,6 +420,22 @@ struct DroneDetailView: View {
                         }
                     }
                 }
+                
+                // Transmission data section
+                if let aux = message.rawMessage["AUX_ADV_IND"] as? [String: Any],
+                   let aext = message.rawMessage["aext"] as? [String: Any] {
+                    DroneTransmissionSection(aux: aux, aext: aext)
+                }
+                
+                // Operation area section
+                if let areaCount = message.areaCount, areaCount != "0" {
+                    DroneOperationAreaSection(message: message)
+                }
+                
+                // System status section
+                if let status = message.status {
+                    DroneSystemStatusSection(message: message, status: status)
+                }
             }
             .navigationTitle("Drone Details")
             .font(.appSubheadline)
@@ -467,9 +483,11 @@ struct DroneDetailView: View {
         var body: some View {
             HStack {
                 Text(title)
+                    .font(.appHeadline)
                     .foregroundColor(.secondary)
                 Spacer()
                 Text(value)
+                    .font(.appCaption)
                     .foregroundColor(.primary)
             }
         }
@@ -487,7 +505,178 @@ struct DroneDetailView: View {
         }
     }
     
+    struct DronePositionSection: View {
+        let message: CoTViewModel.CoTMessage
+        
+        var body: some View {
+            Group {
+                SectionHeader(title: "Position")
+                InfoRow(title: "Latitude", value: message.lat)
+                InfoRow(title: "Longitude", value: message.lon)
+                InfoRow(title: "Altitude", value: "\(message.alt)m")
+                
+                if let heightformatted = message.formattedHeight {
+                    InfoRow(title: "Height", value: heightformatted)
+                }
+                
+                if let heightType = message.heightType {
+                    InfoRow(title: "Height Type", value: heightType)
+                }
+                
+                if message.op_status != "" {
+                    InfoRow(title: "Operation Status", value: message.op_status ?? "Unknown")
+                }
+            }
+        }
+    }
+
+    struct DroneMovementSection: View {
+        let message: CoTViewModel.CoTMessage
+        
+        var body: some View {
+            Group {
+                SectionHeader(title: "Movement")
+                InfoRow(title: "E/W Direction", value: "\(message.ew_dir_segment ?? "")")
+                InfoRow(title: "Speed", value: "\(message.speed)m/s")
+                InfoRow(title: "Vertical Speed", value: "\(message.vspeed)m/s")
+                
+                if let timeSpeed = message.timeSpeed {
+                    InfoRow(title: "Time Speed", value: timeSpeed)
+                }
+            }
+        }
+    }
+
+    struct DroneSignalDataSection: View {
+        let auxAdvData: [String: Any]
+        
+        var body: some View {
+            Group {
+                SectionHeader(title: "Signal Data")
+                
+                if let rssi = auxAdvData["rssi"] as? Int {
+                    InfoRow(title: "RSSI", value: "\(rssi) dBm")
+                }
+                
+                if let channel = auxAdvData["chan"] as? Int {
+                    InfoRow(title: "Channel", value: "\(channel)")
+                }
+                
+                if let phy = auxAdvData["phy"] as? Int {
+                    InfoRow(title: "PHY", value: "\(phy)")
+                }
+                
+                if let aa = auxAdvData["aa"] as? Int {
+                    InfoRow(title: "Access Address", value: String(format: "0x%08X", aa))
+                }
+            }
+        }
+    }
+
+    struct DroneAccuracySection: View {
+        let message: CoTViewModel.CoTMessage
+        
+        var body: some View {
+            Group {
+                SectionHeader(title: "Accuracy")
+                
+                if let horizAcc = message.horizAcc {
+                    InfoRow(title: "Horizontal", value: "\(horizAcc)m")
+                }
+                
+                if let vertAcc = message.vertAcc {
+                    InfoRow(title: "Vertical", value: "\(vertAcc)m")
+                }
+                
+                if let baroAcc = message.baroAcc {
+                    InfoRow(title: "Barometric", value: "\(baroAcc)m")
+                }
+                
+                if let speedAcc = message.speedAcc {
+                    InfoRow(title: "Speed", value: "\(speedAcc)m/s")
+                }
+            }
+        }
+    }
+
+    struct DroneTransmissionSection: View {
+        let aux: [String: Any]
+        let aext: [String: Any]
+        
+        var body: some View {
+            Group {
+                SectionHeader(title: "Transmission Data")
+                
+                if let rssi = aux["rssi"] as? Int {
+                    InfoRow(title: "Signal", value: "\(rssi) dBm")
+                }
+                
+                if let channel = aux["chan"] as? Int {
+                    InfoRow(title: "Channel", value: "\(channel)")
+                }
+                
+                if let mode = aext["AdvMode"] as? String {
+                    InfoRow(title: "Mode", value: mode)
+                }
+                
+                if let addr = aext["AdvA"] as? String {
+                    InfoRow(title: "Address", value: addr)
+                }
+                
+                if let dataInfo = aext["AdvDataInfo"] as? [String: Any] {
+                    if let did = dataInfo["did"] as? Int {
+                        InfoRow(title: "Data ID", value: "\(did)")
+                    }
+                    
+                    if let sid = dataInfo["sid"] as? Int {
+                        InfoRow(title: "Set ID", value: "\(sid)")
+                    }
+                }
+            }
+        }
+    }
+
+    struct DroneOperationAreaSection: View {
+        let message: CoTViewModel.CoTMessage
+        
+        var body: some View {
+            Group {
+                SectionHeader(title: "Operation Area")
+                InfoRow(title: "Count", value: message.areaCount ?? "")
+                
+                if let radius = message.areaRadius {
+                    InfoRow(title: "Radius", value: "\(radius)m")
+                }
+                
+                if let ceiling = message.areaCeiling {
+                    InfoRow(title: "Ceiling", value: "\(ceiling)m")
+                }
+                
+                if let floor = message.areaFloor {
+                    InfoRow(title: "Floor", value: "\(floor)m")
+                }
+            }
+        }
+    }
+
+    struct DroneSystemStatusSection: View {
+        let message: CoTViewModel.CoTMessage
+        let status: String
+        
+        var body: some View {
+            Group {
+                SectionHeader(title: "System Status")
+                InfoRow(title: "Status Code", value: status)
+                
+                if let classification = message.classification {
+                    InfoRow(title: "Classification", value: classification)
+                }
+            }
+        }
+    }
+    
     //MARK: - Helper functions
+    
     private func rssiColor(_ rssi: Double) -> Color {
         switch rssi {
         case ..<(-75): return .red
@@ -524,6 +713,55 @@ struct DroneDetailView: View {
             }
         }
     }
-
-
+    
+    
+    // MARK: - Section Components
+    
+    struct DroneHeaderSection: View {
+        let message: CoTViewModel.CoTMessage
+        @Binding var showingInfoEditor: Bool
+        
+        var body: some View {
+            HStack {
+                let encounter = DroneStorageManager.shared.encounters[message.uid]
+                let customName = encounter?.customName ?? ""
+                let trustStatus = encounter?.trustStatus ?? .unknown
+                
+                VStack(alignment: .leading) {
+                    if !customName.isEmpty {
+                        Text(customName)
+                            .font(.system(.title3, design: .monospaced))
+                            .foregroundColor(.primary)
+                    }
+                    
+                    HStack {
+                        Text(message.uid)
+                            .font(.appCaption)
+                            .foregroundColor(.secondary)
+                        
+                        Image(systemName: trustStatus.icon)
+                            .foregroundColor(trustStatus.color)
+                    }
+                }
+                
+                Spacer()
+                
+                if message.idType.contains("Serial Number") {
+                    FAALookupButton(mac: message.mac, remoteId: message.uid.replacingOccurrences(of: "drone-", with: ""))
+                }
+                
+                Button(action: { showingInfoEditor = true }) {
+                    Label("Edit", systemImage: "pencil")
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.2))
+                        .foregroundColor(.blue)
+                        .cornerRadius(8)
+                }
+            }
+            .padding()
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+        }
+    }
 }

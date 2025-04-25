@@ -393,8 +393,7 @@ class ZMQHandler: ObservableObject {
         let idType = basicId["id_type"] as? String ?? ""
         var caaReg =  ""
         if idType.contains("CAA") {
-            caaReg = droneId
-            print("CAA IN XML CONVERSION")
+            caaReg = droneId.replacingOccurrences(of: "drone-", with: "")
         }
         var mac = basicId["MAC"] as? String ?? ""
         let rssi = basicId["RSSI"] as? Int ?? 0
