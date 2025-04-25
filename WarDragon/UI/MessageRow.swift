@@ -15,6 +15,7 @@ struct MessageRow: View {
     @State private var activeSheet: SheetType?
     @State private var showingSaveConfirmation = false
     @State private var showingInfoEditor = false
+    @State private var showingDeleteConfirmation = false
     
     enum SheetType: Identifiable {
         case liveMap
@@ -29,6 +30,69 @@ struct MessageRow: View {
         cotViewModel.droneSignatures.first(where: { $0.primaryId.id == message.uid })
     }
     
+    private func removeDroneFromTracking() {
+        // Remove from active messages
+        if let index = cotViewModel.parsedMessages.firstIndex(where: { $0.id == message.id }) {
+            cotViewModel.parsedMessages.remove(at: index)
+        }
+        
+        // Remove signatures
+        cotViewModel.droneSignatures.removeAll(where: { $0.primaryId.id == message.uid })
+        
+        // Remove MAC history
+        cotViewModel.macIdHistory.removeValue(forKey: message.uid)
+        cotViewModel.macProcessing.removeValue(forKey: message.uid)
+        
+        // Remove any alert rings
+        cotViewModel.alertRings.removeAll(where: { $0.droneId == message.uid })
+    }
+    
+    private func deleteDroneFromStorage() {
+        // Remove from storage
+        droneStorage.deleteEncounter(id: message.uid)
+        
+        // Handle FPV devices with different ID formats
+        if message.isFPVDevice {
+            let components = message.uid.components(separatedBy: "-")
+            if components.count > 1 {
+                let hashPart = components.last ?? ""
+                
+                // Find and delete any matching FPV encounters
+                for (encounterId, _) in droneStorage.encounters {
+                    if encounterId.contains("fpv-") && encounterId.contains(hashPart) {
+                        droneStorage.deleteEncounter(id: encounterId)
+                    }
+                }
+            }
+        }
+        
+        // After deleting from storage, also remove from tracking
+        removeDroneFromTracking()
+    }
+    
+    private func findEncounterForID(_ id: String) -> DroneEncounter? {
+        // Direct lookup first
+        if let encounter = droneStorage.encounters[id] {
+            return encounter
+        }
+        
+        // For FPV devices, try partial matching
+        if id.contains("fpv-") {
+            let components = id.components(separatedBy: "-")
+            if components.count > 1 {
+                let hashPart = components.last ?? ""
+                
+                // Find any matching FPV encounter
+                for (encounterId, encounter) in droneStorage.encounters {
+                    if encounterId.contains("fpv-") && encounterId.contains(hashPart) {
+                        return encounter
+                    }
+                }
+            }
+        }
+        
+        return nil
+    }
     // MARK: - Helper Methods
     
     private func rssiColor(_ rssi: Double) -> Color {
@@ -160,30 +224,32 @@ struct MessageRow: View {
             
             Spacer()
             
-            // Trust status indicator
-            Image(systemName: trustStatus.icon)
-                .foregroundColor(trustStatus.color)
-                .font(.system(size: 18))
-                .padding(.trailing, 4)
-            
-            // Edit button
-            Button(action: { showingInfoEditor = true }) {
-                Image(systemName: "pencil.circle")
+            Menu {
+                Button(action: { showingInfoEditor = true }) {
+                    Label("Edit Info", systemImage: "pencil")
+                }
+                
+                Button(action: { activeSheet = .liveMap }) {
+                    Label("Live Map", systemImage: "map")
+                }
+                
+                Divider()
+                
+                Button(action: {
+                    removeDroneFromTracking()
+                }) {
+                    Label("Stop Tracking", systemImage: "eye.slash")
+                }
+                
+                Button(role: .destructive, action: {
+                    showingDeleteConfirmation = true
+                }) {
+                    Label("Delete", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
                     .font(.system(size: 18))
                     .foregroundColor(.blue)
-            }
-            
-            // Live Map Button
-            Button(action: { activeSheet = .liveMap }) {
-                HStack {
-                    Image(systemName: "map.fill")
-                    Text("Live")
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(8)
             }
         }
     }
@@ -234,6 +300,9 @@ struct MessageRow: View {
         case .sdr:
             iconName = "dot.radiowaves.left.and.right"
             iconColor = .purple
+        case .fpv:
+            iconName = "camera.aperture"
+            iconColor = .orange
         default:
             iconName = "questionmark.circle"
             iconColor = .gray
@@ -365,28 +434,63 @@ struct MessageRow: View {
     // MARK: - Main View
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button(action: {
-                activeSheet = .detailView
-            }) {
-                VStack(alignment: .leading, spacing: 4) {
-                    headerView()
-                    typeInfoView()
-                    signalSourcesView()
-                    macRandomizationView()
-                    mapSectionView()
-                    detailsView()
-                    spoofDetectionView()
+            VStack(alignment: .leading, spacing: 8) {
+                Button(action: {
+                    activeSheet = .detailView
+                }) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        headerView()
+                        typeInfoView()
+                        signalSourcesView()
+                        macRandomizationView()
+                        mapSectionView()
+                        detailsView()
+                        spoofDetectionView()
+                    }
+                }
+                .cornerRadius(8)
+                .padding(.vertical, 8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.primary, lineWidth: 3)
+                        .padding(-8)
+                )
+            }
+            .contextMenu {  // Add context menu for long press
+                Button(action: {
+                    removeDroneFromTracking()
+                }) {
+                    Label("Stop Tracking", systemImage: "eye.slash")
+                }
+                
+                Button(role: .destructive, action: {
+                    showingDeleteConfirmation = true
+                }) {
+                    Label("Delete from History", systemImage: "trash")
                 }
             }
-            .cornerRadius(8)
-            .padding(.vertical, 8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.primary, lineWidth: 3)
-                    .padding(-8)
-            )
-        }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {  // Add swipe action
+                Button(role: .destructive) {
+                    showingDeleteConfirmation = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                
+                Button {
+                    removeDroneFromTracking()
+                } label: {
+                    Label("Stop", systemImage: "eye.slash")
+                }
+                .tint(.orange)
+            }
+            .alert("Delete Drone", isPresented: $showingDeleteConfirmation) {  // Add confirmation dialog
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    deleteDroneFromStorage()
+                }
+            } message: {
+                Text("Are you sure you want to delete all data for this drone? This action cannot be undone.")
+            }
         .sheet(item: $activeSheet) { sheetType in
             switch sheetType {
             case .liveMap:

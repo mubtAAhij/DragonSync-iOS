@@ -12,6 +12,7 @@ import UserNotifications
 struct ContentView: View {
     @StateObject private var statusViewModel = StatusViewModel()
     @StateObject private var spectrumViewModel = SpectrumData.SpectrumViewModel()
+    @StateObject private var droneStorage = DroneStorageManager.shared
     @StateObject private var cotViewModel: CoTViewModel
     @StateObject private var settings = Settings.shared
     @State private var showAlert = false
@@ -69,13 +70,39 @@ struct ContentView: View {
                 .navigationTitle("DragonSync")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: {
-                            cotViewModel.parsedMessages.removeAll()  // Remove UI messages
-                            cotViewModel.droneSignatures.removeAll() // Ditch old signatures BUGFIX #
-                            cotViewModel.macIdHistory.removeAll()
-                            cotViewModel.macProcessing.removeAll()
-                        }) {
-                            Image(systemName: "trash")
+                        Menu {
+                            Button(action: {
+                                cotViewModel.parsedMessages.removeAll()
+                                cotViewModel.droneSignatures.removeAll()
+                                cotViewModel.macIdHistory.removeAll()
+                                cotViewModel.macProcessing.removeAll()
+                                cotViewModel.alertRings.removeAll()
+                            }) {
+                                Label("Clear All", systemImage: "trash")
+                            }
+                            
+                            // Add option to clear just active tracking but keep history
+                            Button(action: {
+                                cotViewModel.parsedMessages.removeAll()
+                                cotViewModel.droneSignatures.removeAll()
+                                cotViewModel.alertRings.removeAll()
+                            }) {
+                                Label("Stop All Tracking", systemImage: "eye.slash")
+                            }
+                            
+                            // Add option to delete all from history
+                            Button(role: .destructive, action: {
+                                droneStorage.deleteAllEncounters()
+                                cotViewModel.parsedMessages.removeAll()
+                                cotViewModel.droneSignatures.removeAll()
+                                cotViewModel.macIdHistory.removeAll()
+                                cotViewModel.macProcessing.removeAll()
+                                cotViewModel.alertRings.removeAll()
+                            }) {
+                                Label("Delete All History", systemImage: "trash.fill")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
                         }
                     }
                 }
