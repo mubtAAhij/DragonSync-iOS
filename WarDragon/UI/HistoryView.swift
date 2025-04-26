@@ -215,20 +215,26 @@ struct StoredEncountersView: View {
                                 
                                 Spacer()
                                 
+                                if let mac = encounter.metadata["mac"],
+                                   !encounter.id.isEmpty {  // No 'let' needed here since these are non-optional
+                                    let remoteId = encounter.id.replacingOccurrences(of: "drone-", with: "")
+                                    FAALookupButton(mac: mac, remoteId: remoteId)
+                                }
+                                
                                 Image(systemName: encounter.trustStatus.icon)
                                     .foregroundColor(encounter.trustStatus.color)
                                     .font(.system(size: 24))
+                                
+                                Button(action: { showingInfoEditor = true }) {
+                                    Image(systemName: "pencil.circle")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(.blue)
+                                }
                             }
                             
                             Text(encounter.id)
                                 .font(.appCaption)
                                 .foregroundColor(.secondary)
-                        }
-                        
-                        Button(action: { showingInfoEditor = true }) {
-                            Image(systemName: "pencil.circle")
-                                .font(.system(size: 24))
-                                .foregroundColor(.blue)
                         }
                     }
                     .padding()
