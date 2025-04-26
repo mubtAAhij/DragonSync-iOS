@@ -129,6 +129,22 @@ struct SettingsView: View {
                 .disabled(settings.isListening)
             }
             
+            Section("Performance") {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Message Processing Interval")
+                        Spacer()
+                        Stepper(value: $settings.messageProcessingInterval, in: 100...5000, step: 50) {
+                            Text("\(settings.messageProcessingInterval) ms")
+                                .font(.appCaption)
+                                .bold()
+                                .foregroundColor(.primary)
+                                .frame(width: 100, alignment: .trailing)
+                        }
+                    }
+                }
+            }
+            
             Section("Warning Thresholds") {
                 VStack(alignment: .leading) {
                     Toggle("System Warnings", isOn: $settings.systemWarningsEnabled)

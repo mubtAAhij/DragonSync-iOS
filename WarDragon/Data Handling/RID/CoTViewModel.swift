@@ -17,6 +17,7 @@ class CoTViewModel: ObservableObject {
     @Published var randomMacIdHistory: [String: Set<String>] = [:]
     @Published var alertRings: [AlertRing] = []
     @Published private(set) var isReconnecting = false
+    private var lastProcessTime: Date = Date()
     private let signatureGenerator = DroneSignatureGenerator()
     private var spectrumViewModel: SpectrumData.SpectrumViewModel?
     private var zmqHandler: ZMQHandler?
@@ -547,6 +548,16 @@ class CoTViewModel: ObservableObject {
                 print("No data received.")
                 return
             }
+            
+            // Also bail if throttled
+            let now = Date()
+            if now.timeIntervalSince(self.lastProcessTime) < Settings.shared.messageProcessingIntervalSeconds {
+                // Skip this message if we're processing too fast
+                print("Processing too fast for set interval, throttling...")
+                return
+            }
+            self.lastProcessTime = now
+            
             
             if let message = String(data: data, encoding: .utf8) {
 //                print("DEBUG - Received data: \(message)")

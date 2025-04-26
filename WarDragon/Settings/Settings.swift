@@ -148,7 +148,8 @@ class Settings: ObservableObject {
         }
     }
     @AppStorage("enableProximityWarnings") var enableProximityWarnings = true
-
+    @AppStorage("messageProcessingInterval") var messageProcessingInterval: Int = 100
+    
     //MARK: - Connection
 
     private init() {
@@ -247,6 +248,9 @@ class Settings: ObservableObject {
             }
         }
     
+    var messageProcessingIntervalSeconds: Double {
+        Double(messageProcessingInterval) / 1000.0
+    }
     
     func updatePreferences(notifications: Bool, screenOn: Bool) {
         notificationsEnabled = notifications
