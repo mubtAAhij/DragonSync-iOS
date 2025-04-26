@@ -360,7 +360,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     }
     
     private func buildDroneType(_ json: [String: Any]) -> String {
-        var droneType = "a-f-G-U"
+        var droneType = "a-u-A-M-H-R"
         
         if let basicId = json["Basic ID"] as? [String: Any] {
             let idType = basicId["id_type"] as? String
@@ -382,8 +382,6 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             }
         }
         
-        
-        droneType += "-F"
         return droneType
     }
     
