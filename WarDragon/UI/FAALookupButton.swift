@@ -58,19 +58,28 @@ struct FAALookupButton: View {
         }
         .sheet(isPresented: $showingFAAInfo) {
             if let data = faaData {
-                NavigationView {
-                    FAAInfoView(faaData: data)
-                        .navigationTitle("FAA Registration")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                Button("Done") {
-                                    showingFAAInfo = false
-                                }
+                ZStack {
+                    Color.clear
+                    VStack(spacing: 0) {
+                        HStack {
+                            Spacer()
+                            Button("Done") {
+                                showingFAAInfo = false
                             }
+                            .padding(.trailing)
+                            .padding(.top, 8)
                         }
+                        .background(Color.clear)
+                        
+                        // FAA Info View
+                        FAAInfoView(faaData: data)
+                            .padding(.horizontal)
+                    }
                 }
-                .presentationDetents([.medium])
+                .background(Color.clear)
+                .presentationDetents([.height(350)]) // TODO dont hardcode this 
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
             }
         }
     }
