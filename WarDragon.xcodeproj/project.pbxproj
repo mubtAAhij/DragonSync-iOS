@@ -346,7 +346,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WarDragon/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WarDragon;
+				INFOPLIST_KEY_CFBundleDisplayName = DragonSync;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "DragonSync needs local network access to receive drone broadcasts";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -397,7 +397,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WarDragon/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WarDragon;
+				INFOPLIST_KEY_CFBundleDisplayName = DragonSync;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "DragonSync needs local network access to receive drone broadcasts";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
