@@ -108,6 +108,12 @@
   <img src="https://github.com/user-attachments/assets/816debe7-6c05-4c7a-9e88-14a6a4f0989a" width="60%" alt="Encounter History View">
 </div>
 
+### FAA Database Analysis
+
+![image](https://github.com/user-attachments/assets/3c5165f1-4177-4934-8a79-4196f3824ba3)
+
+
+
 
 ## App Settings
 
@@ -130,9 +136,18 @@
 
 ### Option 2: DIY Setup
 
-- ESP32 with WiFi RID Firmware, or a a WiFi adapter using DroneID `wifi_sniffer` below
-- Sniffle-compatible BT dongle (Catsniffer, Sonoff) flashed with latest Sniffle FW 
-- (Optional) ANTSDR E200 & GPS unit
+Configuration A. WiFi & BT Adapters
+   - ESP32 with WiFi RID Firmware, or a a WiFi adapter using DroneID `wifi_sniffer` below
+   - Sniffle-compatible BT dongle (Catsniffer, Sonoff) flashed with Sniffle FW.
+
+Configuration B. Single Xiao ESP32S3
+   - Flash it with this [firmware](https://github.com/lukeswitz/T-Halow/blob/master/firmware/xiao_s3dualcoreRIDfirmware.bin)
+   - Change port name and firmware filepath: 
+     ```esptool.py --chip esp32s3 --port /dev/yourportname --baud 115200 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 16MB 0x10000 firmwareFile.bin```
+
+   - Swap in updated zmq decoder that handles both types over UART [here](https://github.com/lukeswitz/DroneID/blob/dual-esp32-rid/zmq_decoder.py)
+  
+- (Optional) ANTSDR E200 & DJI FW
 
 ---
 
