@@ -243,22 +243,6 @@ The Multicast option uses Cursor on Target (CoT) to transmit data for integratio
 | **WiFi Adapter/BT Decoder**           | `python3 zmq_decoder.py -z --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222,127.0.0.1:4223 -v`                | Run after starting WiFi sniffer     |
 | **ESP32/BT Decoder**                  | `python3 zmq_decoder.py -z --uart /dev/esp0 --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222 -v`             | Replace `/dev/esp0` with actual port |
 
-### Multicast Commands
-
-> **For CoT to TAK/ATAK or Kismet**
-
-| **Description**                           | **Command**                                                                                                                                    |
-|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Multicast Only (No TAK Server)**        | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969` |
-| **With TAK Server (TCP)**                 | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP`            |
-| **With TAK Server (TCP) + TLS Encryption**| `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP --tak-tls-p12 /path/to/cert.p12 --tak-tls-p12-pass yourpassword` |
-| **With TAK Server (UDP)**                 | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8999 --tak-protocol UDP`                                      |
-| **Start Kismet with ZMQ output**          | `kismet --no-ncurses --log-types=kismet,pcapng,pcap --log-title=drone_hunt --log-prefix=/path/to/logs`                                          |
-| **Use Kismet data with DragonSync**       | `python3 dragonsync.py --zmq-host 127.0.0.1 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --max-drones 50 --inactivity-timeout 120` |
-| **Rate-Limited Tracking**                 | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --rate-limit 2.5 --max-drones 100`                                                   |
-| **Combined Multicast and TAK Server**     | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-host 192.168.1.100 --tak-port 8089` |
-| **With Specific Network Interface**       | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-multicast-interface eth0`         |
-| **With Debug Logging**                    | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 -d`                                         |
 
 ---
 
