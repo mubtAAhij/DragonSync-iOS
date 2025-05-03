@@ -108,6 +108,12 @@
   <img src="https://github.com/user-attachments/assets/816debe7-6c05-4c7a-9e88-14a6a4f0989a" width="60%" alt="Encounter History View">
 </div>
 
+### FAA Database Analysis
+
+![image](https://github.com/user-attachments/assets/3c5165f1-4177-4934-8a79-4196f3824ba3)
+
+
+
 
 ## App Settings
 
@@ -130,9 +136,18 @@
 
 ### Option 2: DIY Setup
 
-- ESP32 with WiFi RID Firmware, or a a WiFi adapter using DroneID `wifi_sniffer` below
-- Sniffle-compatible BT dongle (Catsniffer, Sonoff) flashed with latest Sniffle FW 
-- (Optional) ANTSDR E200 & GPS unit
+Configuration A. WiFi & BT Adapters
+   - ESP32 with WiFi RID Firmware, or a a WiFi adapter using DroneID `wifi_sniffer` below
+   - Sniffle-compatible BT dongle (Catsniffer, Sonoff) flashed with Sniffle FW.
+
+Configuration B. Single Xiao ESP32S3
+   - Flash it with this [firmware](https://github.com/lukeswitz/T-Halow/blob/master/firmware/xiao_s3dualcoreRIDfirmware.bin)
+   - Change port name and firmware filepath: 
+     ```esptool.py --chip esp32s3 --port /dev/yourportname --baud 115200 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 16MB 0x10000 firmwareFile.bin```
+
+   - Swap in updated zmq decoder that handles both types over UART [here](https://github.com/lukeswitz/DroneID/blob/dual-esp32-rid/zmq_decoder.py)
+  
+- (Optional) ANTSDR E200 & DJI FW
 
 ---
 
@@ -228,22 +243,6 @@ The Multicast option uses Cursor on Target (CoT) to transmit data for integratio
 | **WiFi Adapter/BT Decoder**           | `python3 zmq_decoder.py -z --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222,127.0.0.1:4223 -v`                | Run after starting WiFi sniffer     |
 | **ESP32/BT Decoder**                  | `python3 zmq_decoder.py -z --uart /dev/esp0 --zmqsetting 0.0.0.0:4224 --zmqclients 127.0.0.1:4222 -v`             | Replace `/dev/esp0` with actual port |
 
-### Multicast Commands
-
-> **For CoT to TAK/ATAK or Kismet**
-
-| **Description**                           | **Command**                                                                                                                                    |
-|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Multicast Only (No TAK Server)**        | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969` |
-| **With TAK Server (TCP)**                 | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP`            |
-| **With TAK Server (TCP) + TLS Encryption**| `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 --tak-protocol TCP --tak-tls-p12 /path/to/cert.p12 --tak-tls-p12-pass yourpassword` |
-| **With TAK Server (UDP)**                 | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8999 --tak-protocol UDP`                                      |
-| **Start Kismet with ZMQ output**          | `kismet --no-ncurses --log-types=kismet,pcapng,pcap --log-title=drone_hunt --log-prefix=/path/to/logs`                                          |
-| **Use Kismet data with DragonSync**       | `python3 dragonsync.py --zmq-host 127.0.0.1 --zmq-port 4224 --zmq-status-port 4225 --tak-host 192.168.1.100 --tak-port 8089 --max-drones 50 --inactivity-timeout 120` |
-| **Rate-Limited Tracking**                 | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --rate-limit 2.5 --max-drones 100`                                                   |
-| **Combined Multicast and TAK Server**     | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-host 192.168.1.100 --tak-port 8089` |
-| **With Specific Network Interface**       | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --enable-multicast --tak-multicast-addr 239.2.3.1 --tak-multicast-port 6969 --tak-multicast-interface eth0`         |
-| **With Debug Logging**                    | `python3 dragonsync.py --zmq-host 0.0.0.0 --zmq-port 4224 --tak-host 192.168.1.100 --tak-port 8089 -d`                                         |
 
 ---
 
