@@ -122,11 +122,13 @@ struct SettingsView: View {
                     get: { settings.keepScreenOn },
                     set: { settings.updatePreferences(notifications: settings.notificationsEnabled, screenOn: $0) }
                 ))
-                Toggle("Use Background Refresh", isOn: .init(
-                    get: { settings.enableBackgroundDetection },
-                    set: { settings.enableBackgroundDetection = $0 }
-                ))
-                .disabled(settings.isListening)
+                
+                // This is handled by native Apple iOS funtionality...
+//                Toggle("Use Background Refresh", isOn: .init(
+//                    get: { settings.enableBackgroundDetection },
+//                    set: { settings.enableBackgroundDetection = $0 }
+//                ))
+//                .disabled(settings.isListening)
             }
             
             Section("Performance") {
