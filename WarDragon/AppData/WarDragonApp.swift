@@ -32,12 +32,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Register notifications
         UNUserNotificationCenter.current().delegate = self
         
-        // Register background tasks
-        BackgroundManager.shared.registerBackgroundTasks()
-        
-        // Register for app lifecycle notifications
-        setupAppLifecycleObservers()
-        
         return true
     }
     
@@ -49,33 +43,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound])
-    }
-    
-    private func setupAppLifecycleObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(appMovingToBackground),
-            name: UIApplication.didEnterBackgroundNotification,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(appMovingToForeground),
-            name: UIApplication.willEnterForegroundNotification,
-            object: nil
-        )
-    }
-    
-    @objc private func appMovingToBackground() {
-        // Start background processing if listening is active
-        if Settings.shared.isListening && Settings.shared.enableBackgroundDetection {
-            BackgroundManager.shared.startBackgroundProcessing()
-        }
-    }
-    
-    @objc private func appMovingToForeground() {
-        // Nothing to do, let normal operation resume
     }
     
     deinit {

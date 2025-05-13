@@ -35,7 +35,6 @@ class CoTViewModel: ObservableObject {
     private var lastNotificationTime: Date?
     private var macToCAA: [String: String] = [:]
     private var macToHomeLoc: [String: (lat: Double, lon: Double)] = [:]
-    private let backgroundManager = BackgroundManager.shared
     private var currentMessageFormat: ZMQHandler.MessageFormat {
         return zmqHandler?.messageFormat ?? .bluetooth
     }
@@ -402,14 +401,6 @@ class CoTViewModel: ObservableObject {
         stopListening()
         isListeningCot = true
         
-        // Setup background processing notification observer
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(checkConnections),
-            name: Notification.Name("RefreshNetworkConnections"),
-            object: nil
-        )
-        
         // Start the appropriate connection type
         switch Settings.shared.connectionMode {
         case .multicast:
@@ -418,10 +409,6 @@ class CoTViewModel: ObservableObject {
             startZMQListening()
         }
         
-        // Start background processing if enabled
-        if Settings.shared.enableBackgroundDetection {
-            backgroundManager.startBackgroundProcessing()
-        }
     }
     
     private func startMulticastListening() {
@@ -1032,13 +1019,6 @@ class CoTViewModel: ObservableObject {
         
         isListeningCot = false
         
-        // Remove notification observer
-        NotificationCenter.default.removeObserver(
-            self,
-            name: Notification.Name("RefreshNetworkConnections"),
-            object: nil
-        )
-        
         // Clean up multicast connections but give time for cleanup
         multicastConnection?.cancel()
         cotListener?.cancel()
@@ -1060,47 +1040,6 @@ class CoTViewModel: ObservableObject {
             self.zmqHandler = nil
         }
         
-        // Stop background processing
-        backgroundManager.stopBackgroundProcessing()
-        
         print("All listeners stopped and clean up initiated.")
     }
-    
-    //MARK: - Helper methods
-    
-    // Helper
-    @objc private func checkConnections() {
-        // Only check if we're supposed to be listening
-        guard isListeningCot && !isReconnecting else { return }
-        
-        isReconnecting = true
-        
-        // First ensure all connections are properly closed
-        multicastConnection?.cancel()
-        multicastConnection = nil
-        cotListener?.cancel()
-        statusListener?.cancel()
-        
-        if let zmqHandler = self.zmqHandler {
-            zmqHandler.disconnect()
-        }
-        
-        // Wait a short time to ensure sockets have fully released
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            // Then restart the appropriate connections
-            self.cotListener = nil
-            self.statusListener = nil
-            self.zmqHandler = nil
-            
-            switch Settings.shared.connectionMode {
-            case .multicast:
-                self.startMulticastListening()
-            case .zmq:
-                self.startZMQListening()
-            }
-            
-            self.isReconnecting = false
-        }
-    }
-    
 }
