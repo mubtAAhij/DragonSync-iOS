@@ -148,7 +148,8 @@ struct SpectrumGraphView: View {
                 let values = data.data
                 let minValue = values.min() ?? 0
                 let maxValue = values.max() ?? 1
-                let scale = geometry.size.height / CGFloat(maxValue - minValue)
+                let difference = maxValue - minValue
+                let scale = difference != 0 ? geometry.size.height / CGFloat(difference) : 0
                 
                 path.move(to: CGPoint(
                     x: 0,

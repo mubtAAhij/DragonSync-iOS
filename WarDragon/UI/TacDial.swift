@@ -54,7 +54,9 @@ struct TacDial: View {
                             .onChanged { gesture in
                                 let center = CGPoint(x: radius, y: radius)
                                 let location = gesture.location
-                                let angle = atan2(location.x - center.x, -(location.y - center.y))
+                                let dx = location.x - center.x
+                                let dy = -(location.y - center.y)
+                                let angle = (dx == 0 && dy == 0) ? 0 : atan2(dx, dy)
                                 var degrees = angle * 180 / .pi
                                 if degrees < 0 { degrees += 360 }
                                 

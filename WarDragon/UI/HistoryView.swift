@@ -657,7 +657,8 @@ struct StoredEncountersView: View {
                    GeometryReader { geometry in
                        Path { path in
                            let step = geometry.size.width / CGFloat(data.count - 1)
-                           let scale = geometry.size.height / (maxValue - minValue)
+                           let difference = maxValue - minValue
+                           let scale = difference != 0 ? geometry.size.height / CGFloat(difference) : 0
                            
                            path.move(to: CGPoint(
                                x: 0,
