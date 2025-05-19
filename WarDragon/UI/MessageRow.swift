@@ -469,14 +469,6 @@ struct MessageRow: View {
                 }
                 .tint(.orange)
             }
-            .alert("Delete Drone", isPresented: $showingDeleteConfirmation) {  // Add confirmation dialog
-                Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
-                    deleteDroneFromStorage()
-                }
-            } message: {
-                Text("Are you sure you want to delete all data for this drone? This action cannot be undone.")
-            }
         .sheet(item: $activeSheet) { sheetType in
             switch sheetType {
             case .liveMap:
