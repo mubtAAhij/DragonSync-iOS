@@ -114,6 +114,12 @@ class ZMQHandler: ObservableObject {
         onTelemetry: @escaping MessageHandler,
         onStatus: @escaping MessageHandler
     ) {
+        // Store parameters for reconnection
+        self.lastHost = host
+        self.lastTelemetryPort = zmqTelemetryPort
+        self.lastStatusPort = zmqStatusPort
+        self.lastTelemetryHandler = onTelemetry
+        self.lastStatusHandler = onStatus
         
         guard !host.isEmpty && zmqTelemetryPort > 0 && zmqStatusPort > 0 else {
             print("Invalid connection parameters")
@@ -710,6 +716,24 @@ class ZMQHandler: ObservableObject {
         poller = nil
         isConnected = false
         print("ZMQ: Disconnected")
+    }
+    
+    func reconnect() {
+        if isConnected || lastHost.isEmpty || lastTelemetryPort == 0 || lastStatusPort == 0 {
+            return
+        }
+        
+        // Disconnect first to clean up
+        disconnect()
+        
+        // Reconnect with stored parameters
+        connect(
+            host: lastHost,
+            zmqTelemetryPort: lastTelemetryPort,
+            zmqStatusPort: lastStatusPort,
+            onTelemetry: lastTelemetryHandler,
+            onStatus: lastStatusHandler
+        )
     }
     
 }

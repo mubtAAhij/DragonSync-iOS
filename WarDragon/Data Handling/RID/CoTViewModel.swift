@@ -401,6 +401,14 @@ class CoTViewModel: ObservableObject {
         stopListening()
         isListeningCot = true
         
+        // Setup background processing notification observer
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(checkConnections),
+            name: Notification.Name("RefreshNetworkConnections"),
+            object: nil
+        )
+        
         // Start the appropriate connection type
         switch Settings.shared.connectionMode {
         case .multicast:
@@ -409,6 +417,10 @@ class CoTViewModel: ObservableObject {
             startZMQListening()
         }
         
+        // Start background processing if enabled
+        if Settings.shared.enableBackgroundDetection {
+            backgroundManager.startBackgroundProcessing()
+        }
     }
     
     private func startMulticastListening() {
@@ -1019,7 +1031,14 @@ class CoTViewModel: ObservableObject {
         
         isListeningCot = false
         
-        // Clean up multicast connections but give time for cleanup
+        // Remove notification observer
+        NotificationCenter.default.removeObserver(
+            self,
+            name: Notification.Name("RefreshNetworkConnections"),
+            object: nil
+        )
+        
+        // Clean up multicast if using it
         multicastConnection?.cancel()
         cotListener?.cancel()
         statusListener?.cancel()
@@ -1040,6 +1059,27 @@ class CoTViewModel: ObservableObject {
             self.zmqHandler = nil
         }
         
-        print("All listeners stopped and clean up initiated.")
+        // Stop background processing
+        backgroundManager.stopBackgroundProcessing()
+        
+        print("All listeners stopped and connections cleaned up.")
     }
+    
+    @objc private func checkConnections() {
+        // Only check if we're supposed to be listening
+        guard isListeningCot else { return }
+        
+        if Settings.shared.connectionMode == .zmq {
+            if zmqHandler == nil || zmqHandler?.isConnected != true {
+                print("ZMQ connection lost in background, reconnecting...")
+                startZMQListening()
+            }
+        } else if Settings.shared.connectionMode == .multicast {
+            if cotListener == nil || statusListener == nil {
+                print("Multicast connection lost in background, reconnecting...")
+                startMulticastListening()
+            }
+        }
+    }
+    
 }
