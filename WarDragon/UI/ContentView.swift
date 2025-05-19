@@ -21,11 +21,38 @@ struct ContentView: View {
     
     
     init() {
+        // Create temporary non-StateObject instances for initialization
         let statusVM = StatusViewModel()
-        _statusViewModel = StateObject(wrappedValue: statusVM)
-        _cotViewModel = StateObject(wrappedValue: CoTViewModel(statusViewModel: statusVM))
-        _selectedTab = State(initialValue: Settings.shared.isListening ? 0 : 3)
+        let cotVM = CoTViewModel(statusViewModel: statusVM)
+        
+        // Initialize the StateObject properties
+        self._statusViewModel = StateObject(wrappedValue: statusVM)
+        self._cotViewModel = StateObject(wrappedValue: cotVM)
+        self._selectedTab = State(initialValue: Settings.shared.isListening ? 0 : 3)
+        
+        // Configure background manager with the created instance, not the StateObject wrapper
+        BackgroundManager.shared.configure(with: cotVM)
+        
+        // Add lightweight connection check listener
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("LightweightConnectionCheck"),
+            object: nil,
+            queue: .main
+        ) { [weak cotVM] _ in
+            cotVM?.checkConnectionStatus()
+        }
+        
+        // Add notification for background task expiry
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("BackgroundTaskExpiring"),
+            object: nil,
+            queue: .main
+        ) { [weak cotVM] _ in
+            // Perform urgent cleanup when background task is about to expire
+            cotVM?.prepareForBackgroundExpiry()
+        }
     }
+    
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -181,4 +208,6 @@ struct ContentView: View {
             }
         }
     }
+    
+    
 }
