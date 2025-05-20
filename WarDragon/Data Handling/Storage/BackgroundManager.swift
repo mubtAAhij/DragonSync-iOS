@@ -169,36 +169,32 @@ class BackgroundManager {
         
         // Begin a new background task with a safety buffer for cleanup
         backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
-            // Expiration handler - iOS is about to terminate our background task
-            // Perform urgent cleanup with a higher QoS to ensure it completes
-            DispatchQueue.global(qos: .userInitiated).async {
-                // Notify that background task is about to expire
-                NotificationCenter.default.post(name: NSNotification.Name("BackgroundTaskExpiring"), object: nil)
-                
-                // Give a moment for cleanup before ending
-                Thread.sleep(forTimeInterval: 0.5)
-                
-                // End the task
-                self?.endBackgroundTask()
+            // Immediately end the task in the expiration handler
+            if let self = self {
+                let taskToEnd = self.backgroundTask
+                self.backgroundTask = .invalid
+                UIApplication.shared.endBackgroundTask(taskToEnd)
             }
         }
     }
+
     
     private func endBackgroundTask() {
-        // Cancel the timer
         timer?.invalidate()
         timer = nil
         
         // End the background task if active
         if backgroundTask != .invalid {
-            UIApplication.shared.endBackgroundTask(backgroundTask)
+            let taskToEnd = backgroundTask
             backgroundTask = .invalid
+            UIApplication.shared.endBackgroundTask(taskToEnd)
         }
     }
     
     private func startKeepAliveTimer() {
-        // Create a timer that periodically refreshes the background task
-        // Use 25 seconds to stay well under the 30-second background task limit
+        timer?.invalidate()
+        
+        // Periodically refresh the background task
         timer = Timer.scheduledTimer(withTimeInterval: 25, repeats: true) { [weak self] _ in
             self?.refreshBackgroundTask()
         }
@@ -212,11 +208,11 @@ class BackgroundManager {
             
             // Start a new task before ending the old one to ensure continuity
             backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
-                // Safety handler if the new task is about to expire
-                DispatchQueue.global(qos: .userInitiated).async {
-                    NotificationCenter.default.post(name: NSNotification.Name("BackgroundTaskExpiring"), object: nil)
-                    Thread.sleep(forTimeInterval: 0.5)
-                    self?.endBackgroundTask()
+                // Immediately end the task in the expiration handler
+                if let self = self {
+                    let taskToEnd = self.backgroundTask
+                    self.backgroundTask = .invalid
+                    UIApplication.shared.endBackgroundTask(taskToEnd)
                 }
             }
             
