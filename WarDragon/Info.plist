@@ -8,5 +8,11 @@
         <string>processing</string>
         <string>remote-notification</string>
     </array>
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>com.wardragon.processMessages</string>
+        <string>com.wardragon.updateStatus</string>
+        <string>com.wardragon.refreshConnections</string>
+    </array>
 </dict>
 </plist>
