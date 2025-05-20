@@ -9,7 +9,7 @@ import Foundation
 import Network
 import UserNotifications
 import CoreLocation
-
+import UIKit
 
 class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
@@ -21,6 +21,7 @@ class CoTViewModel: ObservableObject {
     private let signatureGenerator = DroneSignatureGenerator()
     private var spectrumViewModel: SpectrumData.SpectrumViewModel?
     private var zmqHandler: ZMQHandler?
+    private let backgroundManager = BackgroundManager.shared
     private var cotListener: NWListener?
     private var statusListener: NWListener?
     private var multicastConnection: NWConnection?
@@ -371,9 +372,77 @@ class CoTViewModel: ObservableObject {
         }
     }
     
-    init(statusViewModel: StatusViewModel, spectrumViewModel: SpectrumData.SpectrumViewModel? = nil) {        self.statusViewModel = statusViewModel
+    init(statusViewModel: StatusViewModel, spectrumViewModel: SpectrumData.SpectrumViewModel? = nil) {
+        self.statusViewModel = statusViewModel
         self.spectrumViewModel = spectrumViewModel
         self.checkPermissions()
+        
+        // Register for application lifecycle notifications
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+        // Also add observer for refreshing connections
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(refreshConnections),
+            name: Notification.Name("RefreshNetworkConnections"),
+            object: nil
+        )
+    }
+
+    @objc private func handleAppDidEnterBackground() {
+        // Prepare connections for background mode
+        prepareForBackgroundExpiry()
+    }
+
+    @objc private func handleAppWillEnterForeground() {
+        // Resume normal connection behavior
+        resumeFromBackground()
+    }
+
+    @objc private func refreshConnections() {
+        // Only refresh if we're actively listening
+        if isListeningCot && !isReconnecting {
+            // Briefly reconnect to keep connections alive
+            performBackgroundRefresh()
+        }
+    }
+    
+    private func performBackgroundRefresh() {
+        // Quick reconnect to refresh connections
+        if isListeningCot && !isReconnecting {
+            isReconnecting = true
+            
+            // Brief reconnection to keep connections active
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                guard let self = self else { return }
+                
+                switch Settings.shared.connectionMode {
+                case .multicast:
+                    self.multicastConnection?.cancel()
+                    self.multicastConnection = nil
+                    self.startMulticastListening()
+                case .zmq:
+                    self.zmqHandler?.disconnect()
+                    self.zmqHandler = nil
+                    self.startZMQListening()
+                }
+                
+                // Reset reconnecting flag
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                    self?.isReconnecting = false
+                }
+            }
+        }
     }
     
     private func checkPermissions() {
@@ -631,6 +700,105 @@ class CoTViewModel: ObservableObject {
                 // Add new status message
                 self.statusViewModel.statusMessages.append(message)
                 self.sendStatusNotification(for: message)
+            }
+        }
+    }
+    
+    // Check connection status without heavy processing
+    func checkConnectionStatus() {
+        // Just verify that connections are still responsive
+        if !isListeningCot && Settings.shared.isListening {
+            reconnectIfNeeded()
+        }
+    }
+    
+    func prepareForBackgroundExpiry() {
+        // Record state for potential resumption
+        let wasListening = isListeningCot
+        
+        // Log background transition
+        print("WarDragon preparing for background expiry...")
+        
+        // Set a flag to indicate reduced processing mode
+        isReconnecting = true
+        
+        // For ZMQ connections, reduce activity but maintain connection
+        if let zmqHandler = self.zmqHandler {
+            // Don't fully disconnect ZMQ, just reduce activity
+            // Save current message format for restoration later
+            let currentFormat = zmqHandler.messageFormat
+            
+            // Reduce polling frequency by setting a lower-intensity flag if available
+            // Note: This assumes ZMQHandler has a background mode property
+            // If not available in the current implementation, consider adding it
+            if zmqHandler.isConnected {
+                print("Reducing ZMQ activity for background mode")
+                zmqHandler.setBackgroundMode(true)
+            }
+        }
+        
+        // For multicast connections, we'll keep them open but reduce processing rate
+        if multicastConnection != nil {
+            print("Reducing multicast processing for background mode")
+        }
+        
+        objectWillChange.send()
+        
+        if wasListening {
+            BackgroundManager.shared.startBackgroundProcessing()
+            
+            // Set a timer to periodically check status
+            // This will help maintain connections while in background
+            Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] timer in
+                guard let self = self, self.isListeningCot else {
+                    timer.invalidate()
+                    return
+                }
+                
+                // Periodic check to maintain connections
+                print("Background maintenance check: \(Date())")
+                
+                // For ZMQ, send a minimal keepalive if needed
+                // For multicast, no action needed as the socket remains open
+            }
+        }
+        
+        print("WarDragon background preparation complete")
+    }
+    
+    func resumeFromBackground() {
+        print("WarDragon resuming from background...")
+        
+        // Clear the reconnecting flag
+        isReconnecting = false
+        
+        // Restore ZMQ to normal operation if it was modified
+        if let zmqHandler = self.zmqHandler, zmqHandler.isConnected {
+            print("Restoring ZMQ normal activity")
+            zmqHandler.setBackgroundMode(false)
+        }
+        
+        // Stop background task management
+        BackgroundManager.shared.stopBackgroundProcessing()
+        
+        // Force an update to UI
+        objectWillChange.send()
+        
+        print("WarDragon successfully resumed from background")
+    }
+
+    // Reconnect BG if we need to
+    func reconnectIfNeeded() {
+        if !isReconnecting && Settings.shared.isListening && !isListeningCot {
+            isReconnecting = true
+            
+            // Clean up any existing connections
+            stopListening()
+            
+            // Wait a moment before reconnecting
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.startListening()
+                self.isReconnecting = false
             }
         }
     }

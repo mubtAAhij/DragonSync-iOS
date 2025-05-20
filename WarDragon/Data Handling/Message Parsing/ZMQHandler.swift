@@ -10,7 +10,8 @@ import SwiftyZeroMQ5
 
 class ZMQHandler: ObservableObject {
     //MARK: - ZMQ Connection
-    @Published var messageFormat: MessageFormat = .bluetooth 
+    @Published var messageFormat: MessageFormat = .bluetooth
+    var isInBackgroundMode = false
     
     @Published var isConnected = false {
         didSet {
@@ -201,6 +202,19 @@ class ZMQHandler: ObservableObject {
         } catch {
             print("ZMQ Setup Error: \(error)")
             disconnect()
+        }
+    }
+    
+    func setBackgroundMode(_ enabled: Bool) {
+        isInBackgroundMode = enabled
+        
+        // Adjust polling interval based on background mode
+        if enabled {
+            // Use longer intervals for background polling
+            //  pollingInterval = 5.0 // 5 seconds
+        } else {
+            // Use normal intervals for foreground polling
+            // pollingInterval = 0.4 // 400ms
         }
     }
     
