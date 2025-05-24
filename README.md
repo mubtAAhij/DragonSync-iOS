@@ -113,17 +113,12 @@
 ![image](https://github.com/user-attachments/assets/3c5165f1-4177-4934-8a79-4196f3824ba3)
 
 
-
-
 ## App Settings
 
 ### Settings & Warning Dials
 - Customize warning thresholds, proximity alerts, and display preferences.
 - Set limits for CPU usage, temperature (including PLUTO and ZYNQ), memory, and RSSI.
 
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0" width="60%" alt="Settings Configuration">
-</div>
 <div align="center">
   <img src="https://github.com/user-attachments/assets/3a3651c2-38c5-4eab-902a-d61198e677c0" width="70%" alt="Warning Configuration">
 </div>
