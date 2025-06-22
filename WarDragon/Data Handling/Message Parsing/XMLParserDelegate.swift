@@ -58,6 +58,11 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private var index: String?
     private var runtime: String?
     
+    private var trackAttributes: [String: String] = [:]
+    private var track_course: String?
+    private var track_speed: String?
+    private var track_bearing: String?
+    
     private var memoryTotal: Double = 0.0
     private var memoryAvailable: Double = 0.0
     private var memoryUsed: Double = 0.0
@@ -81,6 +86,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
     private var plutoTemp: Double = 0.0
     private var zynqTemp: Double = 0.0
     
+    private var gps_course: Double = 0.0
+    private var gps_speed: Double = 0.0
+    
+    private var trackCourse: String?
+    private var trackSpeed: String?
+    private var trackBearing: String?
+
     var cotMessage: CoTViewModel.CoTMessage?
     var statusMessage: StatusViewModel.StatusMessage?
     private var isStatusMessage = false
@@ -100,18 +112,23 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             eventAttributes = attributes
             remarks = ""
             // Skip pilot and home messages
-            if Settings.shared.connectionMode == .multicast {
-                let uid = attributes["uid"] ?? ""
-                if uid.starts(with: "pilot-") || uid.starts(with: "home-") {
-                    return
-                }
-            }
+//            if Settings.shared.connectionMode == .multicast {
+//                let uid = attributes["uid"] ?? ""
+////                if uid.starts(with: "pilot-") || uid.starts(with: "home-") {
+////                    return
+////                }
+//            }
         } else if elementName == "point" {
             pointAttributes = attributes
             // For multicast message altitude is in hae
             if let haeAlt = attributes["hae"] {
                 alt = haeAlt  // Set alt for multicast messages
             }
+        } else if elementName == "track" {
+            trackAttributes = attributes
+            track_course = attributes["course"]
+            track_speed = attributes["speed"]
+            track_bearing = attributes["bearing"]
         }
     }
     
@@ -135,6 +152,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
     }
     
+          
+
+           
     private func processJSONArray(_ messages: [[String: Any]]) {
         var droneData: [String: Any] = [:]
         
@@ -307,8 +327,6 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
             // Get operator info
             let opID = operatorID?["operator_id"] as? String ?? ""
             let opIDType = operatorID?["operator_id_type"] as? String ?? ""
-            _ = operatorID?["protocol_version"] as? String ?? ""
-            
             
             // Skip only if the ID itself is empty or explicitly "drone-" (empty after prefix)
             if id.isEmpty || droneId == "drone-" {
@@ -597,11 +615,14 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         var timestampAdv: Double?
         var homeLat: Double?
         var homeLon: Double?
-        
+        var trackCourse: String?
+        var trackSpeed: String?
+        var trackBearing: String?
         
         let components = remarks.components(separatedBy: ", ")
         
-//        print("DEBUG: REMARKS COMPONENTS: \(components)")
+        print("DEBUG: REMARKS COMPONENTS: \(components)")
+        
         
         for component in components {
             let trimmed = component.trimmingCharacters(in: .whitespaces)
@@ -768,6 +789,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         
         print("Manufacturer: \(String(describing: manufacturer))")
         
+        
         return (mac, rssi, caaReg, idRegType, manufacturer, protocolVersion, description, speed, vspeed, alt, heightAGL,
                 heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus,
                 direction, timestamp, runtime, index, status, altPressure, horizAcc,
@@ -777,52 +799,6 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 timestampAdv, homeLat, homeLon)
     }
     
-    private func parseRemarks(_ remarks: String) {
-        let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-        for component in components {
-            
-            print("Processing component: \(component)")
-            
-            if component.hasPrefix("CPU Usage:") {
-                cpuUsage = Double(component.replacingOccurrences(of: "CPU Usage: ", with: "").replacingOccurrences(of: "%", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Total:") {
-                memoryTotal = Double(component.replacingOccurrences(of: "Memory Total: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Available:") {
-                memoryAvailable = Double(component.replacingOccurrences(of: "Memory Available: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Disk Total:") {
-                diskTotal = Double(component.replacingOccurrences(of: "Disk Total: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Disk Used:") {
-                diskUsed = Double(component.replacingOccurrences(of: "Disk Used: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Temperature:") {
-                temperature = Double(component.replacingOccurrences(of: "Temperature: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
-            } else if component.hasPrefix("Uptime:") {
-                uptime = Double(component.replacingOccurrences(of: "Uptime: ", with: "").replacingOccurrences(of: " seconds", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Used:") {
-                memoryUsed = Double(component.replacingOccurrences(of: "Memory Used: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Free:") {
-                memoryFree = Double(component.replacingOccurrences(of: "Memory Free: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Active:") {
-                memoryActive = Double(component.replacingOccurrences(of: "Memory Active: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Inactive:") {
-                memoryInactive = Double(component.replacingOccurrences(of: "Memory Inactive: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Buffers:") {
-                memoryBuffers = Double(component.replacingOccurrences(of: "Memory Buffers: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Shared:") {
-                memoryShared = Double(component.replacingOccurrences(of: "Memory Shared: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Cached:") {
-                memoryCached = Double(component.replacingOccurrences(of: "Memory Cached: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Slab:") {
-                memorySlab = Double(component.replacingOccurrences(of: "Memory Slab: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
-            } else if component.hasPrefix("Memory Percent:") {
-                memoryPercent = Double(component.replacingOccurrences(of: "Memory Percent: ", with: "").replacingOccurrences(of: " percent", with: "")) ?? 0.0
-            } else if component.hasPrefix("Pluto Temp:") {
-                plutoTemp = Double(component.replacingOccurrences(of: "Pluto Temp: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
-            } else if component.hasPrefix("Zynq Temp:") {
-                zynqTemp = Double(component.replacingOccurrences(of: "Zynq Temp: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
-            }
-            
-        }
-    }
     
     // MARK: - Message Handler
     private func handleDroneMessage(_ elementName: String, _ parent: String) {
@@ -835,9 +811,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                  vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType,
                  operatorLat, operatorLon, operatorAltGeo, classification,
                  channel, phy, accessAddress, advMode, deviceId, sequenceId, advAddress,
-                 timestampAdv, homeLat, homeLon) = parseDroneRemarks(remarks)
+                 timestampAdv, homeLat, homeLon, trackCourse, trackSpeed, trackBearing) = parseDroneRemarks(remarks)
             
-//            print("DEBUG - Parsing Remarks: \(remarks) and op lon is \(String(describing: operatorLon)) and home is \(String(describing: homeLat)) / \(String(describing: homeLon))")
+            //            print("DEBUG - Parsing Remarks: \(remarks) and op lon is \(String(describing: operatorLon)) and home is \(String(describing: homeLat)) / \(String(describing: homeLon))")
             
             let finalDescription = description?.isEmpty ?? true ? selfIDDesc : description ?? ""
             
@@ -930,6 +906,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     isSpoofed: false,
                     spoofingDetails: nil,
                     runtime: runtime ?? "",
+                    track_speed: trackSpeed?.description,
+                    track_bearing: track_bearing?.description,
                     rawMessage: buildRawMessage(mac, rssi, description)
                 )
             }
@@ -945,7 +923,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
                     processJSONArray(jsonArray)
                 } else if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    processSingleJSON(json)
+                    _ = processSingleJSON(json)
                 }
             }
             
@@ -1072,18 +1050,203 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         }
     }
     
-    private func parseTransmissionDetails(_ elementName: String) {
-        switch elementName {
-        case "Channel": cotMessage?.channel = Int(currentValue)
-        case "PHY": cotMessage?.phy = Int(currentValue)
-        case "AdvMode": cotMessage?.advMode = currentValue
-        case "DID": cotMessage?.did = Int(currentValue)
-        case "SID": cotMessage?.sid = Int(currentValue)
-        case "TxAdd": cotMessage?.txAdd = Int(currentValue)
-        case "RxAdd": cotMessage?.rxAdd = Int(currentValue)
-        case "AdLength": cotMessage?.adLength = Int(currentValue)
-        default: break
+    // MARK: - Parsing Helper Methods
+    private func parseRemarks(_ remarks: String) {
+        let components = remarks.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        for component in components {
+            
+            if component.hasPrefix("CPU Usage:") {
+                cpuUsage = Double(component.replacingOccurrences(of: "CPU Usage: ", with: "").replacingOccurrences(of: "%", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Total:") {
+                memoryTotal = Double(component.replacingOccurrences(of: "Memory Total: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Available:") {
+                memoryAvailable = Double(component.replacingOccurrences(of: "Memory Available: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Disk Total:") {
+                diskTotal = Double(component.replacingOccurrences(of: "Disk Total: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Disk Used:") {
+                diskUsed = Double(component.replacingOccurrences(of: "Disk Used: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Temperature:") {
+                temperature = Double(component.replacingOccurrences(of: "Temperature: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
+            } else if component.hasPrefix("Uptime:") {
+                uptime = Double(component.replacingOccurrences(of: "Uptime: ", with: "").replacingOccurrences(of: " seconds", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Used:") {
+                memoryUsed = Double(component.replacingOccurrences(of: "Memory Used: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Free:") {
+                memoryFree = Double(component.replacingOccurrences(of: "Memory Free: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Active:") {
+                memoryActive = Double(component.replacingOccurrences(of: "Memory Active: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Inactive:") {
+                memoryInactive = Double(component.replacingOccurrences(of: "Memory Inactive: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Buffers:") {
+                memoryBuffers = Double(component.replacingOccurrences(of: "Memory Buffers: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Shared:") {
+                memoryShared = Double(component.replacingOccurrences(of: "Memory Shared: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Cached:") {
+                memoryCached = Double(component.replacingOccurrences(of: "Memory Cached: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Slab:") {
+                memorySlab = Double(component.replacingOccurrences(of: "Memory Slab: ", with: "").replacingOccurrences(of: " MB", with: "")) ?? 0.0
+            } else if component.hasPrefix("Memory Percent:") {
+                memoryPercent = Double(component.replacingOccurrences(of: "Memory Percent: ", with: "").replacingOccurrences(of: " percent", with: "")) ?? 0.0
+            } else if component.hasPrefix("Pluto Temp:") {
+                plutoTemp = Double(component.replacingOccurrences(of: "Pluto Temp: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
+            } else if component.hasPrefix("Zynq Temp:") {
+                zynqTemp = Double(component.replacingOccurrences(of: "Zynq Temp: ", with: "").replacingOccurrences(of: "°C", with: "")) ?? 0.0
+            } else if component.hasPrefix("GPS Course:") {
+                gps_course = Double(component.replacingOccurrences(of: "GPS Course: ", with: "").replacingOccurrences(of: "°", with: "")) ?? 0.0
+            } else if component.hasPrefix("GPS Speed:") {
+                gps_speed = Double(component.replacingOccurrences(of: "GPS Speed: ", with: "").replacingOccurrences(of: " m/s", with: "")) ?? 0.0
+            }
         }
+    }
+    
+    private func parseDroneRemarks(_ remarks: String) -> (
+        mac: String?,
+        rssi: Int?,
+        caaReg: String?,
+        idRegType: String?,
+        manufacturer: String?,
+        protocolVersion: String?,
+        description: String?,
+        speed: Double?,
+        vspeed: Double?,
+        alt: Double?,
+        heightAGL: Double?,
+        heightType: String?,
+        pressureAltitude: Double?,
+        ewDirSegment: String?,
+        speedMultiplier: Double?,
+        opStatus: String?,
+        direction: Double?,
+        timestamp: String?,
+        runtime: String?,
+        index: String?,
+        status: String?,
+        altPressure: Double?,
+        horizAcc: Int?,
+        vertAcc: String?,
+        baroAcc: Int?,
+        speedAcc: Int?,
+        selfIDtext: String?,
+        selfIDDesc: String?,
+        operatorID: String?,
+        uaType: String?,
+        operatorLat: Double?,
+        operatorLon: Double?,
+        operatorAltGeo: Double?,
+        classification: Int?,
+        channel: Int?, phy: Int?,
+        accessAddress: Int?,
+        advMode: String?,
+        deviceId: Int?,
+        sequenceId: Int?,
+        advAddress: String?,
+        timestampAdv: Double?,
+        homeLat: Double?,
+        homeLon: Double?,
+        trackCourse: String?,
+        trackSpeed: String?,
+        trackBearing: String?
+    ) {
+        var mac: String?
+        var rssi: Int?
+        var caaReg: String?
+        var idRegType: String?
+        var protocolVersion: String?
+        var description: String?
+        var speed: Double?
+        var vspeed: Double?
+        var alt: Double?
+        var heightAGL: Double?
+        var heightType: String?
+        var pressureAltitude: Double?
+        var ewDirSegment: String?
+        var speedMultiplier: Double?
+        var opStatus: String?
+        var direction: Double?
+        var timestamp: String?
+        var runtime: String?
+        var index: String?
+        var status: String?
+        var altPressure: Double?
+        var horizAcc: Int?
+        var vertAcc: String?
+        var baroAcc: Int?
+        var speedAcc: Int?
+        var selfIDtext: String?
+        var selfIDDesc: String?
+        var operatorID: String?
+        var uaType: String?
+        var operatorLat: Double?
+        var operatorLon: Double?
+        var operatorAltGeo: Double?
+        var classification: Int?
+        var manufacturer = "Unknown"
+        var channel: Int?
+        var phy: Int?
+        var accessAddress: Int?
+        var advMode: String?
+        var deviceId: Int?
+        var sequenceId: Int?
+        var advAddress: String?
+        var timestampAdv: Double?
+        var homeLat: Double?
+        var homeLon: Double?
+        var trackCourse: String?
+        var trackSpeed: String?
+        var trackBearing: String?
+        
+        let components = remarks.components(separatedBy: ", ")
+        
+        for component in components {
+            let trimmed = component.trimmingCharacters(in: .whitespaces)
+            
+            if trimmed.hasPrefix("MAC:") {
+                mac = trimmed.dropFirst(4).trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first
+            } else if trimmed.hasPrefix("RSSI:") {
+                rssi = Int(trimmed.dropFirst(5).replacingOccurrences(of: "dBm", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("Course:") {
+                let courseStr = trimmed.dropFirst(7).replacingOccurrences(of: "°", with: "").trimmingCharacters(in: .whitespaces)
+                trackCourse = courseStr
+            } else if trimmed.hasPrefix("Track Speed:") {
+                let speedStr = trimmed.dropFirst(12).replacingOccurrences(of: " m/s", with: "").trimmingCharacters(in: .whitespaces)
+                trackSpeed = speedStr
+            } else if trimmed.hasPrefix("Track Bearing:") {
+                let bearingStr = trimmed.dropFirst(14).replacingOccurrences(of: "°", with: "").trimmingCharacters(in: .whitespaces)
+                trackBearing = bearingStr
+            } else if trimmed.hasPrefix("ID Type:") {
+                idRegType = trimmed.dropFirst(8).trimmingCharacters(in: .whitespaces)
+                if idRegType?.contains("CAA") == true {
+                    if let droneId = eventAttributes["uid"] {
+                        caaReg = droneId.replacingOccurrences(of: "drone-", with: "")
+                    }
+                }
+            } else if trimmed.hasPrefix("Manufacturer:") {
+                manufacturer = trimmed.dropFirst(13).trimmingCharacters(in: .whitespaces)
+            }
+            
+        }
+        
+        if manufacturer == "Unknown", let mac = mac {
+            let cleanMac = mac.replacingOccurrences(of: ":", with: "").uppercased()
+            for (brand, prefixes) in macPrefixesByManufacturer {
+                for prefix in prefixes {
+                    let cleanPrefix = prefix.replacingOccurrences(of: ":", with: "").uppercased()
+                    if cleanMac.hasPrefix(cleanPrefix) {
+                        manufacturer = brand
+                        break
+                    }
+                }
+                if manufacturer != "Unknown" { break }
+            }
+        }
+        
+        return (mac, rssi, caaReg, idRegType, manufacturer, protocolVersion, description, speed, vspeed, alt, heightAGL,
+                heightType, pressureAltitude, ewDirSegment, speedMultiplier, opStatus,
+                direction, timestamp, runtime, index, status, altPressure, horizAcc,
+                vertAcc, baroAcc, speedAcc, selfIDtext, selfIDDesc, operatorID, uaType,
+                operatorLat, operatorLon, operatorAltGeo, classification,
+                channel, phy, accessAddress, advMode, deviceId, sequenceId, advAddress,
+                timestampAdv, homeLat, homeLon, trackCourse, trackSpeed, trackBearing)
     }
     
     private func handleLocationFields(_ elementName: String) {

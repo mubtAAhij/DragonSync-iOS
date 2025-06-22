@@ -238,7 +238,7 @@ class DroneStorageManager: ObservableObject {
         encounter.lastSeen = Date()
         var didAddPoint = false
         
-        // Handle proximity points for FPV or encrypted devices
+        // Handle proximity points for encrypted devices
         if ((lat == 0 && lon == 0) && message.rssi != nil && message.rssi != 0) {
             var pointToAdd: FlightPathPoint? = nil
             
@@ -430,9 +430,29 @@ class DroneStorageManager: ObservableObject {
         }
     }
     
+    func updatePilotLocation(droneId: String, latitude: Double, longitude: Double) {
+        if var encounter = encounters[droneId] {
+            encounter.metadata["pilotLat"] = String(latitude)
+            encounter.metadata["pilotLon"] = String(longitude)
+            encounters[droneId] = encounter
+            saveToStorage()
+        }
+    }
+
+    func updateHomeLocation(droneId: String, latitude: Double, longitude: Double) {
+        if var encounter = encounters[droneId] {
+            encounter.metadata["homeLat"] = String(latitude)
+            encounter.metadata["homeLon"] = String(longitude)
+            encounters[droneId] = encounter
+            saveToStorage()
+        }
+    }
+
+    
+    
     func updateProximityPointsWithCorrectRadius() {
         for (id, encounter) in encounters {
-            if encounter.metadata["type"] == "fpv" || encounter.metadata["hasProximityPoints"] == "true" {
+            if encounter.metadata["hasProximityPoints"] == "true" {
                 var updatedEncounter = encounter
                 var updatedFlightPath: [FlightPathPoint] = []
                 

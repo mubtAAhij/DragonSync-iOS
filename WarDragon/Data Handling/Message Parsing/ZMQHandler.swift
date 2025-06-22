@@ -466,17 +466,18 @@ class ZMQHandler: ObservableObject {
         let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
         
         return """
-                <event version="2.0" uid="drone-\(droneId)" type="a-u-A-M-H-R" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
-                    <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
-                    <detail>
-                        <remarks>MAC: \(mac), RSSI: \(rssi)dBm, CAA: \(caaReg), ID Type: \(idType), UA Type: \(uaType), Manufacturer: \(manufacturer), Channel: \(String(describing: channel)), PHY: \(String(describing: phy)), Operator ID: \(opID), Access Address: \(String(describing: accessAddress)), Advertisement Mode: \(String(describing: advMode)), Device ID: \(String(describing: deviceId)), Sequence ID: \(String(describing: sequenceId)), Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Location/Vector: [Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Altitude \(operator_alt_geo) m, Classification: \(classification), Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc)], Text: \(selfIDtext), Description: \(desc), System: [Operator Lat: \(operator_lat), Operator Lon: \(operator_lon), Home Lat: \(homeLat), Home Lon: \(homeLon)]</remarks>
-                        <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
-                        <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
-                        <color argb="-256"/>
-                        <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
-                    </detail>
-                </event>
-                """
+        <event version="2.0" uid="drone-\(droneId)" type="a-u-A-M-H-R" time="\(now)" start="\(now)" stale="\(stale)" how="m-g">
+            <point lat="\(lat)" lon="\(lon)" hae="\(alt)" ce="9999999" le="999999"/>
+            <detail>
+                <track course="\(direction)" speed="\(speed)"/>
+                <remarks>MAC: \(mac), RSSI: \(rssi)dBm, CAA: \(caaReg), ID Type: \(idType), UA Type: \(uaType), Manufacturer: \(manufacturer), Channel: \(String(describing: channel)), PHY: \(String(describing: phy)), Operator ID: \(opID), Access Address: \(String(describing: accessAddress)), Advertisement Mode: \(String(describing: advMode)), Device ID: \(String(describing: deviceId)), Protocol Version: \(protocol_version.isEmpty ? mProtocol : protocol_version), Location/Vector: [Speed: \(speed) m/s, Vert Speed: \(vspeed) m/s, Geodetic Altitude: \(alt) m, Altitude \(operator_alt_geo) m, Classification: \(classification), Height AGL: \(height_agl) m, Height Type: \(height_type), Pressure Altitude: \(pressure_altitude) m, EW Direction Segment: \(ew_dir_segment), Speed Multiplier: \(speed_multiplier), Operational Status: \(op_status), Direction: \(direction), Course: \(direction)°, Track Speed: \(speed) m/s, Timestamp: \(timestamp), Runtime: \(mRuntime), Index: \(mIndex), Status: \(status), Alt Pressure: \(alt_pressure) m, Horizontal Accuracy: \(horiz_acc), Vertical Accuracy: \(vert_acc), Baro Accuracy: \(baro_acc), Speed Accuracy: \(speed_acc)], Text: \(selfIDtext), Description: \(desc), System: [Operator Lat: \(operator_lat), Operator Lon: \(operator_lon), Home Lat: \(homeLat), Home Lon: \(homeLon)]</remarks>
+                <contact endpoint="" phone="" callsign="drone-\(droneId)"/>
+                <precisionlocation geopointsrc="GPS" altsrc="GPS"/>
+                <color argb="-256"/>
+                <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/UAV_quad.png"/>
+            </detail>
+        </event>
+        """
     }
     
     private func formatDoubleValue(_ value: Any?) -> String {
@@ -653,14 +654,15 @@ class ZMQHandler: ObservableObject {
         "Zynq Temp: \(zynqTemp)°C"
         
         return """
-            <event version="2.0" uid="\(serialNumber)" type="b-m-p-s-m">
-                <point lat="\(gpsData["latitude"] as? Double ?? 0.0)" lon="\(gpsData["longitude"] as? Double ?? 0.0)" hae="\(gpsData["altitude"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
-                <detail> 
-                    <status readiness="true"/>
-                    <remarks>\(remarks)</remarks>
-                </detail>
-            </event>
-            """
+        <event version="2.0" uid="\(serialNumber)" type="b-m-p-s-m">
+            <point lat="\(gpsData["latitude"] as? Double ?? 0.0)" lon="\(gpsData["longitude"] as? Double ?? 0.0)" hae="\(gpsData["altitude"] as? Double ?? 0.0)" ce="9999999" le="9999999"/>
+            <detail>
+                <track course="\(gpsData["track"] as? Double ?? 0.0)" speed="\(gpsData["speed"] as? Double ?? 0.0)"/>
+                <status readiness="true"/>
+                <remarks>\(remarks)</remarks>
+            </detail>
+        </event>
+        """
     }
     
     //MARK: - Services Manager

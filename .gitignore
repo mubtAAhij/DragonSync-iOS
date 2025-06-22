@@ -70,3 +70,5 @@ iOSInjectionProject/
 Podfile.lock
 
 multicastTest.py
+
+Scripts/testscript.py

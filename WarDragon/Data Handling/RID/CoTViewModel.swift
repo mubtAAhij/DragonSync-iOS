@@ -154,7 +154,6 @@ class CoTViewModel: ObservableObject {
         var speedAcc: String?
         var timestampAccuracy: String?
         
-        
         // ZMQ Operator & System fields
         var operator_id: String?
         var operator_id_type: String?
@@ -195,6 +194,34 @@ class CoTViewModel: ObservableObject {
         
         var index: String?
         var runtime: String?
+        
+        //CoT Message Tracks
+        var track_course: String?
+        var track_speed: String?
+        var track_bearing: String?
+        
+        var hasTrackInfo: Bool {
+            return track_course != nil || track_speed != nil || track_bearing != nil ||
+                   (direction != nil && direction != "0")
+        }
+        
+        var trackHeading: String? {
+            if let course = track_course {
+                return "\(course)°"
+            } else if let direction = direction {
+                return "\(direction)°"
+            }
+            return nil
+        }
+
+        var trackSpeedFormatted: String? {
+            if let speed = track_speed {
+                return "\(speed) m/s"
+            } else if !self.speed.isEmpty && self.speed != "0.0" {
+                return "\(self.speed) m/s"
+            }
+            return nil
+        }
         
         // Data store
         func saveToStorage() {
@@ -805,6 +832,23 @@ class CoTViewModel: ObservableObject {
     
     private func updateMessage(_ message: CoTMessage) {
         
+        // Extract the numerical ID from messages like "pilot-107", "home-107", "drone-107"
+        let extractedId = extractNumericId(from: message.uid)
+        
+        // Check if this is a pilot or home message that should be associated with a drone
+        if message.uid.hasPrefix("pilot-") {
+            updatePilotLocation(for: extractedId, message: message)
+            return // Don't create separate message for pilot
+        }
+        
+        if message.uid.hasPrefix("home-") {
+            updateHomeLocation(for: extractedId, message: message)
+            return // Don't create separate message for home
+        }
+        
+        // Early exit for blocked devices
+        let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
+        
         // Uncomment this to disallow zero-coordinate entries
 //        guard let coordinate = message.coordinate,
 //              coordinate.latitude != 0 || coordinate.longitude != 0 else {
@@ -892,6 +936,85 @@ class CoTViewModel: ObservableObject {
             self.updateParsedMessages(updatedMessage: updatedMessage, signature: signature)
         }
     }
+    
+    private func extractNumericId(from uid: String) -> String {
+        if let match = uid.firstMatch(of: /.*-(\d+)/) {
+            return String(match.1)
+        }
+        return uid
+    }
+
+    private func updatePilotLocation(for droneId: String, message: CoTMessage) {
+        let targetUid = "drone-\(droneId)"
+        
+        // Find existing drone message and update pilot location
+        if let index = parsedMessages.firstIndex(where: { $0.uid == targetUid }) {
+            var updatedMessage = parsedMessages[index]
+            updatedMessage.pilotLat = message.lat
+            updatedMessage.pilotLon = message.lon
+            parsedMessages[index] = updatedMessage
+            
+            // Also update in storage
+            DroneStorageManager.shared.updatePilotLocation(
+                droneId: targetUid,
+                latitude: Double(message.lat) ?? 0.0,
+                longitude: Double(message.lon) ?? 0.0
+            )
+        }
+    }
+
+    private func updateHomeLocation(for droneId: String, message: CoTMessage) {
+        let targetUid = "drone-\(droneId)"
+        
+        // Find existing drone message and update home location
+        if let index = parsedMessages.firstIndex(where: { $0.uid == targetUid }) {
+            var updatedMessage = parsedMessages[index]
+            updatedMessage.homeLat = message.lat
+            updatedMessage.homeLon = message.lon
+            parsedMessages[index] = updatedMessage
+            
+            // Also update in storage
+            DroneStorageManager.shared.updateHomeLocation(
+                droneId: targetUid,
+                latitude: Double(message.lat) ?? 0.0,
+                longitude: Double(message.lon) ?? 0.0
+            )
+        }
+    }
+
+    // MARK: - Helper Methods
+
+
+    private func extractMAC(from message: CoTMessage) -> String? {
+        // Try message property first
+        if let mac = message.mac { return mac }
+        
+        // Try raw message sources
+        if let basicIdMac = (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String {
+            return basicIdMac
+        }
+        
+        if let auxAdvMac = (message.rawMessage["AUX_ADV_IND"] as? [String: Any])?["addr"] as? String {
+            return auxAdvMac
+        }
+        
+        return nil
+    }
+
+    private func updateCAARegistration(for mac: String, message: CoTMessage) {
+        // Find existing message with same MAC and update its CAA registration
+        if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
+            var existingMessage = self.parsedMessages[existingIndex]
+            existingMessage.caaRegistration = message.caaRegistration ?? message.id
+            // Keep the original ID type if it's a serial number
+            if !existingMessage.idType.contains("Serial") {
+                existingMessage.idType = "CAA Assigned Registration ID"
+            }
+            self.parsedMessages[existingIndex] = existingMessage
+            print("Updated CAA registration for existing drone with MAC: \(mac)")
+        }
+    }
+
     
     func determineSignalType(message: CoTMessage, mac: String?, rssi: Int?, updatedMessage: inout CoTMessage) -> SignalSource.SignalType {
         print("DEBUG: Index and runbtiume : \(String(describing: message.index)) and \(String(describing: message.runtime))")
