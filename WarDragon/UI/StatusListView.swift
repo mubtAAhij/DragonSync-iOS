@@ -37,6 +37,9 @@ struct StatusListView: View {
                         ForEach(statusViewModel.statusMessages) { message in
                             StatusMessageView(message: message)
                         }
+                        .onDelete { indexSet in
+                            statusViewModel.deleteStatusMessages(at: indexSet)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -62,7 +65,7 @@ struct StatusListView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button(action: { statusViewModel.statusMessages.removeAll() }) {
-                        Label("Clear Status", systemImage: "trash")
+                        Label("Clear All Status", systemImage: "trash")
                     }
                     Button(action: { showServiceManagement = true }) {
                         Label("Services", systemImage: "gearshape.2")

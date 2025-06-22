@@ -116,6 +116,10 @@ extension StatusViewModel {
             )
         }
     }
+    
+    func deleteStatusMessages(at indexSet: IndexSet) {
+        statusMessages.remove(atOffsets: indexSet)
+    }
 
     private func sendSystemNotification(title: String, message: String) {
         guard Settings.shared.notificationsEnabled else { return }
