@@ -356,20 +356,49 @@ class DroneStorageManager: ObservableObject {
         }
         
         var updatedMetadata = encounter.metadata
+
+        // Add other metadata first
         if let mac = message.mac {
             updatedMetadata["mac"] = mac
         }
-        
+
         if let caaReg = message.caaRegistration {
             updatedMetadata["caaRegistration"] = caaReg
         }
-        
+
         if let manufacturer = message.manufacturer {
             updatedMetadata["manufacturer"] = manufacturer
         }
-        
-        // TODO metadata to display from above
+
+        // Add pilot location
+        if let pilotLat = Double(message.pilotLat), let pilotLon = Double(message.pilotLon),
+           pilotLat != 0 || pilotLon != 0 {
+            updatedMetadata["pilotLat"] = message.pilotLat
+            updatedMetadata["pilotLon"] = message.pilotLon
+        }
+
+        // Add home location
+        if let homeLat = Double(message.homeLat), let homeLon = Double(message.homeLon),
+           homeLat != 0 || homeLon != 0 {
+            updatedMetadata["homeLat"] = message.homeLat
+            updatedMetadata["homeLon"] = message.homeLon
+        }
+
+        // Apply the updated metadata to the encounter
         encounter.metadata = updatedMetadata
+        // Add pilot location
+        if let pilotLat = Double(message.pilotLat), let pilotLon = Double(message.pilotLon),
+           pilotLat != 0 || pilotLon != 0 {
+            updatedMetadata["pilotLat"] = message.pilotLat
+            updatedMetadata["pilotLon"] = message.pilotLon
+        }
+
+        // Add home location (which you're calling takeoff)
+        if let lat = Double(message.homeLat), let lon = Double(message.homeLon),
+           lat != 0 || lon != 0 {
+            updatedMetadata["takeoffLat"] = message.homeLat
+            updatedMetadata["takeoffLon"] = message.homeLon
+        }
         
         // Update name or trust status
         if encounters[droneId] != nil {

@@ -10,6 +10,7 @@ import Network
 import UserNotifications
 import CoreLocation
 import UIKit
+import SwiftUI
 
 class CoTViewModel: ObservableObject {
     @Published var parsedMessages: [CoTMessage] = []
@@ -202,7 +203,7 @@ class CoTViewModel: ObservableObject {
         
         var hasTrackInfo: Bool {
             return track_course != nil || track_speed != nil || track_bearing != nil ||
-                   (direction != nil && direction != "0")
+            (direction != nil && direction != "0")
         }
         
         var trackHeading: String? {
@@ -213,7 +214,7 @@ class CoTViewModel: ObservableObject {
             }
             return nil
         }
-
+        
         var trackSpeedFormatted: String? {
             if let speed = track_speed {
                 return "\(speed) m/s"
@@ -425,17 +426,17 @@ class CoTViewModel: ObservableObject {
             object: nil
         )
     }
-
+    
     @objc private func handleAppDidEnterBackground() {
         // Prepare connections for background mode
         prepareForBackgroundExpiry()
     }
-
+    
     @objc private func handleAppWillEnterForeground() {
         // Resume normal connection behavior
         resumeFromBackground()
     }
-
+    
     @objc private func refreshConnections() {
         // Only refresh if we're actively listening
         if isListeningCot && !isReconnecting {
@@ -655,7 +656,7 @@ class CoTViewModel: ObservableObject {
             
             
             if let message = String(data: data, encoding: .utf8) {
-//                print("DEBUG - Received data: \(message)")
+                //                print("DEBUG - Received data: \(message)")
                 
                 // Check for Status message first (has both status code type and remarks with CPU Usage)
                 if message.contains("<remarks>CPU Usage:") {
@@ -813,7 +814,7 @@ class CoTViewModel: ObservableObject {
         
         print("WarDragon successfully resumed from background")
     }
-
+    
     // Reconnect BG if we need to
     func reconnectIfNeeded() {
         if !isReconnecting && Settings.shared.isListening && !isListeningCot {
@@ -943,7 +944,7 @@ class CoTViewModel: ObservableObject {
         }
         return uid
     }
-
+    
     private func updatePilotLocation(for droneId: String, message: CoTMessage) {
         let targetUid = "drone-\(droneId)"
         
@@ -962,7 +963,7 @@ class CoTViewModel: ObservableObject {
             )
         }
     }
-
+    
     private func updateHomeLocation(for droneId: String, message: CoTMessage) {
         let targetUid = "drone-\(droneId)"
         
@@ -981,7 +982,7 @@ class CoTViewModel: ObservableObject {
             )
         }
     }
-
+    
     // MARK: - Helper Methods
 
 
@@ -1033,7 +1034,7 @@ class CoTViewModel: ObservableObject {
         if !isValidMAC(checkedMac) {
             newSourceType = .sdr
         } else if message.index != nil && message.index != "" && message.index != "0" ||
-                  message.runtime != nil && message.runtime != "" && message.runtime != "0" {
+                    message.runtime != nil && message.runtime != "" && message.runtime != "0" {
             newSourceType = .wifi
         } else {
             newSourceType = .bluetooth
@@ -1084,6 +1085,7 @@ class CoTViewModel: ObservableObject {
 
     
     private func updateDroneSignaturesAndEncounters(_ signature: DroneSignature, message: CoTMessage) {
+        
         // Update drone signatures
         if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
             self.droneSignatures[index] = signature
@@ -1157,6 +1159,83 @@ class CoTViewModel: ObservableObject {
             // Remove alert ring if coordinates are now valid
             alertRings.removeAll(where: { $0.droneId == message.uid })
         }
+    }
+    
+    // Helper function to calculate distance using the MDN RSSI scale
+    private func calculateMDNDistance(_ rssi: Double) -> Double {
+        let minRssi = 1200.0 // Threshold for weakest signals
+        let maxRssi = 2800.0 // Threshold for strongest signals
+        
+        if rssi < minRssi {
+            return 1500.0 // Maximum range when signal is too weak
+        }
+        
+        let normalizedRssi = (rssi - minRssi) / (maxRssi - minRssi)
+        let clampedNormalizedRssi = min(1.0, max(0.0, normalizedRssi))
+        
+        // Use an exponential curve to map RSSI to distance
+        // Strong signal (closer to maxRssi) results in shorter distance
+        // Weak signal (closer to minRssi) results in longer distance
+        let distance = 1500.0 * exp(-5.0 * clampedNormalizedRssi)
+        
+        // Ensure distance stays within the expected range
+        return min(max(distance, 0.0), 1500.0)
+    }
+    
+    
+    
+
+    // Helper function to update alert rings for consolidated messages
+    private func updateAlertRingForConsolidated(consolidated: CoTMessage, originalMessages: [CoTMessage]) {
+        // Remove all existing alert rings for the original messages
+        for message in originalMessages {
+            alertRings.removeAll(where: { $0.droneId == message.uid })
+        }
+        
+        // Create a new alert ring for the consolidated message
+        if let monitorStatus = statusViewModel.statusMessages.last {
+            let monitorLocation = CLLocationCoordinate2D(
+                latitude: monitorStatus.gpsData.latitude,
+                longitude: monitorStatus.gpsData.longitude
+            )
+            
+            // Calculate radius based on strongest signal
+            let rssiValue = Double(consolidated.rssi ?? 0)
+            let distance: Double
+            
+            if rssiValue > 1000 {
+                distance = calculateMDNDistance(rssiValue)
+            } else {
+                distance = DroneSignatureGenerator().calculateDistance(rssiValue)
+            }
+            
+            let newRing = AlertRing(
+                centerCoordinate: monitorLocation,
+                radius: distance,
+                droneId: consolidated.uid,
+                rssi: consolidated.rssi ?? 0
+            )
+            
+            alertRings.append(newRing)
+        }
+    }
+
+    // Helper to calculate radius from RSSI
+    private func calculateRadius(rssi: Double) -> Double {
+        if rssi > 1000 {
+            // MDN-style values (around 1400-2500)
+            return 100.0 + ((rssi - 1200) / 10)
+        } else {
+            // Standard RSSI values (negative dBm)
+            let generator = DroneSignatureGenerator()
+            return generator.calculateDistance(rssi)
+        }
+    }
+
+    
+    private func calculateConfidenceRadius(_ confidence: Double) -> Double {
+        // Radius gets smaller as confidence increases
+        return 50.0 + ((1.0 - confidence) * 250.0)
     }
     
     private func updateMACHistory(droneId: String, mac: String?) {
@@ -1258,7 +1337,7 @@ class CoTViewModel: ObservableObject {
             }
         }
     }
-
+    
     private func handleCAAMessage(_ message: CoTMessage) {
         // Special handling for CAA messages that don't generate a signature
         if let mac = message.mac {
@@ -1373,4 +1452,104 @@ class CoTViewModel: ObservableObject {
         }
     }
     
+}
+
+
+extension CoTViewModel.CoTMessage {
+    
+    var timestampDouble: Double {
+        if let timestampString = timestamp, let value = Double(timestampString) {
+            return value
+        }
+        // Fallback to current time if timestamp is invalid
+        return Date().timeIntervalSince1970
+    }
+    
+    enum ConnectionStatus {
+        case connected
+        case weak
+        case lost
+        case unknown
+        
+        var color: Color {
+            switch self {
+            case .connected: return .green
+            case .weak: return .yellow
+            case .lost: return .red
+            case .unknown: return .gray
+            }
+        }
+        
+        var description: String {
+            switch self {
+            case .connected: return "Connected"
+            case .weak: return "Weak Signal"
+            case .lost: return "Connection Lost"
+            case .unknown: return "Unknown"
+            }
+        }
+    }
+    
+    var connectionStatus: ConnectionStatus {
+        let currentTime = Date().timeIntervalSince1970
+        let messageTime = timestampDouble
+        let timeSinceLastUpdate = currentTime - messageTime
+        
+        if timeSinceLastUpdate < 5 {
+            if let rssi = rssi {
+                return rssi > -70 ? .connected : .weak
+            }
+            return .connected
+        } else if timeSinceLastUpdate < 30 {
+            return .weak
+        } else {
+            return .lost
+        }
+    }
+}
+
+extension CoTViewModel.CoTMessage {
+    struct TrackData {
+        let course: String?
+        let speed: String?
+        let bearing: String?
+    }
+    
+    func getTrackData() -> TrackData {
+        // Extract track data from rawMessage if available
+        var course: String?
+        var trackSpeed: String?
+        var bearing: String?
+        
+        // Try to get course from various possible fields
+        if let trackDict = rawMessage["track"] as? [String: Any] {
+            course = trackDict["course"] as? String
+            trackSpeed = trackDict["speed"] as? String
+        }
+        
+        // Try detail section
+        if let detailDict = rawMessage["detail"] as? [String: Any] {
+            if let trackDict = detailDict["track"] as? [String: Any] {
+                course = course ?? (trackDict["course"] as? String)
+                trackSpeed = trackSpeed ?? (trackDict["speed"] as? String)
+            }
+        }
+        
+        // Calculate bearing if we have coordinates
+        if let lat = Double(lat), let lon = Double(lon),
+           let homeLat = Double(homeLat), let homeLon = Double(homeLon),
+           homeLat != 0.0 && homeLon != 0.0 {
+            let deltaLon = (homeLon - lon) * .pi / 180
+            let lat1Rad = lat * .pi / 180
+            let lat2Rad = homeLat * .pi / 180
+            
+            let y = sin(deltaLon) * cos(lat2Rad)
+            let x = cos(lat1Rad) * sin(lat2Rad) - sin(lat1Rad) * cos(lat2Rad) * cos(deltaLon)
+            let bearingRad = atan2(y, x)
+            let bearingDeg = bearingRad * 180 / .pi
+            bearing = String(format: "%.0f", bearingDeg < 0 ? bearingDeg + 360 : bearingDeg)
+        }
+        
+        return TrackData(course: course, speed: trackSpeed, bearing: bearing)
+    }
 }
