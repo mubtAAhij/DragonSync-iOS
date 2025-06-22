@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import MapKit
+import CoreLocation
 
 struct StatusListView: View {
     @ObservedObject var statusViewModel: StatusViewModel
+    @ObservedObject var cotViewModel: CoTViewModel
     @StateObject private var serviceViewModel = ServiceViewModel()
     @State private var showServiceManagement = false
     
@@ -16,19 +19,21 @@ struct StatusListView: View {
         GeometryReader { geometry in
             ScrollViewReader { proxy in
                 List {
-                    // Service Status Widget
-//                    Section {
-//                        ServiceStatusWidget(
-//                            healthReport: serviceViewModel.healthReport,
-//                            criticalServices: serviceViewModel.criticalServices(),
-//                            showServiceManagement: $showServiceManagement
-//                        )
+                    // We'll create flight paths from the parsed messages instead
+                    let messagesWithCoordinates = cotViewModel.parsedMessages.filter {
+                        $0.coordinate != nil && $0.coordinate!.latitude != 0 && $0.coordinate!.longitude != 0
+                    }
+                    
+//                    if !messagesWithCoordinates.isEmpty {
+//                        Section("Active Drones") {
+//                            ForEach(messagesWithCoordinates) { message in
+//                                ActiveDroneRow(message: message)
+//                            }
+//                        }
 //                    }
-//                    .listRowInsets(EdgeInsets())
-//                    .listRowBackground(Color.clear)
                     
                     // System status messages
-                    Section {
+                    Section("System Status") {
                         ForEach(statusViewModel.statusMessages) { message in
                             StatusMessageView(message: message)
                         }
@@ -53,6 +58,20 @@ struct StatusListView: View {
             }
         }
         .navigationTitle("System Status")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(action: { statusViewModel.statusMessages.removeAll() }) {
+                        Label("Clear Status", systemImage: "trash")
+                    }
+                    Button(action: { showServiceManagement = true }) {
+                        Label("Services", systemImage: "gearshape.2")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
         .sheet(isPresented: $showServiceManagement) {
             NavigationView {
                 ServiceManagementView(viewModel: serviceViewModel)
@@ -77,6 +96,81 @@ struct StatusListView: View {
     }
 }
 
+struct DroneConnectionRow: View {
+    let message: CoTViewModel.CoTMessage
+    let cotViewModel: CoTViewModel
+    
+    var body: some View {
+        HStack {
+            Circle()
+                .fill(message.connectionStatus.color)
+                .frame(width: 12, height: 12)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(message.uid)
+                    .font(.appHeadline)
+                Text(message.connectionStatus.description)
+                    .font(.appCaption)
+                    .foregroundColor(message.connectionStatus.color)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 2) {
+                if let rssi = message.rssi {
+                    Text("\(rssi) dBm")
+                        .font(.appCaption)
+                        .foregroundColor(.secondary)
+                }
+                Text(formatLastSeen(Double(message.timestamp ?? "0") ?? 0))
+                    .font(.appCaption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private func formatLastSeen(_ timestamp: Double) -> String {
+        let date = Date(timeIntervalSince1970: timestamp)
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+// Replace FlightPathRow with ActiveDroneRow since we don't have flight paths
+struct ActiveDroneRow: View {
+    let message: CoTViewModel.CoTMessage
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "video")
+                .foregroundStyle(.blue)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(message.id)
+                    .font(.appHeadline)
+                if let coordinate = message.coordinate {
+                    Text("Lat: \(coordinate.latitude, specifier: "%.4f"), Lon: \(coordinate.longitude, specifier: "%.4f")")
+                        .font(.appCaption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(message.alt) m")
+                    .font(.appCaption)
+                Text("\(message.speed) m/s")
+                    .font(.appCaption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 struct ServiceStatusWidget: View {
     let healthReport: ServiceViewModel.HealthReport?
     let criticalServices: [ServiceControl]
@@ -85,55 +179,20 @@ struct ServiceStatusWidget: View {
     var body: some View {
         Button(action: { showServiceManagement = true }) {
             VStack(spacing: 4) {
-                // Health Status Bar
-//                HStack(spacing: 12) {
-//                    Circle()
-//                        .fill(healthReport?.statusColor ?? .gray)
-//                        .frame(width: 12, height: 12)
-//                    
-//                    Text(healthReport?.overallHealth.uppercased() ?? "SYSTEM SERVICES")
-//                        .font(.appHeadline)
-//                    
-//                    Spacer()
-//                    
-//                    Image(systemName: "chevron.right")
-//                        .foregroundColor(.secondary)
-//                }
-                
-                // Critical Services Preview
-                if !criticalServices.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("CRITICAL SERVICES")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.red)
-                        
-                        ForEach(criticalServices.prefix(2)) { service in
-                            HStack {
-                                Circle()
-                                    .fill(service.status.healthStatus.color)
-                                    .frame(width: 8, height: 8)
-                                Text(service.description)
-                                    .font(.system(.caption, design: .monospaced))
-                                Spacer()
-                            }
-                        }
-                        
-                        if criticalServices.count > 2 {
-                            Text("+ \(criticalServices.count - 2) more")
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.top, 4)
+                HStack {
+                    Circle()
+                        .fill(.gray)
+                        .frame(width: 12, height: 12)
+                    
+                    Text("SERVICE STATUS")
+                        .font(.appHeadline)
+                    
+                    Spacer()
                 }
             }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(UIColor.secondarySystemBackground))
-            )
-            .padding(.horizontal)
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding()
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(12)
     }
 }
