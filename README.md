@@ -85,6 +85,15 @@
 
 ## Detection & Tracking
 
+- **Swipe-to-delete & untrack**
+
+![image](https://github.com/user-attachments/assets/525358d3-576e-44bd-b76e-661fa2201109)
+
+- **Label encounters with aliases and trust status**
+
+![image](https://github.com/user-attachments/assets/5a497881-f270-4213-b542-552ef37b1a3f)
+
+
 ### Dashboard Display
 - Overview of live signal counts, system health, and active drones with proximity alerts
 
