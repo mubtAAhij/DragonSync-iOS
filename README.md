@@ -44,6 +44,9 @@
 - Instant flight path visualization and telemetry
 - Multi-protocol (ZMQ & multicast) with tri-source detection
 
+  ![image](https://github.com/user-attachments/assets/8f2b82b9-7e0d-410a-9c68-8c5c32c1ae05)
+
+
 ### Spoof Detection
 - Advanced analysis: signal strength, position consistency, transmission patterns, and flight physics
 
