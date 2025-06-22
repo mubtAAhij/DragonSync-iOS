@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var showAlert = false
     @State private var latestMessage: CoTViewModel.CoTMessage?
     @State private var selectedTab: Int
+    @State private var showDeleteAllConfirmation = false
     
     
     init() {
@@ -94,7 +95,7 @@ struct ContentView: View {
                         }
                     }
                 }
-                .navigationTitle("DragonSync")
+                .navigationTitle("Detections")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
@@ -117,14 +118,9 @@ struct ContentView: View {
                                 Label("Stop All Tracking", systemImage: "eye.slash")
                             }
                             
-                            // Add option to delete all from history
+                            // Modified button - now shows confirmation
                             Button(role: .destructive, action: {
-                                droneStorage.deleteAllEncounters()
-                                cotViewModel.parsedMessages.removeAll()
-                                cotViewModel.droneSignatures.removeAll()
-                                cotViewModel.macIdHistory.removeAll()
-                                cotViewModel.macProcessing.removeAll()
-                                cotViewModel.alertRings.removeAll()
+                                showDeleteAllConfirmation = true
                             }) {
                                 Label("Delete All History", systemImage: "trash.fill")
                             }
@@ -140,15 +136,28 @@ struct ContentView: View {
                         Text("From: \(message.uid)\nType: \(message.type)\nLocation: \(message.lat), \(message.lon)")
                     }
                 }
+                // Add the confirmation alert
+                .alert("Delete All History", isPresented: $showDeleteAllConfirmation) {
+                    Button("Delete", role: .destructive) {
+                        droneStorage.deleteAllEncounters()
+                        cotViewModel.parsedMessages.removeAll()
+                        cotViewModel.droneSignatures.removeAll()
+                        cotViewModel.macIdHistory.removeAll()
+                        cotViewModel.macProcessing.removeAll()
+                        cotViewModel.alertRings.removeAll()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will permanently delete all stored drone encounters and detection history. This action cannot be undone.")
+                }
             }
-            
             .tabItem {
                 Label("Drones", systemImage: "airplane.circle")
             }
             .tag(1)
             
             NavigationStack {
-                StatusListView(statusViewModel: statusViewModel)
+                StatusListView(statusViewModel: statusViewModel, cotViewModel: cotViewModel)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button(action: { statusViewModel.statusMessages.removeAll() }) {
@@ -177,29 +186,29 @@ struct ContentView: View {
             }
             .tag(4)
             
-//            NavigationStack {
-//                SpectrumView(viewModel: spectrumViewModel)
-//                    .navigationTitle("Spectrum")
-//            }
-//            .tabItem {
-//                Label("Spectrum", systemImage: "waveform")
-//            }
-//            .tag(4)
+            //            NavigationStack {
+            //                SpectrumView(viewModel: spectrumViewModel)
+            //                    .navigationTitle("Spectrum")
+            //            }
+            //            .tabItem {
+            //                Label("Spectrum", systemImage: "waveform")
+            //            }
+            //            .tag(4)
         }
         
         .onChange(of: settings.isListening) {
             if settings.isListening {
                 cotViewModel.startListening()
-            } else { 
+            } else {
                 cotViewModel.stopListening()
             }
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             if newValue != 3 { // Spectrum tab
-//                spectrumViewModel.stopListening()
+                //                spectrumViewModel.stopListening()
             } else if settings.isListening {
                 let port = UInt16(UserDefaults.standard.integer(forKey: "spectrumPort"))
-//                spectrumViewModel.startListening(port: port)
+                //                spectrumViewModel.startListening(port: port)
             }
         }
         .onChange(of: settings.connectionMode) {
