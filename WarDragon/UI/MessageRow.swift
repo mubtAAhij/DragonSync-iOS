@@ -221,9 +221,6 @@ struct MessageRow: View {
                     Text(message.id)
                         .font(.system(.title3, design: .monospaced))
                         .foregroundColor(.primary)
-                    
-//                    Image(systemName: trustStatus.icon)  // 11.2 hotfix for UI: iPhones need only one icon for size reasons,
-//                        .foregroundColor(trustStatus.color)
                 }
                 
                 if let caaReg = message.caaRegistration, !caaReg.isEmpty {
@@ -242,10 +239,20 @@ struct MessageRow: View {
                 FAALookupButton(mac: message.mac, remoteId: message.uid.replacingOccurrences(of: "drone-", with: ""))
             }
             
-            Image(systemName: trustStatus.icon)
-                .foregroundColor(trustStatus.color)
-                .font(.system(size: 18))
-                .padding(.trailing, 4)
+            VStack(alignment: .trailing, spacing: 2) {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(message.statusColor)
+                        .frame(width: 8, height: 8)
+                    Text(message.statusDescription)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(message.statusColor)
+                }
+                
+                Image(systemName: trustStatus.icon)
+                    .foregroundColor(trustStatus.color)
+                    .font(.system(size: 18))
+            }
             
             Button(action: { showingInfoEditor = true }) {
                 Image(systemName: "pencil.circle")

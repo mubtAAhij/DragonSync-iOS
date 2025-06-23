@@ -105,21 +105,21 @@ class Settings: ObservableObject {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("statusNotificationInterval") var statusNotificationInterval: StatusNotificationInterval = .never {
         didSet {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("statusNotificationThresholds") var statusNotificationThresholds = true {
         didSet {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("lastStatusNotificationTime") private var lastStatusNotificationTimestamp: Double = 0
-
+    
     var lastStatusNotificationTime: Date {
         get {
             Date(timeIntervalSince1970: lastStatusNotificationTimestamp)
@@ -128,7 +128,7 @@ class Settings: ObservableObject {
             lastStatusNotificationTimestamp = newValue.timeIntervalSince1970
         }
     }
-
+    
     func updateStatusNotificationSettings(
         enabled: Bool,
         interval: StatusNotificationInterval,
@@ -138,7 +138,7 @@ class Settings: ObservableObject {
         statusNotificationInterval = interval
         statusNotificationThresholds = thresholds
     }
-
+    
     func shouldSendStatusNotification() -> Bool {
         guard statusNotificationsEnabled else { return false }
         
@@ -174,13 +174,13 @@ class Settings: ObservableObject {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("webhookEvents") private var webhookEventsJson = "" {
         didSet {
             objectWillChange.send()
         }
     }
-
+    
     var enabledWebhookEvents: Set<WebhookEvent> {
         get {
             if let data = webhookEventsJson.data(using: .utf8),
@@ -196,7 +196,7 @@ class Settings: ObservableObject {
             }
         }
     }
-
+    
     func updateWebhookSettings(enabled: Bool, events: Set<WebhookEvent>? = nil) {
         webhooksEnabled = enabled
         if let events = events {
@@ -209,53 +209,53 @@ class Settings: ObservableObject {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("tempWarningThreshold") var tempWarningThreshold: Double = 70.0 {  // 70°C
         didSet {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("memoryWarningThreshold") var memoryWarningThreshold: Double = 0.85 {  // 85%
         didSet {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("plutoTempThreshold") var plutoTempThreshold: Double = 85.0 {  // 85°C
         didSet {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("zynqTempThreshold") var zynqTempThreshold: Double = 85.0 {  // 85°C
         didSet {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("proximityThreshold") var proximityThreshold: Int = -60 {  // -60 dBm
         didSet {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("enableWarnings") var enableWarnings = true {
         didSet {
             objectWillChange.send()
         }
     }
-
+    
     @AppStorage("systemWarningsEnabled") var systemWarningsEnabled = true {
         didSet {
             objectWillChange.send()
         }
     }
     @AppStorage("enableProximityWarnings") var enableProximityWarnings = true
-    @AppStorage("messageProcessingInterval") var messageProcessingInterval: Int = 100
+    @AppStorage("messageProcessingInterval") var messageProcessingInterval: Int = 350
     
     //MARK: - Connection
-
+    
     private init() {
         toggleListening(false)
         UIApplication.shared.isIdleTimerDisabled = keepScreenOn
@@ -301,56 +301,56 @@ class Settings: ObservableObject {
     }
     
     var zmqHostHistory: [String] {
-           get {
-               if let data = zmqHostHistoryJson.data(using: .utf8),
-                  let array = try? JSONDecoder().decode([String].self, from: data) {
-                   return array
-               }
-               return []
-           }
-           set {
-               if let data = try? JSONEncoder().encode(newValue),
-                  let json = String(data: data, encoding: .utf8) {
-                   zmqHostHistoryJson = json
-               }
-           }
-       }
-       
-       var multicastHostHistory: [String] {
-           get {
-               if let data = multicastHostHistoryJson.data(using: .utf8),
-                  let array = try? JSONDecoder().decode([String].self, from: data) {
-                   return array
-               }
-               return []
-           }
-           set {
-               if let data = try? JSONEncoder().encode(newValue),
-                  let json = String(data: data, encoding: .utf8) {
-                   multicastHostHistoryJson = json
-               }
-           }
-       }
-    
-    func updateConnectionHistory(host: String, isZmq: Bool) {
-            if isZmq {
-                var history = zmqHostHistory
-                history.removeAll { $0 == host }
-                history.insert(host, at: 0)
-                if history.count > 5 {
-                    history = Array(history.prefix(5))
-                }
-                zmqHostHistory = history
-            } else {
-                var history = multicastHostHistory
-                history.removeAll { $0 == host }
-                history.insert(host, at: 0)
-                if history.count > 5 {
-                    history = Array(history.prefix(5))
-                }
-                multicastHostHistory = history
+        get {
+            if let data = zmqHostHistoryJson.data(using: .utf8),
+               let array = try? JSONDecoder().decode([String].self, from: data) {
+                return array
+            }
+            return []
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue),
+               let json = String(data: data, encoding: .utf8) {
+                zmqHostHistoryJson = json
             }
         }
+    }
+    
+    var multicastHostHistory: [String] {
+        get {
+            if let data = multicastHostHistoryJson.data(using: .utf8),
+               let array = try? JSONDecoder().decode([String].self, from: data) {
+                return array
+            }
+            return []
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue),
+               let json = String(data: data, encoding: .utf8) {
+                multicastHostHistoryJson = json
+            }
+        }
+    }
+    
+    func updateConnectionHistory(host: String, isZmq: Bool) {
+        if isZmq {
+            var history = zmqHostHistory
+            history.removeAll { $0 == host }
+            history.insert(host, at: 0)
+            if history.count > 5 {
+                history = Array(history.prefix(5))
+            }
+            zmqHostHistory = history
+        } else {
+            var history = multicastHostHistory
+            history.removeAll { $0 == host }
+            history.insert(host, at: 0)
+            if history.count > 5 {
+                history = Array(history.prefix(5))
+            }
+            multicastHostHistory = history
+        }
+    }
     
     var messageProcessingIntervalSeconds: Double {
         Double(messageProcessingInterval) / 1000.0

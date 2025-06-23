@@ -621,7 +621,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
         
         let components = remarks.components(separatedBy: ", ")
         
-        print("DEBUG: REMARKS COMPONENTS: \(components)")
+//        print("DEBUG: REMARKS COMPONENTS: \(components)")
         
         
         for component in components {

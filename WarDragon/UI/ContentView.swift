@@ -77,12 +77,19 @@ struct ContentView: View {
                             MessageRow(message: item, cotViewModel: cotViewModel)
                         }
                         .listStyle(.inset)
+                        .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
+                            if !cotViewModel.parsedMessages.isEmpty {
+                                if let firstMessage = cotViewModel.parsedMessages.first {
+                                    let timeSince = Date().timeIntervalSince(firstMessage.lastUpdated)
+                                    //                                    print("DEBUG: Message \(firstMessage.uid) - Last updated: \(timeSince)s ago - Active: \(firstMessage.isActive) - Color: \(firstMessage.statusColor)")
+                                }
+                                cotViewModel.objectWillChange.send()
+                            }
+                        }
                         .onChange(of: cotViewModel.parsedMessages) { oldMessages, newMessages in
-                            // Only proceed if we have more messages than before
                             if oldMessages.count < newMessages.count {
                                 // Get the newest message
                                 if let latest = newMessages.last {
-                                    // Check if this message ID wasn't in the old messages
                                     if !oldMessages.contains(where: { $0.id == latest.id }) {
                                         latestMessage = latest
                                         showAlert = false

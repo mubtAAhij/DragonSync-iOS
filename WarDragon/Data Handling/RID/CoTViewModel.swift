@@ -200,7 +200,7 @@ class CoTViewModel: ObservableObject {
         var track_course: String?
         var track_speed: String?
         var track_bearing: String?
-        
+
         var hasTrackInfo: Bool {
             return track_course != nil || track_speed != nil || track_bearing != nil ||
             (direction != nil && direction != "0")
@@ -222,6 +222,42 @@ class CoTViewModel: ObservableObject {
                 return "\(self.speed) m/s"
             }
             return nil
+        }
+        
+        // Stale timer
+        var lastUpdated: Date = Date()
+        
+        var isActive: Bool {
+            return Date().timeIntervalSince(lastUpdated) <= 300  // 5 minutes standard
+        }
+
+        var isStale: Bool {
+            guard let staleTime = self.stale else { return true }
+            let formatter = ISO8601DateFormatter()
+            guard let staleDate = formatter.date(from: staleTime) else { return true }
+            return Date() > staleDate
+        }
+
+        var statusColor: Color {
+            let timeSince = Date().timeIntervalSince(lastUpdated)
+            if timeSince <= 30 {
+                return .green  // Recently active (within 30s)
+            } else if timeSince <= 300 {
+                return .yellow // Warning state (30s - 5min)
+            } else {
+                return .red    // Stale (over 5min)
+            }
+        }
+        
+        var statusDescription: String {
+            let timeSince = Date().timeIntervalSince(lastUpdated)
+            if timeSince <= 30 {
+                return "Active"
+            } else if timeSince <= 300 {
+                return "Aging"
+            } else {
+                return "Stale"
+            }
         }
         
         // Data store
@@ -426,6 +462,7 @@ class CoTViewModel: ObservableObject {
             object: nil
         )
     }
+    
     
     @objc private func handleAppDidEnterBackground() {
         // Prepare connections for background mode
@@ -1055,7 +1092,7 @@ class CoTViewModel: ObservableObject {
 
     
     func determineSignalType(message: CoTMessage, mac: String?, rssi: Int?, updatedMessage: inout CoTMessage) -> SignalSource.SignalType {
-        print("DEBUG: Index and runbtiume : \(String(describing: message.index)) and \(String(describing: message.runtime))")
+        print("DEBUG: Index and runtime : \(String(describing: message.index)) and \(String(describing: message.runtime))")
         print("CurrentmessageFormat: \(currentMessageFormat)")
         
         func isValidMAC(_ mac: String) -> Bool {
@@ -1112,7 +1149,7 @@ class CoTViewModel: ObservableObject {
             return false
         }
         
-        print("DEBUG: Signal sources after filtering by type: \(updatedMessage.signalSources.count)")
+//        print("DEBUG: Signal sources after filtering by type: \(updatedMessage.signalSources.count)")
         for source in updatedMessage.signalSources {
             print("  - \(source.type): \(source.mac) @ \(source.rssi)dBm")
         }
@@ -1341,6 +1378,9 @@ class CoTViewModel: ObservableObject {
             if updatedMessage.alt != "0.0" { existingMessage.alt = updatedMessage.alt }
             if let height = updatedMessage.height, height != "0.0" { existingMessage.height = height }
 
+            // Update the timestamp
+            existingMessage.lastUpdated = Date()
+
             // Preserve operator info
             if !updatedMessage.pilotLat.isEmpty && updatedMessage.pilotLat != "0.0" {
                 existingMessage.pilotLat = updatedMessage.pilotLat
@@ -1428,29 +1468,6 @@ class CoTViewModel: ObservableObject {
         guard Settings.shared.notificationsEnabled else { return }
         // Don't send here - let StatusViewModel handle it through checkSystemThresholds
         statusViewModel.checkSystemThresholds()
-        
-//        let content = UNMutableNotificationContent()
-//        content.title = "System Status"
-//        let memAvail = message.systemStats.memory.available
-//        let memTotal = message.systemStats.memory.total
-//        let memoryUsed = memTotal - memAvail
-//        let percentageUsed = (Double(memoryUsed) / Double(memTotal)) * 100
-//        content.body = "CPU: \(String(format: "%.0f", message.systemStats.cpuUsage))%\nMemory: \(String(format: "%.0f", percentageUsed))%\nTemp: \(message.systemStats.temperature)°C"
-//        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-//        UNUserNotificationCenter.current().add(request)
-//        
-//        // Send webhook if webhooks are enabled globally
-//        if Settings.shared.webhooksEnabled {
-//            let title = "System Status"
-//            let memAvail = message.systemStats.memory.available
-//            let memTotal = message.systemStats.memory.total
-//            let memoryUsed = memTotal - memAvail
-//            let percentageUsed = (Double(memoryUsed) / Double(memTotal)) * 100
-//            let body = "CPU: \(String(format: "%.0f", message.systemStats.cpuUsage))%, Memory: \(String(format: "%.0f", percentageUsed))%, Temp: \(message.systemStats.temperature)°C"
-//            
-//            sendSystemWebhookAlert(title, body, event: .systemAlert)
-//        }
-        
     }
     
     func stopListening() {
