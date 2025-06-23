@@ -31,25 +31,65 @@ struct MessageRow: View {
     }
     
     private func removeDroneFromTracking() {
-        // Remove from active messages
-        if let index = cotViewModel.parsedMessages.firstIndex(where: { $0.id == message.id }) {
-            cotViewModel.parsedMessages.remove(at: index)
+        // Get all possible ID variants for this drone
+        let baseId = message.uid.replacingOccurrences(of: "drone-", with: "")
+        let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
+        
+        let idsToRemove = [
+            message.uid,
+            droneId,
+            baseId,
+            "drone-\(baseId)"
+        ]
+        
+        // Remove from active messages - use both ID and UID matching
+        cotViewModel.parsedMessages.removeAll { msg in
+            return idsToRemove.contains(msg.uid) || idsToRemove.contains(msg.id) || msg.uid.contains(baseId)
         }
         
-        // Remove signatures
-        cotViewModel.droneSignatures.removeAll(where: { $0.primaryId.id == message.uid })
+        // Remove signatures for all ID variants
+        cotViewModel.droneSignatures.removeAll { signature in
+            return idsToRemove.contains(signature.primaryId.id)
+        }
         
-        // Remove MAC history
-        cotViewModel.macIdHistory.removeValue(forKey: message.uid)
-        cotViewModel.macProcessing.removeValue(forKey: message.uid)
+        // Remove MAC history for all ID variants
+        for id in idsToRemove {
+            cotViewModel.macIdHistory.removeValue(forKey: id)
+            cotViewModel.macProcessing.removeValue(forKey: id)
+        }
         
-        // Remove any alert rings
-        cotViewModel.alertRings.removeAll(where: { $0.droneId == message.uid })
+        // Remove any alert rings for all ID variants
+        cotViewModel.alertRings.removeAll { ring in
+            return idsToRemove.contains(ring.droneId)
+        }
+        
+        // Mark this device as "do not track" in storage for all possible ID formats
+        for id in idsToRemove {
+            DroneStorageManager.shared.markAsDoNotTrack(id: id)
+        }
+        
+        // Force immediate UI update
+        cotViewModel.objectWillChange.send()
+        
+        print("🛑 Stopped tracking drone with IDs: \(idsToRemove)")
     }
     
     private func deleteDroneFromStorage() {
         // Remove from storage
         droneStorage.deleteEncounter(id: message.uid)
+        
+        // Generate all possible ID variants and delete them all
+        let baseId = message.uid.replacingOccurrences(of: "drone-", with: "")
+        let possibleIds = [
+            message.uid,
+            "drone-\(message.uid)",
+            baseId,
+            "drone-\(baseId)"
+        ]
+        
+        for id in possibleIds {
+            droneStorage.deleteEncounter(id: id)
+        }
         
         // After deleting from storage, also remove from tracking
         removeDroneFromTracking()

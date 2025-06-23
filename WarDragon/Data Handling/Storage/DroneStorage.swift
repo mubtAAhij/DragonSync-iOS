@@ -365,25 +365,25 @@ class DroneStorageManager: ObservableObject {
         if let caaReg = message.caaRegistration {
             updatedMetadata["caaRegistration"] = caaReg
         }
-
+        
         if let manufacturer = message.manufacturer {
             updatedMetadata["manufacturer"] = manufacturer
         }
-
+        
         // Add pilot location
         if let pilotLat = Double(message.pilotLat), let pilotLon = Double(message.pilotLon),
            pilotLat != 0 || pilotLon != 0 {
             updatedMetadata["pilotLat"] = message.pilotLat
             updatedMetadata["pilotLon"] = message.pilotLon
         }
-
+        
         // Add home location
         if let homeLat = Double(message.homeLat), let homeLon = Double(message.homeLon),
            homeLat != 0 || homeLon != 0 {
             updatedMetadata["homeLat"] = message.homeLat
             updatedMetadata["homeLon"] = message.homeLon
         }
-
+        
         // Apply the updated metadata to the encounter
         encounter.metadata = updatedMetadata
         // Add pilot location
@@ -392,7 +392,7 @@ class DroneStorageManager: ObservableObject {
             updatedMetadata["pilotLat"] = message.pilotLat
             updatedMetadata["pilotLon"] = message.pilotLon
         }
-
+        
         // Add home location (which you're calling takeoff)
         if let lat = Double(message.homeLat), let lon = Double(message.homeLon),
            lat != 0 || lon != 0 {
@@ -417,6 +417,40 @@ class DroneStorageManager: ObservableObject {
         // Save the drone encounters array and device
         encounters[droneId] = encounter
         saveToStorage()
+    }
+    
+    func markAsDoNotTrack(id: String) {
+        // Generate all possible ID variants
+        let baseId = id.replacingOccurrences(of: "drone-", with: "")
+        let possibleIds = [
+            id,
+            "drone-\(id)",
+            baseId,
+            "drone-\(baseId)"
+        ]
+        
+        // Mark all possible ID variants as "do not track"
+        for possibleId in possibleIds {
+            if var encounter = encounters[possibleId] {
+                encounter.metadata["doNotTrack"] = "true"
+                encounters[possibleId] = encounter
+            } else {
+                // Create a new encounter record to mark as blocked
+                let newEncounter = DroneEncounter(
+                    id: possibleId,
+                    firstSeen: Date(),
+                    lastSeen: Date(),
+                    flightPath: [],
+                    signatures: [],
+                    metadata: ["doNotTrack": "true", "type": "drone"],
+                    macHistory: []
+                )
+                encounters[possibleId] = newEncounter
+            }
+        }
+        
+        saveToStorage()
+        print("🚫 Marked as do not track: \(possibleIds)")
     }
     
     //MARK: - Storage Functions/CRUD

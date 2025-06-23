@@ -572,6 +572,36 @@ class CoTViewModel: ObservableObject {
         )
     }
     
+    private func isDeviceBlocked(_ message: CoTMessage) -> Bool {
+        let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
+        
+        // Check both the original UID and the formatted drone ID
+        let possibleIds = [
+            message.uid,
+            droneId,
+            message.uid.replacingOccurrences(of: "drone-", with: "")
+        ]
+        
+        // Check each possible ID format
+        for id in possibleIds {
+            if let encounter = DroneStorageManager.shared.encounters[id],
+               encounter.metadata["doNotTrack"] == "true" {
+                print("⛔️ BLOCKED message with ID \(id) - marked as do not track")
+                return true
+            }
+            
+            // Also check the "drone-" prefixed version
+            let droneFormatId = id.hasPrefix("drone-") ? id : "drone-\(id)"
+            if let encounter = DroneStorageManager.shared.encounters[droneFormatId],
+               encounter.metadata["doNotTrack"] == "true" {
+                print("⛔️ BLOCKED message with drone ID \(droneFormatId) - marked as do not track")
+                return true
+            }
+        }
+        
+        return false
+    }
+    
     private func processIncomingMessage(_ data: Data) {
         guard let message = String(data: data, encoding: .utf8) else { return }
         
@@ -832,6 +862,13 @@ class CoTViewModel: ObservableObject {
     }
     
     private func updateMessage(_ message: CoTMessage) {
+        
+        // IMMEDIATE BLOCKING CHECK - before any processing
+        if isDeviceBlocked(message) {
+            print("⛔️ EARLY BLOCK: Dropping message for \(message.uid)")
+            return
+        }
+        
         
         // Extract the numerical ID from messages like "pilot-107", "home-107", "drone-107"
         let extractedId = extractNumericId(from: message.uid)
