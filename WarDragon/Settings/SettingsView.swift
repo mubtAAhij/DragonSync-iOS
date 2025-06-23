@@ -9,11 +9,9 @@ import SwiftUI
 import UIKit
 import Network
 
-
 struct SettingsView: View {
     @ObservedObject var cotHandler : CoTViewModel
     @StateObject private var settings = Settings.shared
-    
     
     var body: some View {
         Form {
@@ -108,11 +106,6 @@ struct SettingsView: View {
             }
             
             Section("Preferences") {
-                Toggle("Enable Notifications", isOn: .init(
-                    get: { settings.notificationsEnabled },
-                    set: { settings.updatePreferences(notifications: $0, screenOn: settings.keepScreenOn) }
-                ))
-                
                 Toggle("Auto Spoof Detection", isOn: .init(
                     get: { settings.spoofDetectionEnabled },
                     set: { settings.spoofDetectionEnabled = $0 }
@@ -122,11 +115,72 @@ struct SettingsView: View {
                     get: { settings.keepScreenOn },
                     set: { settings.updatePreferences(notifications: settings.notificationsEnabled, screenOn: $0) }
                 ))
+                
                 Toggle("Enable Background Detection", isOn: .init(
                     get: { settings.enableBackgroundDetection },
                     set: { settings.enableBackgroundDetection = $0 }
                 ))
                 .disabled(settings.isListening) // Can't change while listening is active
+            }
+            
+            Section("Notifications") {
+                Toggle("Enable Push Notifications", isOn: .init(
+                    get: { settings.notificationsEnabled },
+                    set: { settings.updatePreferences(notifications: $0, screenOn: settings.keepScreenOn) }
+                ))
+                
+                if settings.notificationsEnabled {
+                    NavigationLink(destination: StatusNotificationSettingsView()) {
+                        HStack {
+                            Image(systemName: "bell.circle.fill")
+                                .foregroundColor(.orange)
+                            VStack(alignment: .leading) {
+                                Text("Notification Settings")
+                                Text("Configure frequency and types")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } else {
+                    Text("Enable to receive alerts on this device when drones are detected")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Section("Webhooks & External Services") {
+                Toggle("Enable Webhooks", isOn: .init(
+                    get: { settings.webhooksEnabled },
+                    set: { settings.updateWebhookSettings(enabled: $0) }
+                ))
+                
+                if settings.webhooksEnabled {
+                    NavigationLink(destination: WebhookSettingsView()) {
+                        HStack {
+                            Image(systemName: "link.circle.fill")
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading) {
+                                Text("Webhook Services")
+                                Text("\(WebhookManager.shared.configurations.count) services configured")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } else {
+                    Text("Send notifications to Discord, Matrix, IFTTT, and other external services")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             
             Section("Performance") {
@@ -255,29 +309,6 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
-                    
-//                case .both:
-//                    HStack {
-//                        Text("Multicast")
-//                        Spacer()
-//                        Text(verbatim: String(settings.multicastPort))
-//                            .foregroundStyle(.secondary)
-//                            .monospacedDigit()
-//                    }
-//                    HStack {
-//                        Text("ZMQ Telemetry")
-//                        Spacer()
-//                        Text(verbatim: String(settings.zmqTelemetryPort))
-//                            .foregroundStyle(.secondary)
-//                            .monospacedDigit()
-//                    }
-//                    HStack {
-//                        Text("ZMQ Status")
-//                        Spacer()
-//                        Text(verbatim: String(settings.zmqStatusPort))
-//                            .foregroundStyle(.secondary)
-//                            .monospacedDigit()
-//                    }
                 }
             }
             
@@ -309,8 +340,6 @@ struct SettingsView: View {
                 return "antenna.radiowaves.left.and.right.circle.fill"
             case .zmq:
                 return "network.badge.shield.half.filled"
-//            case .both:
-//                return "network.slash.circle.fill"
             }
         } else {
             return "bolt.horizontal.circle"

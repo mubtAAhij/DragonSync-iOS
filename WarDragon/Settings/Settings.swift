@@ -99,6 +99,110 @@ class Settings: ObservableObject {
             objectWillChange.send()
         }
     }
+    // MARK: - Status Notification Settings
+    @AppStorage("statusNotificationsEnabled") var statusNotificationsEnabled = true {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("statusNotificationInterval") var statusNotificationInterval: StatusNotificationInterval = .never {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("statusNotificationThresholds") var statusNotificationThresholds = true {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("lastStatusNotificationTime") private var lastStatusNotificationTimestamp: Double = 0
+
+    var lastStatusNotificationTime: Date {
+        get {
+            Date(timeIntervalSince1970: lastStatusNotificationTimestamp)
+        }
+        set {
+            lastStatusNotificationTimestamp = newValue.timeIntervalSince1970
+        }
+    }
+
+    func updateStatusNotificationSettings(
+        enabled: Bool,
+        interval: StatusNotificationInterval,
+        thresholds: Bool
+    ) {
+        statusNotificationsEnabled = enabled
+        statusNotificationInterval = interval
+        statusNotificationThresholds = thresholds
+    }
+
+    func shouldSendStatusNotification() -> Bool {
+        guard statusNotificationsEnabled else { return false }
+        
+        let now = Date()
+        let timeSinceLastNotification = now.timeIntervalSince(lastStatusNotificationTime)
+        
+        switch statusNotificationInterval {
+        case .never:
+            return false
+        case .always:
+            return true  // Always send status notifications
+        case .thresholdOnly:
+            return false  // Don't send regular status updates, only thresholds
+        case .every5Minutes:
+            return timeSinceLastNotification >= 300
+        case .every15Minutes:
+            return timeSinceLastNotification >= 900
+        case .every30Minutes:
+            return timeSinceLastNotification >= 1800
+        case .hourly:
+            return timeSinceLastNotification >= 3600
+        case .every2Hours:
+            return timeSinceLastNotification >= 7200
+        case .every6Hours:
+            return timeSinceLastNotification >= 21600
+        case .daily:
+            return timeSinceLastNotification >= 86400
+        }
+    }
+    // MARK: - Webhook Settings
+    @AppStorage("webhooksEnabled") var webhooksEnabled = false {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("webhookEvents") private var webhookEventsJson = "" {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+
+    var enabledWebhookEvents: Set<WebhookEvent> {
+        get {
+            if let data = webhookEventsJson.data(using: .utf8),
+               let events = try? JSONDecoder().decode(Set<WebhookEvent>.self, from: data) {
+                return events
+            }
+            return Set(WebhookEvent.allCases) // Default to all events enabled
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue),
+               let json = String(data: data, encoding: .utf8) {
+                webhookEventsJson = json
+            }
+        }
+    }
+
+    func updateWebhookSettings(enabled: Bool, events: Set<WebhookEvent>? = nil) {
+        webhooksEnabled = enabled
+        if let events = events {
+            enabledWebhookEvents = events
+        }
+    }
     //MARK: - Warning Thresholds
     @AppStorage("cpuWarningThreshold") var cpuWarningThreshold: Double = 80.0 {  // 80% CPU
         didSet {

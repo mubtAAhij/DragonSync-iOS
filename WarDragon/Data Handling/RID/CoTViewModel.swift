@@ -1402,6 +1402,10 @@ class CoTViewModel: ObservableObject {
             return
         }
         
+        if Settings.shared.webhooksEnabled {
+            sendWebhookNotification(for: message)
+        }
+        
         // Create and send notification
         let content = UNMutableNotificationContent()
         print("Attempting to send notification for drone: \(message.uid)")
@@ -1422,15 +1426,31 @@ class CoTViewModel: ObservableObject {
     
     private func sendStatusNotification(for message: StatusViewModel.StatusMessage) {
         guard Settings.shared.notificationsEnabled else { return }
-        let content = UNMutableNotificationContent()
-        content.title = "System Status"
-        let memAvail = message.systemStats.memory.available
-        let memTotal = message.systemStats.memory.total
-        let memoryUsed = memTotal - memAvail
-        let percentageUsed = (Double(memoryUsed) / Double(memTotal)) * 100
-        content.body = "CPU: \(String(format: "%.0f", message.systemStats.cpuUsage))%\nMemory: \(String(format: "%.0f", percentageUsed))%\nTemp: \(message.systemStats.temperature)°C"
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
+        // Don't send here - let StatusViewModel handle it through checkSystemThresholds
+        statusViewModel.checkSystemThresholds()
+        
+//        let content = UNMutableNotificationContent()
+//        content.title = "System Status"
+//        let memAvail = message.systemStats.memory.available
+//        let memTotal = message.systemStats.memory.total
+//        let memoryUsed = memTotal - memAvail
+//        let percentageUsed = (Double(memoryUsed) / Double(memTotal)) * 100
+//        content.body = "CPU: \(String(format: "%.0f", message.systemStats.cpuUsage))%\nMemory: \(String(format: "%.0f", percentageUsed))%\nTemp: \(message.systemStats.temperature)°C"
+//        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+//        UNUserNotificationCenter.current().add(request)
+//        
+//        // Send webhook if webhooks are enabled globally
+//        if Settings.shared.webhooksEnabled {
+//            let title = "System Status"
+//            let memAvail = message.systemStats.memory.available
+//            let memTotal = message.systemStats.memory.total
+//            let memoryUsed = memTotal - memAvail
+//            let percentageUsed = (Double(memoryUsed) / Double(memTotal)) * 100
+//            let body = "CPU: \(String(format: "%.0f", message.systemStats.cpuUsage))%, Memory: \(String(format: "%.0f", percentageUsed))%, Temp: \(message.systemStats.temperature)°C"
+//            
+//            sendSystemWebhookAlert(title, body, event: .systemAlert)
+//        }
+        
     }
     
     func stopListening() {
@@ -1588,5 +1608,69 @@ extension CoTViewModel.CoTMessage {
         }
         
         return TrackData(course: course, speed: trackSpeed, bearing: bearing)
+    }
+}
+
+
+// MARK: - Webhook Integration
+extension CoTViewModel {
+    
+    private func sendWebhookNotification(for message: CoTMessage) {
+        // Always drone detected for this branch (no FPV support)
+        let event: WebhookEvent = .droneDetected
+        
+        // Build data payload
+        var data: [String: Any] = [
+            "uid": message.uid,
+            "timestamp": message.timestamp ?? Date().timeIntervalSince1970
+        ]
+        
+        if let rssi = message.rssi {
+            data["rssi"] = rssi
+        }
+        
+        // Use the existing lat/lon properties from CoTMessage
+        if let latitude = Double(message.lat) {
+            data["latitude"] = latitude
+        }
+        
+        if let longitude = Double(message.lon) {
+            data["longitude"] = longitude
+        }
+        
+        if let altitude = Double(message.alt) {
+            data["altitude"] = altitude
+        }
+        
+        // Build metadata
+        var metadata: [String: String] = [:]
+        
+        if let mac = message.mac {
+            metadata["mac"] = mac
+        }
+        
+        if let caaReg = message.caaRegistration {
+            metadata["caa_registration"] = caaReg
+        }
+        
+        if let manufacturer = message.manufacturer {
+            metadata["manufacturer"] = manufacturer
+        }
+        
+        metadata["id_type"] = message.idType
+        metadata["ua_type"] = message.uaType.rawValue
+        
+        // Send webhook
+        WebhookManager.shared.sendWebhook(event: event, data: data, metadata: metadata)
+    }
+    
+    private func sendSystemWebhookAlert(_ title: String, _ message: String, event: WebhookEvent) {
+        let data: [String: Any] = [
+            "title": title,
+            "message": message,
+            "timestamp": Date()
+        ]
+        
+        WebhookManager.shared.sendWebhook(event: event, data: data)
     }
 }

@@ -78,62 +78,143 @@ extension StatusViewModel {
         
         // Check CPU usage
         if lastMessage.systemStats.cpuUsage > Settings.shared.cpuWarningThreshold {
-            sendSystemNotification(
-                title: "High CPU Usage",
-                message: "CPU usage at \(Int(lastMessage.systemStats.cpuUsage))%"
-            )
+            if Settings.shared.statusNotificationThresholds {
+                sendSystemNotification(
+                    title: "High CPU Usage",
+                    message: "CPU usage at \(Int(lastMessage.systemStats.cpuUsage))%",
+                    isThresholdAlert: true
+                )
+            }
         }
         
         // Check system temperature
         if lastMessage.systemStats.temperature > Settings.shared.tempWarningThreshold {
-            sendSystemNotification(
-                title: "High System Temperature",
-                message: "Temperature at \(Int(lastMessage.systemStats.temperature))°C"
-            )
+            if Settings.shared.statusNotificationThresholds {
+                sendSystemNotification(
+                    title: "High System Temperature",
+                    message: "Temperature at \(Int(lastMessage.systemStats.temperature))°C",
+                    isThresholdAlert: true
+                )
+            }
         }
         
-        // Check memory usage
-        let memoryUsage = Double(lastMessage.systemStats.memory.used) / Double(lastMessage.systemStats.memory.total)
+        // Check memory usage - FIX: Use correct calculation
+        let usedMemory = lastMessage.systemStats.memory.total - lastMessage.systemStats.memory.available
+        let memoryUsage = Double(usedMemory) / Double(lastMessage.systemStats.memory.total)
         if memoryUsage > Settings.shared.memoryWarningThreshold {
-            sendSystemNotification(
-                title: "High Memory Usage",
-                message: "Memory usage at \(Int(memoryUsage * 100))%"
-            )
+            if Settings.shared.statusNotificationThresholds {
+                sendSystemNotification(
+                    title: "High Memory Usage",
+                    message: "Memory usage at \(Int(memoryUsage * 100))%",
+                    isThresholdAlert: true
+                )
+            }
         }
         
         // Check ANTSDR temperatures
         if lastMessage.antStats.plutoTemp > Settings.shared.plutoTempThreshold {
-            sendSystemNotification(
-                title: "High Pluto Temperature",
-                message: "Temperature at \(Int(lastMessage.antStats.plutoTemp))°C"
-            )
+            if Settings.shared.statusNotificationThresholds {
+                sendSystemNotification(
+                    title: "High Pluto Temperature",
+                    message: "Temperature at \(Int(lastMessage.antStats.plutoTemp))°C",
+                    isThresholdAlert: true
+                )
+            }
         }
         
         if lastMessage.antStats.zynqTemp > Settings.shared.zynqTempThreshold {
-            sendSystemNotification(
-                title: "High Zynq Temperature",
-                message: "Temperature at \(Int(lastMessage.antStats.zynqTemp))°C"
-            )
+            if Settings.shared.statusNotificationThresholds {
+                sendSystemNotification(
+                    title: "High Zynq Temperature",
+                    message: "Temperature at \(Int(lastMessage.antStats.zynqTemp))°C",
+                    isThresholdAlert: true
+                )
+            }
         }
+        
+        // Check for regular status notification
+        checkRegularStatusNotification()
+    }
+    
+    private func checkRegularStatusNotification() {
+        guard Settings.shared.shouldSendStatusNotification(),
+              let lastMessage = statusMessages.last else { return }
+        
+        let usedMemory = lastMessage.systemStats.memory.total - lastMessage.systemStats.memory.available
+        let memoryUsage = Double(usedMemory) / Double(lastMessage.systemStats.memory.total)
+        
+        sendSystemNotification(
+            title: "System Status Update",
+            message: "CPU: \(String(format: "%.0f", lastMessage.systemStats.cpuUsage))%, Memory: \(String(format: "%.0f", memoryUsage * 100))%, Temp: \(Int(lastMessage.systemStats.temperature))°C",
+            isThresholdAlert: false
+        )
+        
+        // Update last notification time
+        Settings.shared.lastStatusNotificationTime = Date()
     }
     
     func deleteStatusMessages(at indexSet: IndexSet) {
         statusMessages.remove(atOffsets: indexSet)
     }
 
-    private func sendSystemNotification(title: String, message: String) {
-        guard Settings.shared.notificationsEnabled else { return }
+    private func sendSystemNotification(title: String, message: String, isThresholdAlert: Bool = false) {
+        // Send local notification if enabled
+        if Settings.shared.notificationsEnabled {
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = message
+            
+            if isThresholdAlert {
+                content.sound = .default
+                content.badge = 1
+            }
+            
+            let request = UNNotificationRequest(
+                identifier: UUID().uuidString,
+                content: content,
+                trigger: nil
+            )
+            
+            UNUserNotificationCenter.current().add(request)
+        }
         
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = message
-        
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
-        
-        UNUserNotificationCenter.current().add(request)
+        // Send webhook if webhooks are enabled AND status events are enabled
+        if Settings.shared.webhooksEnabled && Settings.shared.enabledWebhookEvents.contains(.systemAlert) {
+            let event: WebhookEvent
+            if title.contains("Temperature") {
+                event = .temperatureAlert
+            } else if title.contains("Memory") {
+                event = .memoryAlert
+            } else if title.contains("CPU") {
+                event = .cpuAlert
+            } else {
+                event = .systemAlert
+            }
+            
+            var data: [String: Any] = [
+                "title": title,
+                "message": message,
+                "timestamp": Date(),
+                "is_threshold_alert": isThresholdAlert
+            ]
+            
+            // Add detailed system stats for webhooks - FIX: Use correct memory calculation
+            if let lastMessage = statusMessages.last {
+                let usedMemory = lastMessage.systemStats.memory.total - lastMessage.systemStats.memory.available
+                let memoryUsagePercent = Double(usedMemory) / Double(lastMessage.systemStats.memory.total) * 100
+                
+                data["cpu_usage"] = lastMessage.systemStats.cpuUsage
+                data["memory_usage"] = memoryUsagePercent
+                data["memory_total_gb"] = Double(lastMessage.systemStats.memory.total) / 1_073_741_824
+                data["memory_used_gb"] = Double(usedMemory) / 1_073_741_824
+                data["memory_available_gb"] = Double(lastMessage.systemStats.memory.available) / 1_073_741_824
+                data["system_temperature"] = lastMessage.systemStats.temperature
+                data["pluto_temperature"] = lastMessage.antStats.plutoTemp
+                data["zynq_temperature"] = lastMessage.antStats.zynqTemp
+                data["uptime"] = lastMessage.systemStats.uptime
+            }
+            
+            WebhookManager.shared.sendWebhook(event: event, data: data)
+        }
     }
 }
