@@ -157,7 +157,7 @@ struct ContentView: View {
             .tag(1)
             
             NavigationStack {
-                StatusListView(statusViewModel: statusViewModel, cotViewModel: cotViewModel)
+                StatusListView(statusViewModel: statusViewModel)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button(action: { statusViewModel.statusMessages.removeAll() }) {
