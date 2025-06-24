@@ -786,8 +786,7 @@ class CoTViewModel: ObservableObject {
     }
     private func updateStatusMessage(_ message: StatusViewModel.StatusMessage) {
         DispatchQueue.main.async {
-            self.statusViewModel.updateExistingStatusMessage(message)  
-            self.sendStatusNotification(for: message)
+            self.statusViewModel.updateExistingStatusMessage(message) 
         }
     }
     
