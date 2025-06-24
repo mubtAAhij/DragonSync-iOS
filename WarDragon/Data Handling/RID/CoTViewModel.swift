@@ -250,10 +250,11 @@ class CoTViewModel: ObservableObject {
         }
         
         var statusDescription: String {
+            // Using times from CoT 4.0 Spec, Section 2.2.2.2
             let timeSince = Date().timeIntervalSince(lastUpdated)
-            if timeSince <= 30 {
+            if timeSince <= 90 {
                 return "Active"
-            } else if timeSince <= 300 {
+            } else if timeSince <= 120 {
                 return "Aging"
             } else {
                 return "Stale"
