@@ -48,20 +48,20 @@ class CoTViewModel: ObservableObject {
         let droneId: String
         let rssi: Int
     }
-     
+    
     struct SignalSource: Hashable {
         let mac: String
         let rssi: Int
         let type: SignalType
         let timestamp: Date
-
+        
         enum SignalType: String, Hashable {
             case bluetooth
             case wifi
             case sdr
             case unknown
         }
-
+        
         init?(mac: String, rssi: Int, type: SignalType, timestamp: Date) {
             guard rssi != 0 else { return nil }
             self.mac = mac
@@ -69,17 +69,17 @@ class CoTViewModel: ObservableObject {
             self.type = type
             self.timestamp = timestamp
         }
-
+        
         func hash(into hasher: inout Hasher) {
             hasher.combine(mac)
             hasher.combine(type)
         }
-
+        
         static func == (lhs: SignalSource, rhs: SignalSource) -> Bool {
             return lhs.mac == rhs.mac && lhs.type == rhs.type
         }
     }
-
+    
     struct CoTMessage: Identifiable, Equatable {
         var id: String { uid }
         var caaRegistration: String?
@@ -200,7 +200,7 @@ class CoTViewModel: ObservableObject {
         var track_course: String?
         var track_speed: String?
         var track_bearing: String?
-
+        
         var hasTrackInfo: Bool {
             return track_course != nil || track_speed != nil || track_bearing != nil ||
             (direction != nil && direction != "0")
@@ -230,14 +230,14 @@ class CoTViewModel: ObservableObject {
         var isActive: Bool {
             return Date().timeIntervalSince(lastUpdated) <= 300  // 5 minutes standard
         }
-
+        
         var isStale: Bool {
             guard let staleTime = self.stale else { return true }
             let formatter = ISO8601DateFormatter()
             guard let staleDate = formatter.date(from: staleTime) else { return true }
             return Date() > staleDate
         }
-
+        
         var statusColor: Color {
             let timeSince = Date().timeIntervalSince(lastUpdated)
             if timeSince <= 30 {
@@ -786,7 +786,7 @@ class CoTViewModel: ObservableObject {
     }
     private func updateStatusMessage(_ message: StatusViewModel.StatusMessage) {
         DispatchQueue.main.async {
-            self.statusViewModel.updateExistingStatusMessage(message) 
+            self.statusViewModel.updateExistingStatusMessage(message)
         }
     }
     
@@ -916,16 +916,16 @@ class CoTViewModel: ObservableObject {
         let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
         
         // Uncomment this to disallow zero-coordinate entries
-//        guard let coordinate = message.coordinate,
-//              coordinate.latitude != 0 || coordinate.longitude != 0 else {
-//            return
-//        }
+        //        guard let coordinate = message.coordinate,
+        //              coordinate.latitude != 0 || coordinate.longitude != 0 else {
+        //            return
+        //        }
         
         DispatchQueue.main.async {
             // Collect the detection details
             // Keep the original drone ID, don't replace with CAA
             let droneId = message.uid.hasPrefix("drone-") ? message.uid : "drone-\(message.uid)"
-        
+            
             
             var mac: String? = nil
             if let basicIdMac = (message.rawMessage["Basic ID"] as? [String: Any])?["MAC"] as? String {
@@ -1049,8 +1049,8 @@ class CoTViewModel: ObservableObject {
     }
     
     // MARK: - Helper Methods
-
-
+    
+    
     private func extractMAC(from message: CoTMessage) -> String? {
         // Try message property first
         if let mac = message.mac { return mac }
@@ -1066,7 +1066,7 @@ class CoTViewModel: ObservableObject {
         
         return nil
     }
-
+    
     private func updateCAARegistration(for mac: String, message: CoTMessage) {
         // Find existing message with same MAC and update its CAA registration
         if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == mac }) {
@@ -1080,7 +1080,7 @@ class CoTViewModel: ObservableObject {
             print("Updated CAA registration for existing drone with MAC: \(mac)")
         }
     }
-
+    
     
     func determineSignalType(message: CoTMessage, mac: String?, rssi: Int?, updatedMessage: inout CoTMessage) -> SignalSource.SignalType {
         print("DEBUG: Index and runtime : \(String(describing: message.index)) and \(String(describing: message.runtime))")
@@ -1094,7 +1094,7 @@ class CoTViewModel: ObservableObject {
         if !isValidMAC(checkedMac) {
             checkedMac = ""
         }
-
+        
         let newSourceType: SignalSource.SignalType
         if !isValidMAC(checkedMac) {
             newSourceType = .sdr
@@ -1140,14 +1140,14 @@ class CoTViewModel: ObservableObject {
             return false
         }
         
-//        print("DEBUG: Signal sources after filtering by type: \(updatedMessage.signalSources.count)")
+        //        print("DEBUG: Signal sources after filtering by type: \(updatedMessage.signalSources.count)")
         for source in updatedMessage.signalSources {
             print("  - \(source.type): \(source.mac) @ \(source.rssi)dBm")
         }
         
         return newSourceType
     }
-
+    
     
     private func updateDroneSignaturesAndEncounters(_ signature: DroneSignature, message: CoTMessage) {
         
@@ -1159,13 +1159,13 @@ class CoTViewModel: ObservableObject {
             print("Added new signature")
             self.droneSignatures.append(signature)
         }
-
-//        // Validate coordinates first - UNCOMMENT THIS TO DISALLOW ZERO COORDINATE DETECTIONS
-//        guard signature.position.coordinate.latitude != 0 &&
-//              signature.position.coordinate.longitude != 0 else {
-//            return // Skip update if coordinates are 0,0
-//        }
-
+        
+        //        // Validate coordinates first - UNCOMMENT THIS TO DISALLOW ZERO COORDINATE DETECTIONS
+        //        guard signature.position.coordinate.latitude != 0 &&
+        //              signature.position.coordinate.longitude != 0 else {
+        //            return // Skip update if coordinates are 0,0
+        //        }
+        
         // Update encounters storage history
         let encounters = DroneStorageManager.shared.encounters
         let currentMonitorStatus = self.statusViewModel.statusMessages.last
@@ -1249,7 +1249,7 @@ class CoTViewModel: ObservableObject {
     
     
     
-
+    
     // Helper function to update alert rings for consolidated messages
     private func updateAlertRingForConsolidated(consolidated: CoTMessage, originalMessages: [CoTMessage]) {
         // Remove all existing alert rings for the original messages
@@ -1284,7 +1284,7 @@ class CoTViewModel: ObservableObject {
             alertRings.append(newRing)
         }
     }
-
+    
     // Helper to calculate radius from RSSI
     private func calculateRadius(rssi: Double) -> Double {
         if rssi > 1000 {
@@ -1296,7 +1296,7 @@ class CoTViewModel: ObservableObject {
             return generator.calculateDistance(rssi)
         }
     }
-
+    
     
     private func calculateConfidenceRadius(_ confidence: Double) -> Double {
         // Radius gets smaller as confidence increases
@@ -1325,14 +1325,14 @@ class CoTViewModel: ObservableObject {
         // Find existing message by MAC or UID
         if let existingIndex = self.parsedMessages.firstIndex(where: { $0.mac == updatedMessage.mac || $0.uid == updatedMessage.uid }) {
             var existingMessage = self.parsedMessages[existingIndex]
-
+            
             var consolidatedSources: [SignalSource.SignalType: SignalSource] = [:]
-
+            
             // Process existing sources first to maintain original order
             for source in existingMessage.signalSources {
                 consolidatedSources[source.type] = source
             }
-
+            
             // Only update with newer sources
             for source in updatedMessage.signalSources {
                 if let existing = consolidatedSources[source.type] {
@@ -1343,7 +1343,7 @@ class CoTViewModel: ObservableObject {
                     consolidatedSources[source.type] = source
                 }
             }
-
+            
             // Maintain the preferred order of WiFi > Bluetooth > SDR while preserving existing sources
             let typeOrder: [SignalSource.SignalType] = [.wifi, .bluetooth, .sdr]
             existingMessage.signalSources = Array(consolidatedSources.values)
@@ -1354,13 +1354,13 @@ class CoTViewModel: ObservableObject {
                     }
                     return false
                 }
-
+            
             // Set primary MAC and RSSI based on the most recent source
             if let latestSource = existingMessage.signalSources.first {
                 existingMessage.mac = latestSource.mac
                 existingMessage.rssi = latestSource.rssi
             }
-
+            
             // Update metadata but avoid overwriting good values with defaults
             if updatedMessage.lat != "0.0" { existingMessage.lat = updatedMessage.lat }
             if updatedMessage.lon != "0.0" { existingMessage.lon = updatedMessage.lon }
@@ -1368,35 +1368,35 @@ class CoTViewModel: ObservableObject {
             if updatedMessage.vspeed != "0.0" { existingMessage.vspeed = updatedMessage.vspeed }
             if updatedMessage.alt != "0.0" { existingMessage.alt = updatedMessage.alt }
             if let height = updatedMessage.height, height != "0.0" { existingMessage.height = height }
-
+            
             // Update the timestamp
             existingMessage.lastUpdated = Date()
-
+            
             // Preserve operator info
             if !updatedMessage.pilotLat.isEmpty && updatedMessage.pilotLat != "0.0" {
                 existingMessage.pilotLat = updatedMessage.pilotLat
                 existingMessage.pilotLon = updatedMessage.pilotLon
             }
-
+            
             // Preserve operator ID unless we get a new valid one
             if let newOpId = updatedMessage.operator_id, !newOpId.isEmpty {
                 existingMessage.operator_id = newOpId
             }
-
+            
             // Update ID type and CAA registration if present
             if updatedMessage.idType.contains("CAA") {
                 existingMessage.caaRegistration = updatedMessage.caaRegistration
                 existingMessage.idType = "CAA Assigned Registration ID"
             }
-
+            
             // Update spoof detection
             existingMessage.isSpoofed = updatedMessage.isSpoofed
             existingMessage.spoofingDetails = updatedMessage.spoofingDetails
-
+            
             // Update the message
             self.parsedMessages[existingIndex] = existingMessage
             self.objectWillChange.send()
-
+            
         } else {
             // New message - add it
             self.parsedMessages.append(updatedMessage)

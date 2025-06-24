@@ -286,9 +286,9 @@ class ZMQHandler: ObservableObject {
         
         // Determine format from raw string and runtime/index presence
         if jsonString.contains("\"index\":") &&
-           jsonString.contains("\"runtime\":") &&
-           (jsonString.range(of: "\"index\":\\s*([1-9]\\d*)", options: .regularExpression) != nil) &&
-           (jsonString.range(of: "\"runtime\":\\s*([1-9]\\d*)", options: .regularExpression) != nil) {
+            jsonString.contains("\"runtime\":") &&
+            (jsonString.range(of: "\"index\":\\s*([1-9]\\d*)", options: .regularExpression) != nil) &&
+            (jsonString.range(of: "\"runtime\":\\s*([1-9]\\d*)", options: .regularExpression) != nil) {
             messageFormat = .wifi
         } else if jsonString.hasPrefix("[") {
             messageFormat = .bluetooth
@@ -415,12 +415,12 @@ class ZMQHandler: ObservableObject {
         var sequenceId: Int?
         var advAddress: String? //TODO use for BT differentiation
         
-      
+        
         var manufacturer = "Unknown"
         if let aext = jsonObject["aext"] as? [String: Any],
            let advInfo = aext["AdvDataInfo"] as? [String: Any],
            let macAddress = advInfo["mac"] as? String {
-
+            
             for (key, prefixes) in macPrefixesByManufacturer {
                 for prefix in prefixes {
                     if macAddress.hasPrefix(prefix) {
@@ -432,18 +432,18 @@ class ZMQHandler: ObservableObject {
         }
         
         if !mac.isEmpty {
-                let normalizedMac = mac.uppercased()
-                for (key, prefixes) in macPrefixesByManufacturer {
-                    for prefix in prefixes {
-                        let normalizedPrefix = prefix.uppercased()
-                        if normalizedMac.hasPrefix(normalizedPrefix) {
-                            manufacturer = key
-                            break
-                        }
+            let normalizedMac = mac.uppercased()
+            for (key, prefixes) in macPrefixesByManufacturer {
+                for prefix in prefixes {
+                    let normalizedPrefix = prefix.uppercased()
+                    if normalizedMac.hasPrefix(normalizedPrefix) {
+                        manufacturer = key
+                        break
                     }
-                    if manufacturer != "Unknown" { break }
                 }
+                if manufacturer != "Unknown" { break }
             }
+        }
         
         // Extract from AUX_ADV_IND
         if let auxData = jsonObject["AUX_ADV_IND"] as? [String: Any] {
@@ -451,7 +451,7 @@ class ZMQHandler: ObservableObject {
             phy = auxData["phy"] as? Int
             accessAddress = auxData["aa"] as? Int
         }
-
+        
         // Extract from aext
         if let aext = jsonObject["aext"] as? [String: Any],
            let advInfo = aext["AdvDataInfo"] as? [String: Any] {
@@ -460,7 +460,7 @@ class ZMQHandler: ObservableObject {
             advMode = aext["AdvMode"] as? String ?? ""
             advAddress = aext["AdvA"] as? String ?? ""
         }
-    
+        
         // Generate XML
         let now = ISO8601DateFormatter().string(from: Date())
         let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
@@ -489,7 +489,7 @@ class ZMQHandler: ObservableObject {
         }
         if let stringVal = value as? String {
             if let doubleVal = Double(stringVal.replacingOccurrences(of: " m/s", with: "")
-                                             .replacingOccurrences(of: " m", with: "")) {
+                .replacingOccurrences(of: " m", with: "")) {
                 return String(format: "%.7f", doubleVal)
             }
         }
@@ -592,25 +592,24 @@ class ZMQHandler: ObservableObject {
         let systemStats = json["system_stats"] as? [String: Any] ?? [:]
         let antSDRTemps = json["ant_sdr_temps"] as? [String: Any] ?? [:]
         
-        // memory block
         let memory = systemStats["memory"] as? [String: Any] ?? [:]
-        let memoryTotal = Double(memory["total"] as? Int64 ?? 0) / (1024 * 1024)
-        let memoryAvailable = Double(memory["available"] as? Int64 ?? 0) / (1024 * 1024)
+        let memoryTotal = Double(memory["total"] as? Int64 ?? 0)
+        let memoryAvailable = Double(memory["available"] as? Int64 ?? 0)
         let memoryPercent = Double(memory["percent"] as? Double ?? 0.0)
-        let memoryUsed = Double(memory["used"] as? Int64 ?? 0) / (1024 * 1024)
-        let memoryFree = Double(memory["free"] as? Int64 ?? 0) / (1024 * 1024)
-        let memoryActive = Double(memory["active"] as? Int64 ?? 0) / (1024 * 1024)
-        let memoryInactive = Double(memory["inactive"] as? Int64 ?? 0) / (1024 * 1024)
-        let memoryBuffers = Double(memory["buffers"] as? Int64 ?? 0) / (1024 * 1024)
-        let memoryShared = Double(memory["shared"] as? Int64 ?? 0) / (1024 * 1024)
-        let memoryCached = Double(memory["cached"] as? Int64 ?? 0) / (1024 * 1024)
-        let memorySlab = Double(memory["slab"] as? Int64 ?? 0) / (1024 * 1024)
+        let memoryUsed = Double(memory["used"] as? Int64 ?? 0)
+        let memoryFree = Double(memory["free"] as? Int64 ?? 0)
+        let memoryActive = Double(memory["active"] as? Int64 ?? 0)
+        let memoryInactive = Double(memory["inactive"] as? Int64 ?? 0)
+        let memoryBuffers = Double(memory["buffers"] as? Int64 ?? 0)
+        let memoryShared = Double(memory["shared"] as? Int64 ?? 0)
+        let memoryCached = Double(memory["cached"] as? Int64 ?? 0)
+        let memorySlab = Double(memory["slab"] as? Int64 ?? 0)
         
-        // disk stats
+        // Disk stats
         let disk = systemStats["disk"] as? [String: Any] ?? [:]
-        let diskTotal = Double(disk["total"] as? Int64 ?? 0) / (1024 * 1024)
-        let diskUsed = Double(disk["used"] as? Int64 ?? 0) / (1024 * 1024)
-        let diskFree = Double(disk["free"] as? Int64 ?? 0) / (1024 * 1024)
+        let diskTotal = Double(disk["total"] as? Int64 ?? 0)
+        let diskUsed = Double(disk["used"] as? Int64 ?? 0)
+        let diskFree = Double(disk["free"] as? Int64 ?? 0)
         let diskPercent = Double(disk["percent"] as? Double ?? 0.0)
         
         // Get ANTSDR temps either from dedicated field or remarks string

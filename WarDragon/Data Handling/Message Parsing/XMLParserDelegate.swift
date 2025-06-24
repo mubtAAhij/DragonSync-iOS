@@ -489,7 +489,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     latitude: lat,
                     longitude: lon,
                     altitude: altitude,
-                    speed: 0.0
+                    speed: gps_speed // Add GPS speed
                 ),
                 systemStats: .init(
                     cpuUsage: cpuUsage,
@@ -497,19 +497,19 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                         total: Int64(memoryTotal * 1024 * 1024),
                         available: Int64(memoryAvailable * 1024 * 1024),
                         percent: memoryPercent,
-                        used: Int64(memoryUsed * 1024 * 1024),
+                        used: Int64(max(memoryUsed, memoryTotal - memoryAvailable) * 1024 * 1024),
                         free: Int64(memoryFree * 1024 * 1024),
-                        active: Int64(memoryActive * 0.6 * 1024 * 1024),
-                        inactive: Int64(memoryInactive * 0.4 * 1024 * 1024),
-                        buffers: Int64(memoryBuffers * 0.1 * 1024 * 1024),
-                        cached: Int64(memoryCached * 0.3 * 1024 * 1024),
-                        shared: Int64(memoryShared * 0.2 * 1024 * 1024),
-                        slab: Int64(memorySlab * 0.1 * 1024 * 1024)
+                        active: Int64(memoryActive * 1024 * 1024),
+                        inactive: Int64(memoryInactive * 1024 * 1024),
+                        buffers: Int64(memoryBuffers * 1024 * 1024),
+                        cached: Int64(memoryCached * 1024 * 1024),
+                        shared: Int64(memoryShared * 1024 * 1024),
+                        slab: Int64(memorySlab * 1024 * 1024)
                     ),
                     disk: .init(
                         total: Int64(diskTotal * 1024 * 1024),
                         used: Int64(diskUsed * 1024 * 1024),
-                        free: Int64((diskTotal - diskUsed) * 1024 * 1024),
+                        free: Int64(diskFree * 1024 * 1024),
                         percent: diskPercent
                     ),
                     temperature: temperature,

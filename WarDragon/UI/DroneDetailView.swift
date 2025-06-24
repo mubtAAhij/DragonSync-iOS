@@ -119,7 +119,7 @@ struct DroneDetailView: View {
                        }
                    }
                    
-                   // Flight path polyline - Fixed to ensure it shows
+                   // Flight path polyline
                    if flightPath.count > 1 {
                        MapPolyline(coordinates: flightPath)
                            .stroke(.purple, lineWidth: 3)

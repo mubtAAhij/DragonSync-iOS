@@ -53,7 +53,7 @@ class StatusViewModel: ObservableObject {
         var systemStats: SystemStats
         var antStats: ANTStats
         
-
+        
         struct GPSData {
             var latitude: Double
             var longitude: Double
@@ -211,7 +211,7 @@ extension StatusViewModel {
     func deleteStatusMessages(at indexSet: IndexSet) {
         statusMessages.remove(atOffsets: indexSet)
     }
-
+    
     private func sendSystemNotification(title: String, message: String, isThresholdAlert: Bool = false) {
         // Send local notification if enabled
         if Settings.shared.notificationsEnabled {

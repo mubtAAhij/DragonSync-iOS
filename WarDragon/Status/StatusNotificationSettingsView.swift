@@ -101,7 +101,7 @@ struct StatusNotificationSettingsView: View {
                     }
                 }
                 
-            
+                
                 Section(header: Text("Current Status")) {
                     StatusSummaryView()
                 }

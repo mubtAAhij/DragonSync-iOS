@@ -11,6 +11,13 @@ struct StatusListView: View {
     @ObservedObject var statusViewModel: StatusViewModel
     @StateObject private var serviceViewModel = ServiceViewModel()
     @State private var showServiceManagement = false
+    @State private var showingDeleteConfirmation = false
+    @State private var messageToDelete: StatusViewModel.StatusMessage?
+    
+    private func deleteMessage(_ message: StatusViewModel.StatusMessage) {
+        messageToDelete = message
+        showingDeleteConfirmation = true
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -27,7 +34,22 @@ struct StatusListView: View {
                     Section {
                         ForEach(statusViewModel.statusMessages) { message in
                             StatusMessageView(message: message, statusViewModel: statusViewModel)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        deleteMessage(message)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                                .contextMenu {
+                                    Button(role: .destructive, action: {
+                                        deleteMessage(message)
+                                    }) {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                         }
+                        .onDelete(perform: statusViewModel.deleteStatusMessages)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -60,7 +82,22 @@ struct StatusListView: View {
                     }
             }
         }
+        .alert("Delete Message", isPresented: $showingDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                if let message = messageToDelete,
+                   let index = statusViewModel.statusMessages.firstIndex(where: { $0.id == message.id }) {
+                    statusViewModel.deleteStatusMessages(at: IndexSet([index]))
+                }
+                messageToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                messageToDelete = nil
+            }
+        } message: {
+            Text("Are you sure you want to delete this status message?")
+        }
     }
+    
 }
 
 // MARK: - Connection Status Header
@@ -190,12 +227,12 @@ struct ServiceStatusWidget: View {
                     Circle()
                         .fill(healthReport?.statusColor ?? .gray)
                         .frame(width: 12, height: 12)
-
+                    
                     Text(healthReport?.overallHealth.uppercased() ?? "NO CONNECTION")
                         .font(.appHeadline)
-
+                    
                     Spacer()
-
+                    
                     Text(healthReport?.timestamp.formatted(date: .omitted, time: .standard) ?? "")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.secondary)

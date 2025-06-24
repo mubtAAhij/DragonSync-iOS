@@ -127,7 +127,6 @@ struct ResourceBar: View {
             }
         }
         .buttonStyle(.plain)
-        .disabled(!isInteractive)
     }
 }
 
@@ -232,51 +231,54 @@ struct StatusMessageView: View {
     
     // MARK: - iPad Layout (Horizontal)
     private var iPadLayout: some View {
-        HStack(alignment: .top, spacing: 24) {
-            // Left Column - System Metrics
-            VStack(alignment: .leading, spacing: 16) {
-                sectionHeader("SYSTEM METRICS", icon: "cpu")
-                
-                // Dials Row
-                HStack(spacing: 20) {
-                    CircularGauge(
-                        value: message.systemStats.cpuUsage,
-                        maxValue: 100,
-                        title: "CPU",
-                        unit: "%",
-                        color: cpuColor(message.systemStats.cpuUsage)
-                    )
+        VStack(spacing: 20) {
+            // System Metrics Row (Full Width)
+            HStack(alignment: .top, spacing: 20) {
+                // Left Column - CPU and Temperature dials
+                VStack(alignment: .leading, spacing: 12) {
+                    sectionHeader("SYSTEM METRICS", icon: "cpu")
                     
-                    CircularGauge(
-                        value: message.systemStats.temperature,
-                        maxValue: 100,
-                        title: "TEMP",
-                        unit: "°C",
-                        color: temperatureColor(message.systemStats.temperature)
-                    )
-                    
-                    if message.antStats.plutoTemp > 0 {
+                    HStack(spacing: 16) {
                         CircularGauge(
-                            value: message.antStats.plutoTemp,
+                            value: message.systemStats.cpuUsage,
                             maxValue: 100,
-                            title: "PLUTO",
-                            unit: "°C",
-                            color: temperatureColor(message.antStats.plutoTemp)
+                            title: "CPU",
+                            unit: "%",
+                            color: cpuColor(message.systemStats.cpuUsage)
                         )
-                    }
-                    
-                    if message.antStats.zynqTemp > 0 {
+                        
                         CircularGauge(
-                            value: message.antStats.zynqTemp,
+                            value: message.systemStats.temperature,
                             maxValue: 100,
-                            title: "ZYNQ",
+                            title: "TEMP",
                             unit: "°C",
-                            color: temperatureColor(message.antStats.zynqTemp)
+                            color: temperatureColor(message.systemStats.temperature)
                         )
+                        
+                        if message.antStats.plutoTemp > 0 {
+                            CircularGauge(
+                                value: message.antStats.plutoTemp,
+                                maxValue: 100,
+                                title: "PLUTO",
+                                unit: "°C",
+                                color: temperatureColor(message.antStats.plutoTemp)
+                            )
+                        }
+                        
+                        if message.antStats.zynqTemp > 0 {
+                            CircularGauge(
+                                value: message.antStats.zynqTemp,
+                                maxValue: 100,
+                                title: "ZYNQ",
+                                unit: "°C",
+                                color: temperatureColor(message.antStats.zynqTemp)
+                            )
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
-                // Resource Bars
+                // Right Column - Resource Bars
                 VStack(spacing: 12) {
                     ResourceBar(
                         title: "MEMORY",
@@ -295,24 +297,162 @@ struct StatusMessageView: View {
                         isInteractive: false
                     )
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             
-            // Right Column - Location & Map
-            VStack(alignment: .leading, spacing: 16) {
-                sectionHeader("LOCATION", icon: "location")
-                
-                LocationStatsView(
-                    gpsData: message.gpsData,
-                    onLocationTap: { activeSheet = .map }
-                )
+            // Location and Map Section (Full Width)
+            VStack(alignment: .leading, spacing: 12) {
+                // Location header and details - FULL WIDTH
+                expandedLocationSection
                 
                 // Map Preview
                 mapPreviewSection
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(20)
+    }
+    
+    private var expandedLocationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("LOCATION & SYSTEM STATUS", icon: "location")
+            
+            // Full-width location and system details
+            HStack(spacing: 20) {
+                // Location Details
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("COORDINATES")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .fontWeight(.medium)
+                        Spacer()
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Button(action: { activeSheet = .map }) {
+                            HStack {
+                                Text(String(format: "%.6f°", message.gpsData.latitude))
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.primary)
+                                    .fontWeight(.medium)
+                                
+                                Image(systemName: "location")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Text(String(format: "%.6f°", message.gpsData.longitude))
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .fontWeight(.medium)
+                    }
+                    
+                    HStack {
+                        Text("Alt:")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundColor(.secondary)
+                        Text("\(String(format: "%.1f", message.gpsData.altitude))m")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Text("Speed:")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundColor(.secondary)
+                        Text("\(String(format: "%.1f", message.gpsData.speed)) m/s")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // System Status Summary
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("SYSTEM STATUS")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .fontWeight(.medium)
+                        Spacer()
+                    }
+                    
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("CPU")
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundColor(.secondary)
+                            Text("\(String(format: "%.1f", message.systemStats.cpuUsage))%")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(cpuColor(message.systemStats.cpuUsage))
+                                .fontWeight(.bold)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("TEMP")
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundColor(.secondary)
+                            Text("\(String(format: "%.1f", message.systemStats.temperature))°C")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(temperatureColor(message.systemStats.temperature))
+                                .fontWeight(.bold)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("UPTIME")
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundColor(.secondary)
+                            Text(formatUptime(message.systemStats.uptime))
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.blue)
+                                .fontWeight(.bold)
+                        }
+                    }
+                    
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("MEMORY")
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundColor(.secondary)
+                            Text("\(String(format: "%.1f", memoryUsagePercent))%")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(memoryColor(memoryUsagePercent))
+                                .fontWeight(.bold)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("DISK")
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundColor(.secondary)
+                            Text("\(String(format: "%.1f", message.systemStats.disk.percent))%")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(diskColor(message.systemStats.disk.percent))
+                                .fontWeight(.bold)
+                        }
+                        
+                        if message.antStats.plutoTemp > 0 {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("PLUTO")
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                Text("\(String(format: "%.1f", message.antStats.plutoTemp))°C")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(temperatureColor(message.antStats.plutoTemp))
+                                    .fontWeight(.bold)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(UIColor.secondarySystemBackground))
+            )
+        }
     }
     
     // MARK: - iPhone Layout (Vertical)
@@ -466,8 +606,7 @@ struct StatusMessageView: View {
         }
     }
     
-    // MARK: - Computed Properties with FIXED Calculations
-    
+    // MARK: - Computed Properties
     private var memoryUsagePercent: Double {
         guard message.systemStats.memory.total > 0 else { return 0 }
         let used = message.systemStats.memory.total - message.systemStats.memory.available
@@ -476,6 +615,11 @@ struct StatusMessageView: View {
     
     private var diskUsagePercent: Double {
         guard message.systemStats.disk.total > 0 else { return 0 }
+        // Use the percent field directly if it's available and non-zero
+        if message.systemStats.disk.percent > 0 {
+            return message.systemStats.disk.percent
+        }
+        // Fallback to calculation
         return Double(message.systemStats.disk.used) / Double(message.systemStats.disk.total) * 100
     }
     
@@ -519,7 +663,7 @@ struct StatusMessageView: View {
     private func diskColor(_ percent: Double) -> Color {
         switch percent {
         case 0..<70: return .green
-        case 70..<85: return .yellow
+        case 50..<80: return .orange
         default: return .red
         }
     }
@@ -578,16 +722,17 @@ struct LocationStatsView: View {
     }
 }
 
-// MARK: - Detail Views (unchanged)
+// MARK: - Detail Views
 struct MemoryDetailView: View {
     let memory: StatusViewModel.StatusMessage.SystemStats.MemoryStats
+    
     
     var body: some View {
         NavigationView {
             List {
                 Section("Memory Usage") {
                     MemoryBarView(title: "Total", value: memory.total, total: memory.total, color: .blue)
-                    MemoryBarView(title: "Used", value: memory.used, total: memory.total, color: .red)
+                    MemoryBarView(title: "Used", value: memory.used > 0 ? memory.used : (memory.total - memory.available), total: memory.total, color: .red)
                     MemoryBarView(title: "Available", value: memory.available, total: memory.total, color: .green)
                     MemoryBarView(title: "Free", value: memory.free, total: memory.total, color: .green)
                     MemoryBarView(title: "Active", value: memory.active, total: memory.total, color: .orange)
@@ -657,6 +802,7 @@ struct MemoryBarView: View {
 struct MapDetailView: View {
     let coordinate: CLLocationCoordinate2D
     @State private var region: MKCoordinateRegion
+    @Environment(\.dismiss) private var dismiss
     
     init(coordinate: CLLocationCoordinate2D) {
         self.coordinate = coordinate
@@ -673,6 +819,13 @@ struct MapDetailView: View {
             }
             .navigationTitle("System Location")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
