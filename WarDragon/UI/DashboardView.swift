@@ -46,16 +46,29 @@ struct SystemStatusCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
+            // Header with Real-Time Status
             HStack {
                 Image(systemName: "cpu")
-                    .foregroundColor(.green)
+                    .foregroundColor(statusViewModel.statusColor)
                 Text("SYSTEM STATUS")
                     .font(.appHeadline)
                 Spacer()
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(statusViewModel.statusColor)
+                            .frame(width: 8, height: 8)
+                        Text(statusViewModel.statusText)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(statusViewModel.statusColor)
+                            .fontWeight(.medium)
+                    }
+                    
+                    Text(statusViewModel.lastReceivedText)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
             }
             
             // Metrics row with circular gauges
@@ -91,50 +104,41 @@ struct SystemStatusCard: View {
         .cornerRadius(12)
     }
     
+    private var statusColor: Color {
+        statusViewModel.statusColor
+    }
+    
     private var cpuColor: Color {
         let usage = statusViewModel.statusMessages.last?.systemStats.cpuUsage ?? 0
         switch usage {
-        case ..<60: return .green
+        case 0..<60: return .green
         case 60..<80: return .yellow
         default: return .red
         }
     }
-
+    
+    private var memoryUsagePercent: Double {
+        guard let lastMessage = statusViewModel.statusMessages.last else { return 0 }
+        let used = lastMessage.systemStats.memory.total - lastMessage.systemStats.memory.available
+        return Double(used) / Double(lastMessage.systemStats.memory.total) * 100
+    }
+    
     private var memoryColor: Color {
-        let percent = memoryUsagePercent
-        switch percent {
-        case ..<70: return .green
+        switch memoryUsagePercent {
+        case 0..<70: return .green
         case 70..<85: return .yellow
         default: return .red
         }
     }
-
+    
     private var temperatureColor: Color {
         let temp = statusViewModel.statusMessages.last?.systemStats.temperature ?? 0
         switch temp {
-        case ..<65: return .green
-        case 65..<75: return .yellow
+        case 0..<60: return .green
+        case 60..<75: return .yellow
         default: return .red
         }
     }
-
-    private var memoryUsagePercent: Double {
-        guard let memory = statusViewModel.statusMessages.last?.systemStats.memory else {
-            return 0
-        }
-        let used = Double(memory.total - memory.available)
-        let total = Double(memory.total)
-        return (used / total) * 100
-    }
-    
-    private var statusColor: Color {
-        guard let stats = statusViewModel.statusMessages.last?.systemStats else { return .gray }
-        if stats.cpuUsage > 80 || stats.temperature > 75 { return .red }
-        if stats.cpuUsage > 60 || stats.temperature > 65 { return .yellow }
-        return .green
-    }
-    
-    // Additional color comps TODO: adjust these to be less scary
 }
 
 struct DronesOverviewCard: View {

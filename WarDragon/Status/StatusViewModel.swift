@@ -11,6 +11,38 @@ import SwiftUI
 
 class StatusViewModel: ObservableObject {
     @Published var statusMessages: [StatusMessage] = []
+    @Published var lastStatusMessageReceived: Date?
+    
+    // MARK: - Status Connection Logic
+    
+    var isSystemOnline: Bool {
+        guard let lastReceived = lastStatusMessageReceived else { return false }
+        return Date().timeIntervalSince(lastReceived) < 300 // Consider offline if no message in 5min
+    }
+    
+    var statusColor: Color {
+        isSystemOnline ? .green : .red
+    }
+    
+    var statusText: String {
+        isSystemOnline ? "ONLINE" : "OFFLINE"
+    }
+    
+    var lastReceivedText: String {
+        guard let lastReceived = lastStatusMessageReceived else { return "Never" }
+        
+        let timeInterval = Date().timeIntervalSince(lastReceived)
+        
+        if timeInterval < 60 {
+            return "\(Int(timeInterval))s ago"
+        } else if timeInterval < 3600 {
+            return "\(Int(timeInterval / 60))m ago"
+        } else if timeInterval < 86400 {
+            return "\(Int(timeInterval / 3600))h ago"
+        } else {
+            return "\(Int(timeInterval / 86400))d ago"
+        }
+    }
     
     struct StatusMessage: Identifiable  {
         var id: String { uid }
@@ -67,6 +99,30 @@ class StatusViewModel: ObservableObject {
             var zynqTemp: Double
         }
     }
+    
+    // MARK: - Message Management
+    
+    func addStatusMessage(_ message: StatusMessage) {
+        statusMessages.append(message)
+        lastStatusMessageReceived = Date()
+        
+        // Keep only the last 100 messages to prevent memory issues
+        if statusMessages.count > 100 {
+            statusMessages.removeFirst(statusMessages.count - 100)
+        }
+        
+        // Check thresholds after adding new message
+        checkSystemThresholds()
+    }
+    
+    func updateExistingStatusMessage(_ message: StatusMessage) {
+        if let index = statusMessages.firstIndex(where: { $0.uid == message.uid }) {
+            statusMessages[index] = message
+        } else {
+            addStatusMessage(message)
+        }
+        lastStatusMessageReceived = Date()
+    }
 }
 
 extension StatusViewModel {
@@ -87,7 +143,7 @@ extension StatusViewModel {
             }
         }
         
-        // Check system temperature
+        // Check system
         if lastMessage.systemStats.temperature > Settings.shared.tempWarningThreshold {
             if Settings.shared.statusNotificationThresholds {
                 sendSystemNotification(
@@ -98,7 +154,6 @@ extension StatusViewModel {
             }
         }
         
-        // Check memory usage - FIX: Use correct calculation
         let usedMemory = lastMessage.systemStats.memory.total - lastMessage.systemStats.memory.available
         let memoryUsage = Double(usedMemory) / Double(lastMessage.systemStats.memory.total)
         if memoryUsage > Settings.shared.memoryWarningThreshold {
@@ -198,7 +253,7 @@ extension StatusViewModel {
                 "is_threshold_alert": isThresholdAlert
             ]
             
-            // Add detailed system stats for webhooks - FIX: Use correct memory calculation
+            // Add detailed system stats for webhooks
             if let lastMessage = statusMessages.last {
                 let usedMemory = lastMessage.systemStats.memory.total - lastMessage.systemStats.memory.available
                 let memoryUsagePercent = Double(usedMemory) / Double(lastMessage.systemStats.memory.total) * 100
@@ -212,6 +267,7 @@ extension StatusViewModel {
                 data["pluto_temperature"] = lastMessage.antStats.plutoTemp
                 data["zynq_temperature"] = lastMessage.antStats.zynqTemp
                 data["uptime"] = lastMessage.systemStats.uptime
+                data["last_status_received"] = lastStatusMessageReceived?.timeIntervalSince1970
             }
             
             WebhookManager.shared.sendWebhook(event: event, data: data)

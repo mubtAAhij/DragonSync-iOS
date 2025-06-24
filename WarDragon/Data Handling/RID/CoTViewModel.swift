@@ -784,19 +784,10 @@ class CoTViewModel: ObservableObject {
             }
         }
     }
-    //MARK: - Message Handling
-    
     private func updateStatusMessage(_ message: StatusViewModel.StatusMessage) {
         DispatchQueue.main.async {
-            if let index = self.statusViewModel.statusMessages.firstIndex(where: { $0.uid == message.uid }) {
-                // Update existing status message
-                self.statusViewModel.statusMessages[index] = message
-                print("Updated existing status message: \(message)")
-            } else {
-                // Add new status message
-                self.statusViewModel.statusMessages.append(message)
-                self.sendStatusNotification(for: message)
-            }
+            self.statusViewModel.updateExistingStatusMessage(message)  
+            self.sendStatusNotification(for: message)
         }
     }
     
