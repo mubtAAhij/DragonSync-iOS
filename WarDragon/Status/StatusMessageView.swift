@@ -503,17 +503,6 @@ struct StatusMessageView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
-                // Location Column
-                VStack(alignment: .leading, spacing: 12) {
-                    sectionHeader("LOCATION", icon: "location")
-                    
-                    LocationStatsView(
-                        gpsData: message.gpsData,
-                        onLocationTap: { activeSheet = .map }
-                    )
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             
             // Resource Bars (Full Width)
