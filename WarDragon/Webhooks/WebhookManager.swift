@@ -462,3 +462,29 @@ class WebhookManager: ObservableObject {
         }
     }
 }
+
+extension WebhookManager {
+    /// Record a test‐send in the delivery history so it shows up in the UI.
+    func recordTestDelivery(
+        config: WebhookConfiguration,
+        success: Bool,
+        responseCode: Int? = nil,
+        error: String? = nil
+    ) {
+        let delivery = WebhookDelivery(
+            webhookName: config.name,
+            event: .systemAlert,          // use a generic event for test
+            timestamp: Date(),
+            success: success,
+            responseCode: responseCode,
+            error: error,
+            retryAttempt: 0
+        )
+        DispatchQueue.main.async {
+            self.recentDeliveries.insert(delivery, at: 0)
+            if self.recentDeliveries.count > 100 {
+                self.recentDeliveries.removeLast(self.recentDeliveries.count - 100)
+            }
+        }
+    }
+}

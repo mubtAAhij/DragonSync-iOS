@@ -246,10 +246,15 @@ struct WebhookConfigurationView: View {
         
         Task {
             let success = await WebhookManager.shared.testWebhook(testConfig)
-            
             DispatchQueue.main.async {
                 self.isTesting = false
                 self.testResult = success ? "✅ Test successful!" : "❌ Test failed"
+                // now log it into the Recent Deliveries list
+                WebhookManager.shared.recordTestDelivery(
+                    config: testConfig,
+                    success: success,
+                    error: success ? nil : "Test failed"
+                )
             }
         }
     }
