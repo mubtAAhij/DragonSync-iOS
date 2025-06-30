@@ -75,10 +75,6 @@ struct MessageRow: View {
     }
     
     private func deleteDroneFromStorage() {
-        // Remove from storage
-        droneStorage.deleteEncounter(id: message.uid)
-        
-        // Generate all possible ID variants and delete them all
         let baseId = message.uid.replacingOccurrences(of: "drone-", with: "")
         let possibleIds = [
             message.uid,
@@ -86,15 +82,11 @@ struct MessageRow: View {
             baseId,
             "drone-\(baseId)"
         ]
-        
         for id in possibleIds {
             droneStorage.deleteEncounter(id: id)
         }
-        
-        // After deleting from storage, also remove from tracking
-        removeDroneFromTracking()
     }
-    
+
     private func findEncounterForID(_ id: String) -> DroneEncounter? {
         // Direct lookup first
         if let encounter = droneStorage.encounters[id] {
@@ -502,9 +494,11 @@ struct MessageRow: View {
                     Label("Delete from History", systemImage: "trash")
                 }
             }
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {  // Add swipe action
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button(role: .destructive) {
-                    showingDeleteConfirmation = true
+                    removeDroneFromTracking()
+                    deleteDroneFromStorage()
+//                    showingDeleteConfirmation = true
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
