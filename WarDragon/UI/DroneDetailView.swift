@@ -202,7 +202,10 @@ struct DroneDetailView: View {
                 if let height = message.height {
                     DroneInfoRow(title: "Height AGL", value: "\(height) m")
                 }
-                DroneInfoRow(title: "Speed", value: "\(message.speed) m/s")
+                if message.speed != "" {
+                    DroneInfoRow(title: "Speed", value: "\(message.speed) m/s")
+                }
+                
                 DroneInfoRow(title: "Vertical Speed", value: "\(message.vspeed) m/s")
                 
                 // Track data from CoT messages

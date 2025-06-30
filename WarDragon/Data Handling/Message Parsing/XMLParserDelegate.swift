@@ -862,13 +862,13 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     aux_rssi: aux_rssi,
                     channel: channel,
                     phy: phy,
-                    aa: aa,
-                    adv_mode: adv_mode,
-                    adv_mac: adv_mac,
+                    aa: accessAddress,
+                    adv_mode: advMode,
+                    adv_mac: advAddress,
                     did: did,
                     sid: sid,
                     timeSpeed: nil,
-                    status: nil,
+                    status: status,
                     opStatus: opStatus,
                     altPressure: altPressure?.description,
                     heightType: heightType,
@@ -885,11 +885,11 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     area_radius: nil,
                     area_ceiling: nil,
                     area_floor: nil,
-                    advMode: nil,
+                    advMode: advMode,
                     txAdd: nil,
                     rxAdd: nil,
                     adLength: nil,
-                    accessAddress: nil,
+                    accessAddress: accessAddress,
                     operatorAltGeo: operatorAltGeo?.description,
                     areaCount: nil,
                     areaRadius: nil,
@@ -906,8 +906,9 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     isSpoofed: false,
                     spoofingDetails: nil,
                     runtime: runtime ?? "",
+                    track_course: trackCourse?.description,
                     track_speed: trackSpeed?.description,
-                    track_bearing: track_bearing?.description,
+                    track_bearing: trackBearing?.description,
                     rawMessage: buildRawMessage(mac, rssi, description)
                 )
             }
@@ -923,7 +924,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
                     processJSONArray(jsonArray)
                 } else if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    _ = processSingleJSON(json)
+                    processSingleJSON(json)
                 }
             }
             
