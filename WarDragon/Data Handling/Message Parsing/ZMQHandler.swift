@@ -207,15 +207,8 @@ class ZMQHandler: ObservableObject {
     
     func setBackgroundMode(_ enabled: Bool) {
         isInBackgroundMode = enabled
-        
-        // Adjust polling interval based on background mode
-        if enabled {
-            // Use longer intervals for background polling
-            //  pollingInterval = 5.0 // 5 seconds
-        } else {
-            // Use normal intervals for foreground polling
-            // pollingInterval = 0.4 // 400ms
-        }
+        // This flag is used to determine timeout values in the poll() call
+        print("ZMQ Background mode \(enabled ? "enabled" : "disabled")")
     }
     
     private func configureSocket(_ socket: SwiftyZeroMQ.Socket) throws {
@@ -236,15 +229,18 @@ class ZMQHandler: ObservableObject {
             
             while self.shouldContinueRunning {
                 do {
-                    if let items = try self.poller?.poll(timeout: 0.1) { // Reduce poll timeout
+                    // Adjust timeout based on background mode
+                    let pollTimeout: Double = self.isInBackgroundMode ? 5.0 : 0.1
+                    
+                    if let items = try self.poller?.poll(timeout: pollTimeout) {
                         for (socket, events) in items {
                             if events.contains(.pollIn) {
                                 if let data = try socket.recv(bufferLength: 65536),
                                    let jsonString = String(data: data, encoding: .utf8) {
+                                    
                                     // Process immediately instead of dispatching
                                     if socket === self.telemetrySocket {
                                         if let xmlMessage = self.convertTelemetryToXML(jsonString) {
-                                            print("Converting to xml: \(xmlMessage)")
                                             onTelemetry(xmlMessage)
                                         }
                                     } else if socket === self.statusSocket {
@@ -256,6 +252,12 @@ class ZMQHandler: ObservableObject {
                             }
                         }
                     }
+                    
+                    // Add a small delay in background mode to reduce CPU usage
+                    if self.isInBackgroundMode {
+                        Thread.sleep(forTimeInterval: 1.0)
+                    }
+                    
                 } catch let error as SwiftyZeroMQ.ZeroMQError {
                     if error.description != "Resource temporarily unavailable" && self.shouldContinueRunning {
                         print("ZMQ Polling Error: \(error)")

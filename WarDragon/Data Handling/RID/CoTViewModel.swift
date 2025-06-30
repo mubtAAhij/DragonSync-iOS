@@ -814,9 +814,6 @@ class CoTViewModel: ObservableObject {
             // Save current message format for restoration later
             let currentFormat = zmqHandler.messageFormat
             
-            // Reduce polling frequency by setting a lower-intensity flag if available
-            // Note: This assumes ZMQHandler has a background mode property
-            // If not available in the current implementation, consider adding it
             if zmqHandler.isConnected {
                 print("Reducing ZMQ activity for background mode")
                 zmqHandler.setBackgroundMode(true)
@@ -1150,6 +1147,12 @@ class CoTViewModel: ObservableObject {
     
     
     private func updateDroneSignaturesAndEncounters(_ signature: DroneSignature, message: CoTMessage) {
+        
+                  // UNCOMMENT THIS BLOCK TO DISALLOW ZERO COORDINATE DETECTIONS
+        //        guard signature.position.coordinate.latitude != 0 &&
+        //              signature.position.coordinate.longitude != 0 else {
+        //            return // Skip update if coordinates are 0,0
+        //        }
         
         // Update drone signatures
         if let index = self.droneSignatures.firstIndex(where: { $0.primaryId.id == signature.primaryId.id }) {
