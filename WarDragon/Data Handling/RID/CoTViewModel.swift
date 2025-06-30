@@ -385,7 +385,7 @@ class CoTViewModel: ObservableObject {
                 "pilotLon": self.pilotLon,
                 "description": self.description,
                 "selfIDText": self.selfIDText,
-                "uaType": self.uaType, // Assuming `UAType` is an enum
+                "uaType": self.uaType,
                 "idType": self.idType,
                 "isSpoofed": self.isSpoofed,
                 "rssi": self.rssi ?? 0.0,
@@ -724,7 +724,7 @@ class CoTViewModel: ObservableObject {
             
             
             if let message = String(data: data, encoding: .utf8) {
-                //                print("DEBUG - Received data: \(message)")
+                print("DEBUG - Received data: \(message)")
                 
                 // Check for Status message first (has both status code type and remarks with CPU Usage)
                 if message.contains("<remarks>CPU Usage:") {
@@ -758,7 +758,7 @@ class CoTViewModel: ObservableObject {
                 
                 // Finally check for regular XML drone message
                 if message.trimmingCharacters(in: .whitespacesAndNewlines).starts(with: "<") {
-                    print("Processing XML Drone message: \(message)")
+                    //                    print("Processing XML Drone message: \(message)")
                     let parser = XMLParser(data: data)
                     let cotParserDelegate = CoTMessageParser()
                     parser.delegate = cotParserDelegate
@@ -1148,7 +1148,7 @@ class CoTViewModel: ObservableObject {
     
     private func updateDroneSignaturesAndEncounters(_ signature: DroneSignature, message: CoTMessage) {
         
-                  // UNCOMMENT THIS BLOCK TO DISALLOW ZERO COORDINATE DETECTIONS
+        // UNCOMMENT THIS BLOCK TO DISALLOW ZERO COORDINATE DETECTIONS
         //        guard signature.position.coordinate.latitude != 0 &&
         //              signature.position.coordinate.longitude != 0 else {
         //            return // Skip update if coordinates are 0,0
