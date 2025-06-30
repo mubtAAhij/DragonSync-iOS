@@ -555,7 +555,7 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                     homeLon: homeLon?.description ?? "0.0",
                     speed: speed?.description ?? "0.0",
                     vspeed: vspeed?.description ?? "0.0",
-                    alt: alt?.description ?? "0.0",
+                    alt: pointAttributes["hae"] ?? (alt?.description ?? "0.0"),
                     height: heightAGL?.description ?? "0.0",
                     pilotLat: operatorLat?.description ?? "0.0",
                     pilotLon: operatorLon?.description ?? "0.0",
@@ -982,8 +982,8 @@ class CoTMessageParser: NSObject, XMLParserDelegate {
                 vspeed = Double(trimmed.dropFirst(11).replacingOccurrences(of: "m/s", with: "").trimmingCharacters(in: .whitespaces))
             } else if trimmed.hasPrefix("Geodetic Altitude:") {
                 alt = Double(trimmed.dropFirst(18).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
-            } else if trimmed.hasPrefix("Height AGL:") {
-                heightAGL = Double(trimmed.dropFirst(11).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
+            } else if trimmed.hasPrefix("AGL:") {
+                heightAGL = Double(trimmed.dropFirst(4).replacingOccurrences(of: "m", with: "").trimmingCharacters(in: .whitespaces))
             } else if trimmed.hasPrefix("Height Type:") {
                 heightType = trimmed.dropFirst(12).trimmingCharacters(in: .whitespaces)
             } else if trimmed.hasPrefix("Pressure Altitude:") {

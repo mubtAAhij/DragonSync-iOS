@@ -628,10 +628,8 @@ public final class DroneSignatureGenerator {
         }
         
         // Handle geodetic altitude from hae attribute
-        if let haeAlt = message["hae"] as? String {
-            alt = Double(haeAlt) ?? 0.0
-        } else if let mAlt = message["alt"] as? String {
-            alt = Double(mAlt) ?? 0.0
+        if let mAlt = message["alt"] as? Double {
+            alt = Double(mAlt)
         } else if let mAlt = message["geodetic_altitude"] as? String {
             alt = Double(mAlt) ?? 0.0
         }
