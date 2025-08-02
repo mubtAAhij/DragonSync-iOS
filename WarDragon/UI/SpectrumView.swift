@@ -73,21 +73,21 @@ struct SpectrumView: View {
                             .strokeBorder(Color.green.opacity(0.3), lineWidth: 1)
                     )
             } else {
-                Text("No spectrum data")
+                Text(String(localized: "no_spectrum_data", comment: "Message when no spectrum data is available"))
                     .foregroundColor(.secondary)
                     .frame(maxHeight: .infinity)
             }
         }
         .padding()
-        .navigationTitle("Spectrum")
+        .navigationTitle(String(localized: "spectrum", comment: "Spectrum view title"))
         .sheet(isPresented: $showSettings) {
             NavigationView {
                 Form {
-                    Section("UDP Connection") {
+                    Section(String(localized: "udp_connection", comment: "UDP connection settings section")) {
                         HStack {
-                            Text("Port")
+                            Text(String(localized: "port", comment: "Port label"))
                             Spacer()
-                            TextField("Port", text: $spectrumPort)
+                            TextField(String(localized: "port", comment: "Port label"), text: $spectrumPort)
                                 .keyboardType(.numberPad)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 100)
@@ -110,11 +110,11 @@ struct SpectrumView: View {
                         }
                     }
                 }
-                .navigationTitle("Spectrum Settings")
+                .navigationTitle(String(localized: "spectrum_settings", comment: "Spectrum settings title"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
+                        Button(String(localized: "done", comment: "Done button")) {
                             showSettings = false
                         }
                     }
