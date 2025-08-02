@@ -12,7 +12,7 @@ enum WebhookType: String, CaseIterable, Codable {
     case ifttt = "IFTTT"
     case matrix = "Matrix"
     case discord = "Discord"
-    case custom = "Custom"
+    case custom = String(localized: "custom", comment: "Custom webhook type")
     
     var icon: String {
         switch self {
@@ -46,15 +46,15 @@ enum WebhookEvent: String, CaseIterable, Codable {
     
     var displayName: String {
         switch self {
-        case .droneDetected: return "Drone Detected"
-        case .fpvSignal: return "FPV Signal"
-        case .systemAlert: return "System Alert"
-        case .proximityWarning: return "Proximity Warning"
-        case .temperatureAlert: return "Temperature Alert"
-        case .memoryAlert: return "Memory Alert"
-        case .cpuAlert: return "CPU Alert"
-        case .connectionLost: return "Connection Lost"
-        case .connectionRestored: return "Connection Restored"
+        case .droneDetected: return String(localized: "drone_detected", comment: "Drone detection event display name")
+        case .fpvSignal: return String(localized: "fpv_signal", comment: "FPV signal event display name")
+        case .systemAlert: return String(localized: "system_alert", comment: "System alert event display name")
+        case .proximityWarning: return String(localized: "proximity_warning", comment: "Proximity warning event display name")
+        case .temperatureAlert: return String(localized: "temperature_alert", comment: "Temperature alert event display name")
+        case .memoryAlert: return String(localized: "memory_alert", comment: "Memory alert event display name")
+        case .cpuAlert: return String(localized: "cpu_alert", comment: "CPU alert event display name")
+        case .connectionLost: return String(localized: "connection_lost", comment: "Connection lost event display name")
+        case .connectionRestored: return String(localized: "connection_restored", comment: "Connection restored event display name")
         }
     }
 }
@@ -130,7 +130,7 @@ struct WebhookPayload {
                 "timestamp": ISO8601DateFormatter().string(from: timestamp),
                 "fields": formatFieldsForDiscord(),
                 "footer": [
-                    "text": "WarDragon Alert System"
+                    "text": String(localized: "wardragon_alert_system", comment: "Footer text for Discord webhook embeds")
                 ]
             ]]
         ]
@@ -378,7 +378,7 @@ class WebhookManager: ObservableObject {
     
     private func buildRequest(config: WebhookConfiguration, payload: WebhookPayload) throws -> URLRequest {
         guard let url = URL(string: config.url) else {
-            throw NSError(domain: "WebhookManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+            throw NSError(domain: "WebhookManager", code: 1, userInfo: [NSLocalizedDescriptionKey: String(localized: "invalid_url", comment: "Error message for invalid webhook URL")])
         }
         
         var request = URLRequest(url: url)
