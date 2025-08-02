@@ -254,11 +254,11 @@ struct MessageRow: View {
             
             Menu {
                 Button(action: { showingInfoEditor = true }) {
-                    Label("Edit Info", systemImage: "pencil")
+                    Label(String(localized: "edit_info", comment: "Edit info menu option"), systemImage: "pencil")
                 }
                 
                 Button(action: { activeSheet = .liveMap }) {
-                    Label("Live Map", systemImage: "map")
+                    Label(String(localized: "live_map", comment: "Live map menu option"), systemImage: "map")
                 }
                 
                 Divider()
@@ -266,13 +266,13 @@ struct MessageRow: View {
                 Button(action: {
                     removeDroneFromTracking()
                 }) {
-                    Label("Stop Tracking", systemImage: "eye.slash")
+                    Label(String(localized: "stop_tracking", comment: "Stop tracking menu option"), systemImage: "eye.slash")
                 }
                 
                 Button(role: .destructive, action: {
                     showingDeleteConfirmation = true
                 }) {
-                    Label("Delete", systemImage: "trash")
+                    Label(String(localized: "delete_button", comment: "Delete confirmation button"), systemImage: "trash")
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
@@ -485,7 +485,7 @@ struct MessageRow: View {
                 Button(action: {
                     removeDroneFromTracking()
                 }) {
-                    Label("Stop Tracking", systemImage: "eye.slash")
+                    Label(String(localized: "stop_tracking", comment: "Button to stop tracking a drone"), systemImage: "eye.slash")
                 }
                 
                 Button(role: .destructive, action: {
@@ -500,7 +500,7 @@ struct MessageRow: View {
                     deleteDroneFromStorage()
 //                    showingDeleteConfirmation = true
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(String(localized: "delete", comment: "Delete button"), systemImage: "trash")
                 }
                 
                 Button {
@@ -519,7 +519,7 @@ struct MessageRow: View {
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarTrailing) {
-                                Button("Done") {
+                                Button(String(localized: "done", comment: "Done button")) {
                                     activeSheet = nil
                                 }
                             }
@@ -534,7 +534,7 @@ struct MessageRow: View {
                     )
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
+                            Button(String(localized: "done", comment: "Done button")) {
                                 activeSheet = nil
                             }
                         }
@@ -545,11 +545,11 @@ struct MessageRow: View {
         .sheet(isPresented: $showingInfoEditor) {
             NavigationView {
                 DroneInfoEditor(droneId: message.uid)
-                    .navigationTitle("Edit Drone Info")
+                    .navigationTitle(String(localized: "edit_drone_info", comment: "Button to edit drone information"))
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
+                            Button(String(localized: "done", comment: "Done button")) {
                                 showingInfoEditor = false
                             }
                         }
