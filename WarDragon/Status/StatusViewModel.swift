@@ -25,11 +25,11 @@ class StatusViewModel: ObservableObject {
     }
     
     var statusText: String {
-        isSystemOnline ? "ONLINE" : "OFFLINE"
+        isSystemOnline ? String(localized: "online", comment: "System online status") : String(localized: "offline", comment: "System offline status")
     }
     
     var lastReceivedText: String {
-        guard let lastReceived = lastStatusMessageReceived else { return "Never" }
+        guard let lastReceived = lastStatusMessageReceived else { return String(localized: "never", comment: "Never received status") }
         
         let timeInterval = Date().timeIntervalSince(lastReceived)
         
@@ -136,8 +136,8 @@ extension StatusViewModel {
         if lastMessage.systemStats.cpuUsage > Settings.shared.cpuWarningThreshold {
             if Settings.shared.statusNotificationThresholds {
                 sendSystemNotification(
-                    title: "High CPU Usage",
-                    message: "CPU usage at \(Int(lastMessage.systemStats.cpuUsage))%",
+                    title: String(localized: "high_cpu_usage", comment: "High CPU usage alert title"),
+                    message: String(localized: "cpu_usage_at_percent", comment: "CPU usage percentage message").replacingOccurrences(of: "{percent}", with: "\(Int(lastMessage.systemStats.cpuUsage))"),
                     isThresholdAlert: true
                 )
             }
@@ -147,8 +147,8 @@ extension StatusViewModel {
         if lastMessage.systemStats.temperature > Settings.shared.tempWarningThreshold {
             if Settings.shared.statusNotificationThresholds {
                 sendSystemNotification(
-                    title: "High System Temperature",
-                    message: "Temperature at \(Int(lastMessage.systemStats.temperature))°C",
+                    title: String(localized: "high_system_temperature", comment: "High system temperature alert title"),
+                    message: String(localized: "temperature_at_celsius", comment: "Temperature in celsius message").replacingOccurrences(of: "{temp}", with: "\(Int(lastMessage.systemStats.temperature))"),
                     isThresholdAlert: true
                 )
             }
@@ -159,8 +159,8 @@ extension StatusViewModel {
         if memoryUsage > Settings.shared.memoryWarningThreshold {
             if Settings.shared.statusNotificationThresholds {
                 sendSystemNotification(
-                    title: "High Memory Usage",
-                    message: "Memory usage at \(Int(memoryUsage * 100))%",
+                    title: String(localized: "high_memory_usage", comment: "High memory usage alert title"),
+                    message: String(localized: "memory_usage_at_percent", comment: "Memory usage percentage message").replacingOccurrences(of: "{percent}", with: "\(Int(memoryUsage * 100))"),
                     isThresholdAlert: true
                 )
             }
@@ -170,8 +170,8 @@ extension StatusViewModel {
         if lastMessage.antStats.plutoTemp > Settings.shared.plutoTempThreshold {
             if Settings.shared.statusNotificationThresholds {
                 sendSystemNotification(
-                    title: "High Pluto Temperature",
-                    message: "Temperature at \(Int(lastMessage.antStats.plutoTemp))°C",
+                    title: String(localized: "high_pluto_temperature", comment: "Warning title for high Pluto temperature"),
+                    message: String(localized: "temperature_at_celsius", comment: "Temperature warning message with value in Celsius").replacingOccurrences(of: "{temperature}", with: "\(Int(lastMessage.antStats.plutoTemp))"),
                     isThresholdAlert: true
                 )
             }
@@ -180,8 +180,8 @@ extension StatusViewModel {
         if lastMessage.antStats.zynqTemp > Settings.shared.zynqTempThreshold {
             if Settings.shared.statusNotificationThresholds {
                 sendSystemNotification(
-                    title: "High Zynq Temperature",
-                    message: "Temperature at \(Int(lastMessage.antStats.zynqTemp))°C",
+                    title: String(localized: "high_zynq_temperature", comment: "Warning title for high Zynq temperature"),
+                    message: String(localized: "temperature_at_celsius", comment: "Temperature warning message with value in Celsius").replacingOccurrences(of: "{temperature}", with: "\(Int(lastMessage.antStats.zynqTemp))"),
                     isThresholdAlert: true
                 )
             }
@@ -199,8 +199,8 @@ extension StatusViewModel {
         let memoryUsage = Double(usedMemory) / Double(lastMessage.systemStats.memory.total)
         
         sendSystemNotification(
-            title: "System Status Update",
-            message: "CPU: \(String(format: "%.0f", lastMessage.systemStats.cpuUsage))%, Memory: \(String(format: "%.0f", memoryUsage * 100))%, Temp: \(Int(lastMessage.systemStats.temperature))°C",
+            title: String(localized: "system_status_update", comment: "Title for system status notification"),
+            message: String(localized: "system_status_message", comment: "System status notification message with CPU, memory, and temperature").replacingOccurrences(of: "{cpu}", with: String(format: "%.0f", lastMessage.systemStats.cpuUsage)).replacingOccurrences(of: "{memory}", with: String(format: "%.0f", memoryUsage * 100)).replacingOccurrences(of: "{temperature}", with: "\(Int(lastMessage.systemStats.temperature))"),
             isThresholdAlert: false
         )
         
@@ -240,7 +240,7 @@ extension StatusViewModel {
                 event = .temperatureAlert
             } else if title.contains("Memory") {
                 event = .memoryAlert
-            } else if title.contains("CPU") {
+            } else if title.contains(String(localized: "cpu", comment: "CPU label")) {
                 event = .cpuAlert
             } else {
                 event = .systemAlert
