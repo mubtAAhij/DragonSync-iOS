@@ -38,14 +38,14 @@ struct StatusListView: View {
                                     Button(role: .destructive) {
                                         deleteMessage(message)
                                     } label: {
-                                        Label("Delete", systemImage: "trash")
+                                        Label(String(localized: "delete", comment: "Delete button"), systemImage: "trash")
                                     }
                                 }
                                 .contextMenu {
                                     Button(role: .destructive, action: {
                                         deleteMessage(message)
                                     }) {
-                                        Label("Delete", systemImage: "trash")
+                                        Label(String(localized: "delete", comment: "Delete button"), systemImage: "trash")
                                     }
                                 }
                         }
@@ -67,34 +67,34 @@ struct StatusListView: View {
                 }
             }
         }
-        .navigationTitle("System Status")
+        .navigationTitle(String(localized: "system_status", comment: "System status navigation title"))
         .sheet(isPresented: $showServiceManagement) {
             NavigationView {
                 ServiceManagementView(viewModel: serviceViewModel)
-                    .navigationTitle("Service Management")
+                    .navigationTitle(String(localized: "service_management", comment: "Service management title"))
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Done") {
+                            Button(String(localized: "done", comment: "Done button")) {
                                 showServiceManagement = false
                             }
                         }
                     }
             }
         }
-        .alert("Delete Message", isPresented: $showingDeleteConfirmation) {
-            Button("Delete", role: .destructive) {
+        .alert(String(localized: "delete_message", comment: "Delete message alert title"), isPresented: $showingDeleteConfirmation) {
+            Button(String(localized: "delete", comment: "Delete button text"), role: .destructive) {
                 if let message = messageToDelete,
                    let index = statusViewModel.statusMessages.firstIndex(where: { $0.id == message.id }) {
                     statusViewModel.deleteStatusMessages(at: IndexSet([index]))
                 }
                 messageToDelete = nil
             }
-            Button("Cancel", role: .cancel) {
+            Button(String(localized: "cancel", comment: "Cancel button text"), role: .cancel) {
                 messageToDelete = nil
             }
         } message: {
-            Text("Are you sure you want to delete this status message?")
+            Text(String(localized: "delete_status_message_confirmation", comment: "Confirmation message for deleting status message"))
         }
     }
     
@@ -112,7 +112,7 @@ struct StatusConnectionHeaderView: View {
                         .fill(statusViewModel.statusColor)
                         .frame(width: 12, height: 12)
                     
-                    Text("SYSTEM CONNECTION")
+                    Text(String(localized: "system_connection", comment: "System connection status header"))
                         .font(.system(.headline, design: .monospaced))
                         .foregroundColor(.primary)
                     
@@ -127,7 +127,7 @@ struct StatusConnectionHeaderView: View {
             
             if let lastReceived = statusViewModel.lastStatusMessageReceived {
                 HStack {
-                    Text("Last Message Received:")
+                    Text(String(localized: "last_message_received", comment: "Label for last message received time"))
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.secondary)
                     
@@ -146,7 +146,7 @@ struct StatusConnectionHeaderView: View {
                 }
             } else {
                 HStack {
-                    Text("No status messages received")
+                    Text(String(localized: "no_status_messages_received", comment: "Message when no status messages have been received"))
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -155,7 +155,7 @@ struct StatusConnectionHeaderView: View {
             
             // Connection quality indicator
             HStack {
-                Text("Connection Reliablity:")
+                Text(String(localized: "connection_reliability", comment: "Label for connection reliability indicator"))
                     .font(.system(.caption, design: .monospaced))
                     .foregroundColor(.secondary)
                 
@@ -228,7 +228,7 @@ struct ServiceStatusWidget: View {
                         .fill(healthReport?.statusColor ?? .gray)
                         .frame(width: 12, height: 12)
                     
-                    Text(healthReport?.overallHealth.uppercased() ?? "NO CONNECTION")
+                    Text(healthReport?.overallHealth.uppercased() ?? String(localized: "no_connection", comment: "No connection status text"))
                         .font(.appHeadline)
                     
                     Spacer()
@@ -243,7 +243,7 @@ struct ServiceStatusWidget: View {
                 // Critical Services Summary
                 if !criticalServices.isEmpty {
                     HStack {
-                        Text("Critical Issues: \(criticalServices.count)")
+                        Text(String(localized: "critical_issues_count", comment: "Critical issues count label").replacingOccurrences(of: "{count}", with: "\(criticalServices.count)"))
                             .font(.appCaption)
                             .foregroundColor(.red)
                         Spacer()
