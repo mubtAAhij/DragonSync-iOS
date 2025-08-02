@@ -68,10 +68,10 @@ struct WebhookConfigurationView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Basic Configuration")) {
-                    TextField("Name", text: $name)
+                Section(header: Text(String(localized: "basic_configuration", comment: "Basic configuration section header"))) {
+                    TextField(String(localized: "name", comment: "Name field label"), text: $name)
                     
-                    Picker("Type", selection: $type) {
+                    Picker(String(localized: "type", comment: "Type field label"), selection: $type) {
                         ForEach(WebhookType.allCases, id: \.self) { webhookType in
                             HStack {
                                 Image(systemName: webhookType.icon)
@@ -81,7 +81,7 @@ struct WebhookConfigurationView: View {
                         }
                     }
                     
-                    TextField("URL", text: $url)
+                    TextField(String(localized: "url", comment: "URL field label"), text: $url)
                         .keyboardType(.URL)
                         .autocapitalization(.none)
                 }
@@ -98,7 +98,7 @@ struct WebhookConfigurationView: View {
                     customConfigurationSection
                 }
                 
-                Section(header: Text("Events")) {
+                Section(header: Text(String(localized: "events", comment: "Events section header"))) {
                     ForEach(WebhookEvent.allCases, id: \.self) { event in
                         Toggle(event.displayName, isOn: .init(
                             get: { enabledEvents.contains(event) },
@@ -113,22 +113,22 @@ struct WebhookConfigurationView: View {
                     }
                 }
                 
-                Section(header: Text("Advanced Settings")) {
+                Section(header: Text(String(localized: "advanced_settings", comment: "Advanced settings section header"))) {
                     HStack {
-                        Text("Retry Count")
+                        Text(String(localized: "retry_count", comment: "Retry count setting label"))
                         Spacer()
                         Stepper("\(retryCount)", value: $retryCount, in: 0...10)
                     }
                     
                     HStack {
-                        Text("Timeout")
+                        Text(String(localized: "timeout", comment: "Timeout setting label"))
                         Spacer()
-                        Text("\(timeoutSeconds, specifier: "%.0f")s")
+                        Text(String(localized: "timeout_seconds_format", comment: "Timeout seconds format").replacingOccurrences(of: "{seconds}", with: "\(timeoutSeconds, specifier: "%.0f")"))
                         Slider(value: $timeoutSeconds, in: 5...60, step: 5)
                     }
                 }
                 
-                Section(header: Text("Test")) {
+                Section(header: Text(String(localized: "test", comment: "Test section header"))) {
                     Button(action: testWebhook) {
                         HStack {
                             if isTesting {
@@ -137,7 +137,7 @@ struct WebhookConfigurationView: View {
                             } else {
                                 Image(systemName: "network")
                             }
-                            Text("Test Webhook")
+                            Text(String(localized: "test_webhook", comment: "Test webhook button text"))
                         }
                     }
                     .disabled(url.isEmpty || isTesting)
@@ -149,13 +149,13 @@ struct WebhookConfigurationView: View {
                     }
                 }
             }
-            .navigationTitle(config == nil ? "Add Webhook" : "Edit Webhook")
+            .navigationTitle(config == nil ? String(localized: "add_webhook", comment: "Add webhook title") : String(localized: "edit_webhook", comment: "Edit webhook title"))
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
-                leading: Button("Cancel") {
+                leading: Button(String(localized: "cancel", comment: "Cancel button text")) {
                     presentationMode.wrappedValue.dismiss()
                 },
-                trailing: Button("Save") {
+                trailing: Button(String(localized: "save", comment: "Save button text")) {
                     saveConfiguration()
                 }
                     .disabled(name.isEmpty || url.isEmpty)
@@ -166,48 +166,48 @@ struct WebhookConfigurationView: View {
     // MARK: - Type-specific sections
     
     private var iftttConfigurationSection: some View {
-        Section(header: Text("IFTTT Configuration")) {
-            TextField("Event Name", text: $iftttEventName)
+        Section(header: Text(String(localized: "ifttt_configuration", comment: "IFTTT configuration section header"))) {
+            TextField(String(localized: "event_name", comment: "Event name field label"), text: $iftttEventName)
                 .autocapitalization(.none)
             
-            Text("Use your IFTTT webhook URL. Event name will be included in the payload.")
+            Text(String(localized: "ifttt_configuration_help", comment: "IFTTT configuration help text"))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
     }
     
     private var matrixConfigurationSection: some View {
-        Section(header: Text("Matrix Configuration")) {
-            TextField("Room ID", text: $matrixRoomId)
+        Section(header: Text(String(localized: "matrix_configuration", comment: "Matrix configuration section header"))) {
+            TextField(String(localized: "room_id", comment: "Room ID field label"), text: $matrixRoomId)
                 .autocapitalization(.none)
             
-            SecureField("Access Token", text: $matrixAccessToken)
+            SecureField(String(localized: "access_token", comment: "Access token field label"), text: $matrixAccessToken)
             
-            Text("Use the Matrix room send message API endpoint. Format: https://matrix.org/_matrix/client/r0/rooms/{roomId}/send/m.room.message")
+            Text(String(localized: "matrix_configuration_help", comment: "Matrix configuration help text"))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
     }
     
     private var discordConfigurationSection: some View {
-        Section(header: Text("Discord Configuration")) {
-            TextField("Bot Username", text: $discordUsername)
+        Section(header: Text(String(localized: "discord_configuration", comment: "Discord configuration section header"))) {
+            TextField(String(localized: "bot_username", comment: "Bot username field label"), text: $discordUsername)
             
-            TextField("Avatar URL (optional)", text: $discordAvatarURL)
+            TextField(String(localized: "avatar_url_optional", comment: "Avatar URL optional field label"), text: $discordAvatarURL)
                 .keyboardType(.URL)
                 .autocapitalization(.none)
             
-            Text("Use your Discord webhook URL. Messages will be sent as rich embeds.")
+            Text(String(localized: "discord_configuration_help", comment: "Discord configuration help text"))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
     }
     
     private var customConfigurationSection: some View {
-        Section(header: Text("Custom Headers")) {
+        Section(header: Text(String(localized: "custom_headers", comment: "Custom headers section header"))) {
             ForEach(customHeaders) { header in
                 HStack {
-                    TextField("Header", text: .init(
+                    TextField(String(localized: "header", comment: "Header field label"), text: .init(
                         get: { header.key },
                         set: { newValue in
                             if let index = customHeaders.firstIndex(where: { $0.id == header.id }) {
@@ -216,7 +216,7 @@ struct WebhookConfigurationView: View {
                         }
                     ))
                     
-                    TextField("Value", text: .init(
+                    TextField(String(localized: "value", comment: "Value field label"), text: .init(
                         get: { header.value },
                         set: { newValue in
                             if let index = customHeaders.firstIndex(where: { $0.id == header.id }) {
@@ -230,7 +230,7 @@ struct WebhookConfigurationView: View {
                 customHeaders.remove(atOffsets: indexSet)
             }
             
-            Button("Add Header") {
+            Button(String(localized: "add_header", comment: "Add header button text")) {
                 customHeaders.append(HeaderPair(key: "", value: ""))
             }
         }
@@ -248,7 +248,7 @@ struct WebhookConfigurationView: View {
             let success = await WebhookManager.shared.testWebhook(testConfig)
             DispatchQueue.main.async {
                 self.isTesting = false
-                self.testResult = success ? "✅ Test successful!" : "❌ Test failed"
+                self.testResult = success ? String(localized: "test_successful", comment: "Test successful message") : String(localized: "test_failed", comment: "Test failed message")
                 // now log it into the Recent Deliveries list
                 WebhookManager.shared.recordTestDelivery(
                     config: testConfig,
