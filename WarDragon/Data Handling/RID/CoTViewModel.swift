@@ -208,18 +208,18 @@ class CoTViewModel: ObservableObject {
         
         var trackHeading: String? {
             if let course = track_course {
-                return "\(course)°"
+                return String(localized: "course_degrees", comment: "Course direction in degrees").replacingOccurrences(of: "{course}", with: "\(course)")
             } else if let direction = direction {
-                return "\(direction)°"
+                return String(localized: "direction_degrees", comment: "Direction in degrees").replacingOccurrences(of: "{direction}", with: "\(direction)")
             }
             return nil
         }
         
         var trackSpeedFormatted: String? {
             if let speed = track_speed {
-                return "\(speed) m/s"
+                return String(localized: "speed_meters_per_second", comment: "Speed in meters per second").replacingOccurrences(of: "{speed}", with: "\(speed)")
             } else if !self.speed.isEmpty && self.speed != "0.0" {
-                return "\(self.speed) m/s"
+                return String(localized: "speed_meters_per_second", comment: "Speed in meters per second").replacingOccurrences(of: "{speed}", with: "\(self.speed)")
             }
             return nil
         }
@@ -253,11 +253,11 @@ class CoTViewModel: ObservableObject {
             // Using times from CoT 4.0 Spec, Section 2.2.2.2
             let timeSince = Date().timeIntervalSince(lastUpdated)
             if timeSince <= 90 {
-                return "Active"
+                return String(localized: "status_active", comment: "Status showing drone is active")
             } else if timeSince <= 120 {
-                return "Aging"
+                return String(localized: "status_aging", comment: "Status showing drone signal is aging")
             } else {
-                return "Stale"
+                return String(localized: "status_stale", comment: "Status showing drone signal is stale")
             }
         }
         
@@ -268,14 +268,14 @@ class CoTViewModel: ObservableObject {
         
         var formattedAltitude: String? {
             if let altValue = Double(alt), altValue != 0 {
-                return String(format: "%.1f m MSL", altValue)
+                return String(format: String(localized: "altitude_msl_format", comment: "Altitude above mean sea level format").replacingOccurrences(of: "{altitude}", with: String(format: "%.1f", altValue)), altValue)
             }
             return nil
         }
         
         var formattedHeight: String? {
             if let heightValue = Double(height ?? ""), heightValue != 0 {
-                return String(format: "%.1f m AGL", heightValue)
+                return String(format: String(localized: "height_agl_format", comment: "Height above ground level format").replacingOccurrences(of: "{height}", with: String(format: "%.1f", heightValue)), heightValue)
             }
             return nil
         }
@@ -1443,8 +1443,8 @@ class CoTViewModel: ObservableObject {
         // Create and send notification
         let content = UNMutableNotificationContent()
         print("Attempting to send notification for drone: \(message.uid)")
-        content.title = "Drone Detected"
-        content.body = "From: \(message.uid)\nMAC: \(message.mac ?? "")"
+        content.title = String(localized: "notification_drone_detected", comment: "Notification title for detected drone")
+        content.body = String(localized: "notification_drone_details", comment: "Notification body with drone details").replacingOccurrences(of: "{uid}", with: message.uid).replacingOccurrences(of: "{mac}", with: message.mac ?? "")
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         
         UNUserNotificationCenter.current().add(request) { error in
@@ -1550,9 +1550,9 @@ extension CoTViewModel.CoTMessage {
         
         var description: String {
             switch self {
-            case .connected: return "Connected"
-            case .weak: return "Weak Signal"
-            case .lost: return "Connection Lost"
+            case .connected: return String(localized: "connection_status_connected", comment: "Connection status: connected")
+            case .weak: return String(localized: "connection_status_weak_signal", comment: "Connection status: weak signal")
+            case .lost: return String(localized: "connection_status_lost", comment: "Connection status: connection lost")
             case .unknown: return "Unknown"
             }
         }
