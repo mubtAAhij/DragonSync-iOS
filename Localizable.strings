@@ -1,0 +1,44 @@
+// Localizable.strings
+"failed_to_send_command" = "Failed to send command";
+"failed_to_get_logs" = "Failed to get logs";
+"course_degrees" = "{course}°";
+"direction_degrees" = "{direction}°";
+"speed_meters_per_second" = "{speed} m/s";
+"status_active" = "Active";
+"status_aging" = "Aging";
+"status_stale" = "Stale";
+"altitude_msl_format" = "%.1f m MSL";
+"height_agl_format" = "%.1f m AGL";
+"drone_detected" = "Drone Detected";
+"drone_detection_details" = "From: {uid}
+MAC: {mac}";
+"connection_status_connected" = "Connected";
+"connection_status_weak_signal" = "Weak Signal";
+"connection_status_lost" = "Connection Lost";
+"id_type_utm_assigned" = "UTM (USS) Assigned ID";
+"id_type_session_id" = "Specific Session ID";
+"ua_type_helicopter_multirotor" = "Helicopter/Multirotor";
+"height_reference_pressure_altitude" = "Pressure Altitude";
+"transmission_type_bt_drone_id" = "BT4/5 DroneID";
+"transmission_type_wifi_drone_id" = "WiFi DroneID";
+"transmission_type_esp32_drone_id" = "ESP32 DroneID";
+"protocol_type_open_drone_id" = "Open Drone ID";
+"protocol_type_legacy_remote_id" = "Legacy Remote ID";
+"protocol_type_custom" = "Custom";
+"dashboard" = "Dashboard";
+"detections" = "Detections";
+"clear_all" = "Clear All";
+"stop_all_tracking" = "Stop All Tracking";
+"delete_all_history" = "Delete All History";
+"new_message" = "New Message";
+"ok" = "OK";
+"new_message_details" = "From: {uid}
+Type: {type}
+Location: {lat}, {lon}";
+"delete" = "Delete";
+"cancel" = "Cancel";
+"delete_all_history_warning" = "This will permanently delete all stored drone encounters and detection history. This action cannot be undone.";
+"drones" = "Drones";
+"status" = "Status";
+"settings" = "Settings";
+"history" = "History";
