@@ -53,15 +53,15 @@ public struct DroneSignature: Hashable {
         public enum IdType: String, Hashable {
             case serialNumber = "Serial Number (ANSI/CTA-2063-A)"
             case caaRegistration = "CAA Assigned Registration ID"
-            case utmAssigned = "UTM (USS) Assigned ID"
-            case sessionId = "Specific Session ID"
+            case utmAssigned = String(localized: "id_type_utm_assigned", comment: "UTM assigned ID type")
+            case sessionId = String(localized: "id_type_session_id", comment: "Specific session ID type")
             case unknown = "Unknown"
         }
         
         public enum UAType: String, Hashable {
             case none = "None"
             case aeroplane = "Aeroplane"
-            case helicopter = "Helicopter/Multirotor"
+            case helicopter = String(localized: "ua_type_helicopter_multirotor", comment: "Helicopter/Multirotor aircraft type")
             case gyroplane = "Gyroplane"
             case hybridLift = "Hybrid Lift"
             case ornithopter = "Ornithopter"
@@ -262,7 +262,7 @@ public struct DroneSignature: Hashable {
         public enum HeightReferenceType: String {
             case ground = "Above Ground Level"
             case takeoff = "Above Takeoff"
-            case pressureAltitude = "Pressure Altitude"
+            case pressureAltitude = String(localized: "height_reference_pressure_altitude", comment: "Pressure altitude reference type")
             case wgs84 = "WGS84"
         }
         
@@ -304,17 +304,17 @@ public struct DroneSignature: Hashable {
         public let phy: Int?
         
         public enum TransmissionType: String {
-            case ble = "BT4/5 DroneID"
-            case wifi = "WiFi DroneID"
-            case esp32 = "ESP32 DroneID"
+            case ble = String(localized: "transmission_type_bt_drone_id", comment: "Bluetooth 4/5 DroneID transmission type")
+            case wifi = String(localized: "transmission_type_wifi_drone_id", comment: "WiFi DroneID transmission type")
+            case esp32 = String(localized: "transmission_type_esp32_drone_id", comment: "ESP32 DroneID transmission type")
             case unknown = "Unknown"
         }
         
         public enum ProtocolType: String {
-            case openDroneID = "Open Drone ID"
-            case legacyRemoteID = "Legacy Remote ID"
+            case openDroneID = String(localized: "protocol_type_open_drone_id", comment: "Open Drone ID protocol type")
+            case legacyRemoteID = String(localized: "protocol_type_legacy_remote_id", comment: "Legacy Remote ID protocol type")
             case astmF3411 = "ASTM F3411"
-            case custom = "Custom"
+            case custom = String(localized: "protocol_type_custom", comment: "Custom protocol type")
         }
         
         public enum MessageType: String, Hashable {
