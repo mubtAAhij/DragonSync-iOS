@@ -127,11 +127,11 @@ struct LiveMapView: View {
                         .stroke(.yellow, lineWidth: 2)
                     
                     
-                    Annotation("RSSI: \(ring.rssi) dBm", coordinate: ring.centerCoordinate) {
+                    Annotation(String(localized: "rssi_value", comment: "RSSI signal strength display"), coordinate: ring.centerCoordinate) {
                         VStack {
-                            Text("Encrypted Drone")
+                            Text(String(localized: "encrypted_drone", comment: "Label for encrypted drone"))
                                 .font(.caption)
-                            Text("\(Int(ring.radius))m radius")
+                            Text(String(localized: "radius_meters", comment: "Radius measurement in meters"))
                                 .font(.caption)
                                 .foregroundColor(.primary)
                         }
@@ -186,7 +186,7 @@ struct LiveMapView: View {
                 
                 Spacer()
                 Button(action: { showDroneList.toggle() }) {
-                    Text("\(uniqueDrones.count) Drones")
+                    Text(String(localized: "drone_count", comment: "Number of drones detected"))
                         .padding()
                         .background(.ultraThinMaterial)
                         .cornerRadius(20)
@@ -201,21 +201,21 @@ struct LiveMapView: View {
                         VStack(alignment: .leading) {
                             Text(message.uid)
                                 .font(.appHeadline)
-                            Text("Position: \(message.lat), \(message.lon)")
+                            Text(String(localized: "position_coordinates", comment: "Drone position coordinates"))
                                 .font(.appCaption)
                             if !message.description.isEmpty {
-                                Text("Description: \(message.description)")
+                                Text(String(localized: "description_label", comment: "Description field label"))
                                     .font(.appCaption)
                             }
                             if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
-                                Text("Pilot: \(message.pilotLat), \(message.pilotLon)")
+                                Text(String(localized: "pilot_coordinates", comment: "Pilot position coordinates"))
                                     .font(.appCaption)
                             }
                             if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 1 {
                                 HStack {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .foregroundColor(.yellow)
-                                    Text("MAC randomizing (\(macs.count))")
+                                    Text(String(localized: "mac_randomizing", comment: "MAC address randomization warning"))
                                         .font(.appCaption)
                                         .foregroundColor(.yellow)
                                 }
@@ -223,11 +223,11 @@ struct LiveMapView: View {
                         }
                     }
                 }
-                .navigationTitle("Active Drones")
+                .navigationTitle(String(localized: "active_drones", comment: "Navigation title for active drones list"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
+                        Button(String(localized: "done", comment: "Done button")) {
                             showDroneList = false
                         }
                     }
@@ -245,7 +245,7 @@ struct LiveMapView: View {
                     )
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
+                            Button(String(localized: "done", comment: "Done button")) {
                                 showDroneDetail = false
                             }
                         }
