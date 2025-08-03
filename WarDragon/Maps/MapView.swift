@@ -45,7 +45,7 @@ struct MapView: View {
                     .foregroundStyle(.yellow.opacity(0.1))
                     .stroke(.yellow, lineWidth: 2)
                 
-                Marker("\(Int(ring.radius))m", coordinate: ring.centerCoordinate)
+                Marker(String(localized: "radius_meters_short", comment: "Short radius display in meters").replacingOccurrences(of: "{radius}", with: "\(Int(ring.radius))"), coordinate: ring.centerCoordinate)
                     .tint(.yellow)
             }
         }
