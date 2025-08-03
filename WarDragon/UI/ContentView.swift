@@ -63,10 +63,10 @@ struct ContentView: View {
                     cotViewModel: cotViewModel,
                     spectrumViewModel: spectrumViewModel
                 )
-                .navigationTitle("Dashboard")
+                .navigationTitle(String(localized: "dashboard", comment: "Dashboard navigation title"))
             }
             .tabItem {
-                Label("Dashboard", systemImage: "gauge")
+                Label(String(localized: "dashboard", comment: "Dashboard tab label"), systemImage: "gauge")
             }
             .tag(0)
             
@@ -102,7 +102,7 @@ struct ContentView: View {
                         }
                     }
                 }
-                .navigationTitle("Detections")
+                .navigationTitle(String(localized: "detections", comment: "Detections navigation title"))
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
@@ -113,7 +113,7 @@ struct ContentView: View {
                                 cotViewModel.macProcessing.removeAll()
                                 cotViewModel.alertRings.removeAll()
                             }) {
-                                Label("Clear All", systemImage: "trash")
+                                Label(String(localized: "clear_all", comment: "Menu option to clear all detections"), systemImage: "trash")
                             }
                             
                             // Add option to clear just active tracking but keep history
@@ -122,30 +122,30 @@ struct ContentView: View {
                                 cotViewModel.droneSignatures.removeAll()
                                 cotViewModel.alertRings.removeAll()
                             }) {
-                                Label("Stop All Tracking", systemImage: "eye.slash")
+                                Label(String(localized: "stop_all_tracking", comment: "Menu option to stop all tracking"), systemImage: "eye.slash")
                             }
                             
                             // Modified button - now shows confirmation
                             Button(role: .destructive, action: {
                                 showDeleteAllConfirmation = true
                             }) {
-                                Label("Delete All History", systemImage: "trash.fill")
+                                Label(String(localized: "delete_all_history", comment: "Menu option to delete all history"), systemImage: "trash.fill")
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
                     }
                 }
-                .alert("New Message", isPresented: $showAlert) {
-                    Button("OK", role: .cancel) {}
+                .alert(String(localized: "new_message", comment: "Alert title for new message"), isPresented: $showAlert) {
+                    Button(String(localized: "ok", comment: "OK button text"), role: .cancel) {}
                 } message: {
                     if let message = latestMessage {
-                        Text("From: \(message.uid)\nType: \(message.type)\nLocation: \(message.lat), \(message.lon)")
+                        Text(String(localized: "message_details", comment: "Message details showing from, type, and location").replacingOccurrences(of: "{uid}", with: message.uid).replacingOccurrences(of: "{type}", with: message.type).replacingOccurrences(of: "{lat}", with: "\(message.lat)").replacingOccurrences(of: "{lon}", with: "\(message.lon)"))
                     }
                 }
                 // Add the confirmation alert
-                .alert("Delete All History", isPresented: $showDeleteAllConfirmation) {
-                    Button("Delete", role: .destructive) {
+                .alert(String(localized: "delete_all_history", comment: "Confirmation dialog title"), isPresented: $showDeleteAllConfirmation) {
+                    Button(String(localized: "delete", comment: "Delete button text"), role: .destructive) {
                         droneStorage.deleteAllEncounters()
                         cotViewModel.parsedMessages.removeAll()
                         cotViewModel.droneSignatures.removeAll()
@@ -153,13 +153,13 @@ struct ContentView: View {
                         cotViewModel.macProcessing.removeAll()
                         cotViewModel.alertRings.removeAll()
                     }
-                    Button("Cancel", role: .cancel) {}
+                    Button(String(localized: "cancel", comment: "Cancel button text"), role: .cancel) {}
                 } message: {
-                    Text("This will permanently delete all stored drone encounters and detection history. This action cannot be undone.")
+                    Text(String(localized: "delete_history_warning", comment: "Warning message for deleting all history"))
                 }
             }
             .tabItem {
-                Label("Drones", systemImage: "airplane.circle")
+                Label(String(localized: "drones", comment: "Drones tab label"), systemImage: "airplane.circle")
             }
             .tag(1)
             
@@ -174,7 +174,7 @@ struct ContentView: View {
                     }
             }
             .tabItem {
-                Label("Status", systemImage: "server.rack")
+                Label(String(localized: "status", comment: "Status tab label"), systemImage: "server.rack")
             }
             .tag(2)
             
@@ -182,14 +182,14 @@ struct ContentView: View {
                 SettingsView(cotHandler: cotViewModel)
             }
             .tabItem {
-                Label("Settings", systemImage: "gear")
+                Label(String(localized: "settings", comment: "Settings tab label"), systemImage: "gear")
             }
             .tag(3)
             NavigationStack {
                 StoredEncountersView(cotViewModel: cotViewModel)
             }
             .tabItem {
-                Label("History", systemImage: "clock.arrow.circlepath")
+                Label(String(localized: "history", comment: "History tab label"), systemImage: "clock.arrow.circlepath")
             }
             .tag(4)
             
