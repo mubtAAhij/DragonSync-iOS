@@ -45,7 +45,7 @@ struct MapView: View {
                     .foregroundStyle(.yellow.opacity(0.1))
                     .stroke(.yellow, lineWidth: 2)
                 
-                Marker("\(Int(ring.radius))m", coordinate: ring.centerCoordinate)
+                Marker(String(localized: "meters_unit", comment: "Meters unit abbreviation"), coordinate: ring.centerCoordinate)
                     .tint(.yellow)
             }
         }
