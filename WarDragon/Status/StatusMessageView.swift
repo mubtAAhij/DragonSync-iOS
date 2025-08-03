@@ -203,7 +203,7 @@ struct StatusMessageView: View {
             
             // Last Received Status Row
             HStack {
-                Text("LAST RECEIVED:")
+                Text(String(localized: "last_received", comment: "Last received status label"))
                     .font(.system(.caption, design: .monospaced))
                     .foregroundColor(.secondary)
                 
@@ -236,13 +236,13 @@ struct StatusMessageView: View {
             HStack(alignment: .top, spacing: 20) {
                 // Left Column - CPU and Temperature dials
                 VStack(alignment: .leading, spacing: 12) {
-                    sectionHeader("SYSTEM METRICS", icon: "cpu")
+                    sectionHeader(String(localized: "system_metrics", comment: "System metrics section header"), icon: "cpu")
                     
                     HStack(spacing: 16) {
                         CircularGauge(
                             value: message.systemStats.cpuUsage,
                             maxValue: 100,
-                            title: "CPU",
+                            title: String(localized: "cpu", comment: "CPU gauge label"),
                             unit: "%",
                             color: cpuColor(message.systemStats.cpuUsage)
                         )
@@ -250,7 +250,7 @@ struct StatusMessageView: View {
                         CircularGauge(
                             value: message.systemStats.temperature,
                             maxValue: 100,
-                            title: "TEMP",
+                            title: String(localized: "temp", comment: "Temperature gauge label"),
                             unit: "°C",
                             color: temperatureColor(message.systemStats.temperature)
                         )
@@ -259,7 +259,7 @@ struct StatusMessageView: View {
                             CircularGauge(
                                 value: message.antStats.plutoTemp,
                                 maxValue: 100,
-                                title: "PLUTO",
+                                title: String(localized: "pluto", comment: "Pluto temperature gauge label"),
                                 unit: "°C",
                                 color: temperatureColor(message.antStats.plutoTemp)
                             )
@@ -269,7 +269,7 @@ struct StatusMessageView: View {
                             CircularGauge(
                                 value: message.antStats.zynqTemp,
                                 maxValue: 100,
-                                title: "ZYNQ",
+                                title: String(localized: "zynq", comment: "ZYNQ temperature gauge label"),
                                 unit: "°C",
                                 color: temperatureColor(message.antStats.zynqTemp)
                             )
@@ -281,7 +281,7 @@ struct StatusMessageView: View {
                 // Right Column - Resource Bars
                 VStack(spacing: 12) {
                     ResourceBar(
-                        title: "MEMORY",
+                        title: String(localized: "memory", comment: "Memory usage label"),
                         usedPercent: memoryUsagePercent,
                         details: "\(formatBytes(message.systemStats.memory.total - message.systemStats.memory.available)) / \(formatBytes(message.systemStats.memory.total))",
                         color: memoryColor(memoryUsagePercent),
@@ -290,7 +290,7 @@ struct StatusMessageView: View {
                     )
                     
                     ResourceBar(
-                        title: "DISK",
+                        title: String(localized: "disk", comment: "Disk usage label"),
                         usedPercent: diskUsagePercent,
                         details: "\(formatBytes(message.systemStats.disk.used)) / \(formatBytes(message.systemStats.disk.total))",
                         color: diskColor(diskUsagePercent),
@@ -314,14 +314,14 @@ struct StatusMessageView: View {
     
     private var expandedLocationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("LOCATION & SYSTEM STATUS", icon: "location")
+            sectionHeader(String(localized: "location_system_status", comment: "Location and system status section header"), icon: "location")
             
             // Full-width location and system details
             HStack(spacing: 20) {
                 // Location Details
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("COORDINATES")
+                        Text(String(localized: "coordinates", comment: "GPS coordinates label"))
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundColor(.secondary)
                             .fontWeight(.medium)
@@ -350,10 +350,10 @@ struct StatusMessageView: View {
                     }
                     
                     HStack {
-                        Text("Alt:")
+                        Text(String(localized: "altitude_short", comment: "Altitude abbreviation"))
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundColor(.secondary)
-                        Text("\(String(format: "%.1f", message.gpsData.altitude))m")
+                        Text(String(localized: "altitude_meters", comment: "Altitude in meters format").replacingOccurrences(of: "{altitude}", with: String(format: "%.1f", message.gpsData.altitude)))
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundColor(.primary)
                         
@@ -362,7 +362,7 @@ struct StatusMessageView: View {
                         Text("Speed:")
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundColor(.secondary)
-                        Text("\(String(format: "%.1f", message.gpsData.speed)) m/s")
+                        Text(String(localized: "speed_meters_per_second", comment: "Speed in meters per second format").replacingOccurrences(of: "{speed}", with: String(format: "%.1f", message.gpsData.speed)))
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundColor(.primary)
                     }
@@ -372,7 +372,7 @@ struct StatusMessageView: View {
                 // System Status Summary
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("SYSTEM STATUS")
+                        Text(String(localized: "system_status", comment: "System status section header"))
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundColor(.secondary)
                             .fontWeight(.medium)
@@ -401,7 +401,7 @@ struct StatusMessageView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("UPTIME")
+                            Text(String(localized: "uptime", comment: "System uptime label"))
                                 .font(.system(.caption2, design: .monospaced))
                                 .foregroundColor(.secondary)
                             Text(formatUptime(message.systemStats.uptime))
@@ -548,7 +548,7 @@ struct StatusMessageView: View {
     
     private var mapPreviewSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("MAP VIEW", icon: "map")
+            sectionHeader(String(localized: "map_view", comment: "Map view section header"), icon: "map")
             
             Button(action: { activeSheet = .map }) {
                 ZStack {
@@ -614,11 +614,11 @@ struct StatusMessageView: View {
     
     private func formatBytes(_ bytes: Int64) -> String {
         if bytes >= 1_073_741_824 { // GB
-            return String(format: "%.1f GB", Double(bytes) / 1_073_741_824)
+            return String(format: String(localized: "gigabytes_format", comment: "Gigabytes format string"), Double(bytes) / 1_073_741_824)
         } else if bytes >= 1_048_576 { // MB
-            return String(format: "%.0f MB", Double(bytes) / 1_048_576)
+            return String(format: String(localized: "megabytes_format", comment: "Megabytes format string"), Double(bytes) / 1_048_576)
         } else {
-            return String(format: "%.0f KB", Double(bytes) / 1024)
+            return String(format: String(localized: "kilobytes_format", comment: "Kilobytes format string"), Double(bytes) / 1024)
         }
     }
     
@@ -627,9 +627,9 @@ struct StatusMessageView: View {
         let minutes = (Int(uptime) % 3600) / 60
         
         if hours > 0 {
-            return "\(hours)h \(minutes)m"
+            return String(localized: "uptime_hours_minutes", comment: "Uptime format with hours and minutes").replacingOccurrences(of: "{hours}", with: "\(hours)").replacingOccurrences(of: "{minutes}", with: "\(minutes)")
         } else {
-            return "\(minutes)m"
+            return String(localized: "uptime_minutes_only", comment: "Uptime format with minutes only").replacingOccurrences(of: "{minutes}", with: "\(minutes)")
         }
     }
     
@@ -690,10 +690,10 @@ struct LocationStatsView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Alt:")
+                    Text(String(localized: "altitude_short", comment: "Altitude abbreviation"))
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundColor(.secondary)
-                    Text("\(String(format: "%.1f", gpsData.altitude))m")
+                    Text(String(localized: "altitude_meters", comment: "Altitude in meters format").replacingOccurrences(of: "{altitude}", with: String(format: "%.1f", gpsData.altitude)))
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundColor(.primary)
                 }
@@ -702,7 +702,7 @@ struct LocationStatsView: View {
                     Text("Speed:")
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundColor(.secondary)
-                    Text("\(String(format: "%.1f", gpsData.speed)) m/s")
+                    Text(String(localized: "speed_meters_per_second", comment: "Speed in meters per second format").replacingOccurrences(of: "{speed}", with: String(format: "%.1f", gpsData.speed)))
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundColor(.primary)
                 }
@@ -719,20 +719,20 @@ struct MemoryDetailView: View {
     var body: some View {
         NavigationView {
             List {
-                Section("Memory Usage") {
-                    MemoryBarView(title: "Total", value: memory.total, total: memory.total, color: .blue)
-                    MemoryBarView(title: "Used", value: memory.used > 0 ? memory.used : (memory.total - memory.available), total: memory.total, color: .red)
-                    MemoryBarView(title: "Available", value: memory.available, total: memory.total, color: .green)
-                    MemoryBarView(title: "Free", value: memory.free, total: memory.total, color: .green)
-                    MemoryBarView(title: "Active", value: memory.active, total: memory.total, color: .orange)
-                    MemoryBarView(title: "Inactive", value: memory.inactive, total: memory.total, color: .yellow)
-                    MemoryBarView(title: "Buffers", value: memory.buffers, total: memory.total, color: .purple)
-                    MemoryBarView(title: "Cached", value: memory.cached, total: memory.total, color: .cyan)
-                    MemoryBarView(title: "Shared", value: memory.shared, total: memory.total, color: .pink)
-                    MemoryBarView(title: "Slab", value: memory.slab, total: memory.total, color: .indigo)
+                Section(String(localized: "memory_usage", comment: "Memory usage detail view title")) {
+                    MemoryBarView(title: String(localized: "total", comment: "Total memory label"), value: memory.total, total: memory.total, color: .blue)
+                    MemoryBarView(title: String(localized: "memory_used", comment: "Memory usage label"), value: memory.used > 0 ? memory.used : (memory.total - memory.available), total: memory.total, color: .red)
+                    MemoryBarView(title: String(localized: "memory_available", comment: "Available memory label"), value: memory.available, total: memory.total, color: .green)
+                    MemoryBarView(title: String(localized: "memory_free", comment: "Free memory label"), value: memory.free, total: memory.total, color: .green)
+                    MemoryBarView(title: String(localized: "memory_active", comment: "Active memory label"), value: memory.active, total: memory.total, color: .orange)
+                    MemoryBarView(title: String(localized: "memory_inactive", comment: "Inactive memory label"), value: memory.inactive, total: memory.total, color: .yellow)
+                    MemoryBarView(title: String(localized: "memory_buffers", comment: "Memory buffers label"), value: memory.buffers, total: memory.total, color: .purple)
+                    MemoryBarView(title: String(localized: "memory_cached", comment: "Cached memory label"), value: memory.cached, total: memory.total, color: .cyan)
+                    MemoryBarView(title: String(localized: "memory_shared", comment: "Shared memory label"), value: memory.shared, total: memory.total, color: .pink)
+                    MemoryBarView(title: String(localized: "memory_slab", comment: "Slab memory label"), value: memory.slab, total: memory.total, color: .indigo)
                 }
             }
-            .navigationTitle("Memory Details")
+            .navigationTitle(String(localized: "memory_details", comment: "Memory details section title"))
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -806,11 +806,11 @@ struct MapDetailView: View {
             Map(coordinateRegion: $region, annotationItems: [MapPoint(coordinate: coordinate)]) { point in
                 MapPin(coordinate: point.coordinate, tint: .red)
             }
-            .navigationTitle("System Location")
+            .navigationTitle(String(localized: "system_location", comment: "System location section title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button(String(localized: "done", comment: "Done button text")) {
                         dismiss()
                     }
                 }
