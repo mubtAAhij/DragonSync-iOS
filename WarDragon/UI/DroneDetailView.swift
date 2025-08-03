@@ -69,14 +69,14 @@ struct DroneDetailView: View {
     private var mapSection: some View {
            VStack(spacing: 8) {
                HStack {
-                   Text("Flight Map")
+                   Text(String(localized: "flight_map", comment: "Title for flight map section"))
                        .font(.headline)
                    Spacer()
                    Button(action: {
                        showAllLocations.toggle()
                        updateMapRegion()
                    }) {
-                       Text(showAllLocations ? "Drone Only" : "Show All")
+                       Text(showAllLocations ? String(localized: "drone_only", comment: "Button to show only drone location on map") : String(localized: "show_all", comment: "Button to show all locations on map"))
                            .font(.caption)
                            .padding(.horizontal, 8)
                            .padding(.vertical, 4)
@@ -88,7 +88,7 @@ struct DroneDetailView: View {
                Map(position: $mapCameraPosition) {
                    // Drone current position
                    if let droneCoordinate = message.coordinate {
-                       Annotation("Drone", coordinate: droneCoordinate) {
+                       Annotation(String(localized: "drone", comment: "Map annotation label for drone"), coordinate: droneCoordinate) {
                            Image(systemName: "airplane")
                                .foregroundStyle(.blue)
                                .background(Circle().fill(.white))
@@ -112,7 +112,7 @@ struct DroneDetailView: View {
                       let pilotLat = Double(message.pilotLat),
                       let pilotLon = Double(message.pilotLon) {
                        let pilotCoordinate = CLLocationCoordinate2D(latitude: pilotLat, longitude: pilotLon)
-                       Annotation("Pilot", coordinate: pilotCoordinate) {
+                       Annotation(String(localized: "pilot", comment: "Map annotation label for pilot location"), coordinate: pilotCoordinate) {
                            Image(systemName: "person.fill")
                                .foregroundStyle(.orange)
                                .background(Circle().fill(.white))
@@ -127,7 +127,7 @@ struct DroneDetailView: View {
                    
                    // Flight path start and end points
                    if let startPoint = flightPath.first, flightPath.count > 1 {
-                       Annotation("Start", coordinate: startPoint) {
+                       Annotation(String(localized: "start", comment: "Map annotation label for flight path start"), coordinate: startPoint) {
                            Image(systemName: "airplane.departure")
                                .foregroundStyle(.green)
                                .background(Circle().fill(.white))
@@ -137,7 +137,7 @@ struct DroneDetailView: View {
                       let startPoint = flightPath.first,
                       flightPath.count > 1,
                       !(endPoint.latitude == startPoint.latitude && endPoint.longitude == startPoint.longitude) {
-                       Annotation("Latest", coordinate: endPoint) {
+                       Annotation(String(localized: "latest", comment: "Map annotation label for latest position"), coordinate: endPoint) {
                            Image(systemName: "airplane.arrival")
                                .foregroundStyle(.red)
                                .background(Circle().fill(.white))
@@ -160,23 +160,23 @@ struct DroneDetailView: View {
     private var droneInfoSection: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Drone Information")
+                Text(String(localized: "drone_information", comment: "Section title for drone information"))
                     .font(.headline)
                 Spacer()
             }
             
             VStack(spacing: 4) {
-                DroneInfoRow(title: "Type", value: message.type)
+                DroneInfoRow(title: String(localized: "type", comment: "Label for drone type field"), value: message.type)
                 DroneInfoRow(title: "ID", value: message.id)
-                DroneInfoRow(title: "ID Type", value: message.idType)
+                DroneInfoRow(title: String(localized: "id_type", comment: "Label for ID type field"), value: message.idType)
                 if !message.description.isEmpty {
-                    DroneInfoRow(title: "Description", value: message.description)
+                    DroneInfoRow(title: String(localized: "description", comment: "Label for description field"), value: message.description)
                 }
                 if !message.selfIDText.isEmpty {
-                    DroneInfoRow(title: "Self-ID", value: message.selfIDText)
+                    DroneInfoRow(title: String(localized: "self_id", comment: "Label for self-ID field"), value: message.selfIDText)
                 }
                 if let manufacturer = message.manufacturer {
-                    DroneInfoRow(title: "Manufacturer", value: manufacturer)
+                    DroneInfoRow(title: String(localized: "manufacturer", comment: "Label for manufacturer field"), value: manufacturer)
                 }
             }
             .padding()
@@ -190,46 +190,46 @@ struct DroneDetailView: View {
     private var locationDetailsSection: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Location Details")
+                Text(String(localized: "location_details", comment: "Section title for location details"))
                     .font(.headline)
                 Spacer()
             }
             
             VStack(spacing: 4) {
                 // Current position
-                DroneInfoRow(title: "Current Position", value: "\(message.lat), \(message.lon)")
-                DroneInfoRow(title: "Altitude", value: "\(message.alt) m")
+                DroneInfoRow(title: String(localized: "current_position", comment: "Label for current position field"), value: "\(message.lat), \(message.lon)")
+                DroneInfoRow(title: String(localized: "altitude", comment: "Label for altitude field"), value: String(localized: "meters", comment: "Unit display for meters").replacingOccurrences(of: "{value}", with: "\(message.alt)"))
                 if let height = message.height {
-                    DroneInfoRow(title: "Height AGL", value: "\(height) m")
+                    DroneInfoRow(title: String(localized: "height_agl", comment: "Label for height above ground level"), value: String(localized: "meters", comment: "Unit display for meters").replacingOccurrences(of: "{value}", with: "\(height)"))
                 }
                 if message.speed != "" {
-                    DroneInfoRow(title: "Speed", value: "\(message.speed) m/s")
+                    DroneInfoRow(title: String(localized: "speed", comment: "Label for speed field"), value: String(localized: "meters_per_second", comment: "Unit display for meters per second").replacingOccurrences(of: "{value}", with: "\(message.speed)"))
                 }
                 
-                DroneInfoRow(title: "Vertical Speed", value: "\(message.vspeed) m/s")
+                DroneInfoRow(title: String(localized: "vertical_speed", comment: "Label for vertical speed field"), value: String(localized: "meters_per_second", comment: "Unit display for meters per second").replacingOccurrences(of: "{value}", with: "\(message.vspeed)"))
                 
                 // Track data from CoT messages
                 let trackData = message.getTrackData()
                 if let course = trackData.course, course != "0.0" && !course.isEmpty {
-                    DroneInfoRow(title: "Course", value: "\(course)°")
+                    DroneInfoRow(title: String(localized: "course", comment: "Label for course field"), value: String(localized: "degrees", comment: "Unit display for degrees").replacingOccurrences(of: "{value}", with: "\(course)"))
                 }
                 if let speed = trackData.speed, speed != "0.0" {
-                    DroneInfoRow(title: "Track Speed", value: "\(speed) m/s")
+                    DroneInfoRow(title: String(localized: "track_speed", comment: "Label for track speed field"), value: String(localized: "meters_per_second", comment: "Unit display for meters per second").replacingOccurrences(of: "{value}", with: "\(speed)"))
                 }
                 if let bearing = trackData.bearing, !bearing.isEmpty {
-                    DroneInfoRow(title: "Bearing", value: "\(bearing)°")
+                    DroneInfoRow(title: String(localized: "bearing", comment: "Label for bearing field"), value: "\(bearing)°")
                 }
                 
                 Divider()
                 
                 // Home location
                 if message.homeLat != "0.0" && message.homeLon != "0.0" {
-                    DroneInfoRow(title: "Home Location", value: "\(message.homeLat), \(message.homeLon)")
+                    DroneInfoRow(title: String(localized: "home_location", comment: "Label for home location field"), value: "\(message.homeLat), \(message.homeLon)")
                 }
                 
                 // Pilot location
                 if message.pilotLat != "0.0" && message.pilotLon != "0.0" {
-                    DroneInfoRow(title: "Pilot Location", value: "\(message.pilotLat), \(message.pilotLon)")
+                    DroneInfoRow(title: String(localized: "pilot_location", comment: "Label for pilot location field"), value: "\(message.pilotLat), \(message.pilotLon)")
                 }
             }
             .padding()
@@ -243,20 +243,20 @@ struct DroneDetailView: View {
     private var flightPathStatsSection: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Flight Path Statistics")
+                Text(String(localized: "flight_path_statistics", comment: "Section title for flight path statistics"))
                     .font(.headline)
                 Spacer()
             }
             
             VStack(spacing: 4) {
-                DroneInfoRow(title: "Total Points", value: "\(flightPath.count)")
+                DroneInfoRow(title: String(localized: "total_points", comment: "Label for total points in flight path"), value: "\(flightPath.count)")
                 
                 if flightPath.count > 1 {
                     let distance = calculateTotalDistance()
-                    DroneInfoRow(title: "Total Distance", value: String(format: "%.1f m", distance))
+                    DroneInfoRow(title: String(localized: "total_distance", comment: "Label for total distance traveled"), value: String(format: String(localized: "distance_meters", comment: "Distance format in meters").replacingOccurrences(of: "{distance}", with: String(format: "%.1f", distance)), distance))
                     
                     if let bounds = calculateFlightBounds() {
-                        DroneInfoRow(title: "Area Covered", value: String(format: "%.3f° × %.3f°", bounds.latSpan, bounds.lonSpan))
+                        DroneInfoRow(title: String(localized: "area_covered", comment: "Label for area covered by flight path"), value: String(format: String(localized: "area_degrees", comment: "Area format in degrees").replacingOccurrences(of: "{lat}", with: String(format: "%.3f", bounds.latSpan)).replacingOccurrences(of: "{lon}", with: String(format: "%.3f", bounds.lonSpan)), bounds.latSpan, bounds.lonSpan))
                     }
                 }
             }
@@ -271,28 +271,28 @@ struct DroneDetailView: View {
     private var signalInfoSection: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Signal Information")
+                Text(String(localized: "signal_information", comment: "Section title for signal information"))
                     .font(.headline)
                 Spacer()
             }
             
             VStack(spacing: 4) {
                 if let rssi = message.rssi {
-                    DroneInfoRow(title: "RSSI", value: "\(rssi) dBm")
+                    DroneInfoRow(title: "RSSI", value: String(localized: "rssi_dbm", comment: "RSSI value in dBm").replacingOccurrences(of: "{rssi}", with: "\(rssi)"))
                 }
                 
                 if let mac = message.mac {
-                    DroneInfoRow(title: "MAC Address", value: mac)
+                    DroneInfoRow(title: String(localized: "mac_address", comment: "Label for MAC address field"), value: mac)
                 }
                 
                 // Show MAC randomization if detected
                 if let macs = cotViewModel.macIdHistory[message.uid], macs.count > 1 {
-                    DroneInfoRow(title: "MAC Randomization", value: "Detected (\(macs.count) MACs)")
+                    DroneInfoRow(title: String(localized: "mac_randomization", comment: "Label for MAC randomization detection"), value: String(localized: "detected_macs", comment: "Text showing detected MAC count").replacingOccurrences(of: "{count}", with: "\(macs.count)"))
                 }
                 
                 // Show signal sources if available
                 if !message.signalSources.isEmpty {
-                    DroneInfoRow(title: "Signal Sources", value: "\(message.signalSources.count)")
+                    DroneInfoRow(title: String(localized: "signal_sources", comment: "Label for signal sources field"), value: "\(message.signalSources.count)")
                 }
             }
             .padding()
@@ -306,7 +306,7 @@ struct DroneDetailView: View {
     private var rawDataSection: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Raw Data")
+                Text(String(localized: "raw_data", comment: "Section title for raw data"))
                     .font(.headline)
                 Spacer()
             }
