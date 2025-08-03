@@ -13,19 +13,19 @@ struct WebhookEventsView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Event Configuration")) {
-                    Text("Select which events will trigger webhooks. Individual webhooks can further filter these events.")
+                Section(header: Text(String(localized: "event_configuration", comment: "Section header for webhook event configuration"))) {
+                    Text(String(localized: "event_configuration_help", comment: "Help text explaining webhook event configuration"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 
-                Section(header: Text("Detection Events")) {
+                Section(header: Text(String(localized: "detection_events", comment: "Section header for detection-related webhook events"))) {
                     EventToggleRow(event: .droneDetected, settings: settings)
                     EventToggleRow(event: .fpvSignal, settings: settings)
                     EventToggleRow(event: .proximityWarning, settings: settings)
                 }
                 
-                Section(header: Text("System Events")) {
+                Section(header: Text(String(localized: "system_events", comment: "Section header for system-related webhook events"))) {
                     EventToggleRow(event: .systemAlert, settings: settings)
                     EventToggleRow(event: .temperatureAlert, settings: settings)
                     EventToggleRow(event: .memoryAlert, settings: settings)
@@ -33,7 +33,7 @@ struct WebhookEventsView: View {
                     
                     // Quick Actions for System Events
                     HStack {
-                        Button("Enable All System Events") {
+                        Button(String(localized: "enable_all_system_events", comment: "Button to enable all system-related webhook events")) {
                             var events = settings.enabledWebhookEvents
                             let systemEvents: [WebhookEvent] = [.systemAlert, .temperatureAlert, .memoryAlert, .cpuAlert]
                             for event in systemEvents {
@@ -46,7 +46,7 @@ struct WebhookEventsView: View {
                         
                         Spacer()
                         
-                        Button("Disable All System Events") {
+                        Button(String(localized: "disable_all_system_events", comment: "Button to disable all system-related webhook events")) {
                             var events = settings.enabledWebhookEvents
                             let systemEvents: [WebhookEvent] = [.systemAlert, .temperatureAlert, .memoryAlert, .cpuAlert]
                             for event in systemEvents {
@@ -60,21 +60,21 @@ struct WebhookEventsView: View {
                     }
                 }
                 
-                Section(header: Text("Connection Events")) {
+                Section(header: Text(String(localized: "connection_events", comment: "Section header for connection-related webhook events"))) {
                     EventToggleRow(event: .connectionLost, settings: settings)
                     EventToggleRow(event: .connectionRestored, settings: settings)
                 }
                 
-                Section(header: Text("Quick Actions")) {
+                Section(header: Text(String(localized: "quick_actions", comment: "Section header for quick action buttons"))) {
                     HStack {
-                        Button("Enable All Events") {
+                        Button(String(localized: "enable_all_events", comment: "Button to enable all webhook events")) {
                             settings.enabledWebhookEvents = Set(WebhookEvent.allCases)
                         }
                         .disabled(allEventsEnabled)
                         
                         Spacer()
                         
-                        Button("Disable All Events") {
+                        Button(String(localized: "disable_all_events", comment: "Button to disable all webhook events")) {
                             settings.enabledWebhookEvents = []
                         }
                         .disabled(allEventsDisabled)
@@ -82,16 +82,16 @@ struct WebhookEventsView: View {
                     }
                 }
                 
-                Section(header: Text("Event Summary")) {
+                Section(header: Text(String(localized: "event_summary", comment: "Section header for webhook event summary"))) {
                     HStack {
-                        Text("Events Enabled")
+                        Text(String(localized: "events_enabled", comment: "Label showing number of enabled webhook events"))
                         Spacer()
                         Text("\(settings.enabledWebhookEvents.count) of \(WebhookEvent.allCases.count)")
                             .foregroundColor(.secondary)
                     }
                 }
             }
-            .navigationTitle("Webhook Events")
+            .navigationTitle(String(localized: "webhook_events", comment: "Navigation title for webhook events screen"))
             .navigationBarTitleDisplayMode(.large)
         }
     }
@@ -181,15 +181,15 @@ struct EventToggleRow: View {
     
     private var eventDescription: String {
         switch event {
-        case .droneDetected: return "When a new drone is detected"
-        case .fpvSignal: return "When an FPV signal is detected"
-        case .proximityWarning: return "When a drone comes too close"
-        case .systemAlert: return "General system alerts"
-        case .temperatureAlert: return "High temperature warnings"
-        case .memoryAlert: return "High memory usage warnings"
-        case .cpuAlert: return "High CPU usage warnings"
-        case .connectionLost: return "When connection is lost"
-        case .connectionRestored: return "When connection is restored"
+        case .droneDetected: return String(localized: "when_drone_detected", comment: "Description for drone detection webhook event")
+        case .fpvSignal: return String(localized: "when_fpv_detected", comment: "Description for FPV signal detection webhook event")
+        case .proximityWarning: return String(localized: "when_drone_too_close", comment: "Description for proximity warning webhook event")
+        case .systemAlert: return String(localized: "general_system_alerts", comment: "Description for general system alert webhook event")
+        case .temperatureAlert: return String(localized: "high_temperature_warnings", comment: "Description for temperature alert webhook event")
+        case .memoryAlert: return String(localized: "high_memory_warnings", comment: "Description for memory alert webhook event")
+        case .cpuAlert: return String(localized: "high_cpu_warnings", comment: "Description for CPU alert webhook event")
+        case .connectionLost: return String(localized: "when_connection_lost", comment: "Description for connection lost webhook event")
+        case .connectionRestored: return String(localized: "when_connection_restored", comment: "Description for connection restored webhook event")
         }
     }
 }
