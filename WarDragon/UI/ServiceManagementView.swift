@@ -31,15 +31,15 @@ struct ServiceManagementView: View {
         
         var title: String {
             switch self {
-            case .toggle: return "Toggle Service"
-            case .restart: return "Restart Service"
+            case .toggle: return String(localized: "toggle_service", comment: "Action to toggle a service on/off")
+            case .restart: return String(localized: "restart_service", comment: "Action to restart a service")
             }
         }
         
         var message: String {
             switch self {
-            case .toggle: return "Are you sure you want to toggle this service?"
-            case .restart: return "Are you sure you want to restart this service?"
+            case .toggle: return String(localized: "confirm_toggle_service", comment: "Confirmation message for toggling a service")
+            case .restart: return String(localized: "confirm_restart_service", comment: "Confirmation message for restarting a service")
             }
         }
     }
@@ -70,11 +70,11 @@ struct ServiceManagementView: View {
         .onDisappear {
             //            viewModel.stopMonitoring()
         }
-        .alert("Error", isPresented: .init(
+        .alert(String(localized: "error", comment: "Error alert title"), isPresented: .init(
             get: { viewModel.error != nil },
             set: { if !$0 { viewModel.error = nil } }
         )) {
-            Button("OK", role: .cancel) {}
+            Button(String(localized: "ok", comment: "OK button text"), role: .cancel) {}
         } message: {
             if let error = viewModel.error {
                 Text(error)
@@ -95,7 +95,7 @@ struct ServiceManagementView: View {
                     }
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(String(localized: "cancel", comment: "Cancel button text"), role: .cancel) {}
         } message: { action in
             Text(action.message)
         }
@@ -107,7 +107,7 @@ struct ServiceManagementView: View {
                 .fill(viewModel.healthReport?.statusColor ?? .gray)
                 .frame(width: 12, height: 12)
             
-            Text(viewModel.healthReport?.overallHealth.uppercased() ?? "NO CONNECTION")
+            Text(viewModel.healthReport?.overallHealth.uppercased() ?? String(localized: "no_connection", comment: "Status message indicating no connection"))
                 .font(.appHeadline)
             
             Spacer()
@@ -128,7 +128,7 @@ struct ServiceManagementView: View {
     
     private var criticalServicesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("CRITICAL SERVICES")
+            Text(String(localized: "critical_services", comment: "Section header for critical services"))
                 .font(.system(.caption, design: .monospaced))
                 .foregroundColor(.red)
                 .padding(.horizontal, 4)
@@ -282,17 +282,17 @@ struct ServiceRowView: View {
     private var serviceDetails: some View {
         VStack(alignment: .leading, spacing: 8) {
             Group {
-                detailRow("Service:", service.service)
+                detailRow(String(localized: "service_label", comment: "Label for service name"), service.service)
                 detailRow("Status:", service.status.statusText)
                 if !service.dependencies.isEmpty {
-                    detailRow("Dependencies:", service.dependencies.joined(separator: ", "))
+                    detailRow(String(localized: "dependencies_label", comment: "Label for service dependencies"), service.dependencies.joined(separator: ", "))
                 }
             }
             .font(.system(.caption, design: .monospaced))
             
             if !service.issues.isEmpty {
                 Divider()
-                Text("ISSUES")
+                Text(String(localized: "issues", comment: "Section header for service issues"))
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundColor(.red)
                 
@@ -315,7 +315,7 @@ struct ServiceRowView: View {
                     pendingAction = .restart
                     showingActionSheet = true
                 } label: {
-                    Label("Restart", systemImage: "arrow.counterclockwise")
+                    Label(String(localized: "restart", comment: "Button label for restarting a service"), systemImage: "arrow.counterclockwise")
                         .font(.system(.caption, design: .monospaced))
                 }
                 .disabled(viewModel.isLoading)
