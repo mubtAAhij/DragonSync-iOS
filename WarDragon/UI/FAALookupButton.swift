@@ -40,7 +40,7 @@ struct FAALookupButton: View {
                         } else {
                             Image(systemName: "airplane.departure")
                         }
-                        Text(isLoading ? "Loading..." : "FAA Lookup")
+                        Text(isLoading ? String(localized: "loading", comment: "Loading state text") : String(localized: "faa_lookup_button", comment: "Button text for FAA database lookup"))
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
@@ -49,10 +49,10 @@ struct FAALookupButton: View {
                     .cornerRadius(8)
                 }
                 .disabled(faaService.isFetching || isLoading)
-                .alert("FAA Lookup Error", isPresented: $showingError) {
-                    Button("OK", role: .cancel) {}
+                .alert(String(localized: "faa_lookup_error_title", comment: "Alert title for FAA lookup error"), isPresented: $showingError) {
+                    Button(String(localized: "ok", comment: "OK button in alert dialog"), role: .cancel) {}
                 } message: {
-                    Text(faaService.error ?? "Unknown error occurred")
+                    Text(faaService.error ?? String(localized: "unknown_error_occurred", comment: "Error message when unknown error happens"))
                 }
             }
         }
@@ -63,7 +63,7 @@ struct FAALookupButton: View {
                     VStack(spacing: 0) {
                         HStack {
                             Spacer()
-                            Button("Done") {
+                            Button(String(localized: "done", comment: "Done button to close sheet")) {
                                 showingFAAInfo = false
                             }
                             .padding(.trailing)
