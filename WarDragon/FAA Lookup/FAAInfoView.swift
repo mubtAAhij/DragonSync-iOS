@@ -12,36 +12,36 @@ struct FAAInfoView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("FAA REGISTRATION")
+            Text(String(localized: "faa_registration_title", defaultValue: "FAA REGISTRATION", comment: "FAA registration information title"))
                 .font(.appHeadline)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.bottom, 5)
 
             if let items = faaData["items"] as? [[String: Any]],
                let firstItem = items.first {
-                InfoRow(title: "Status", value: firstItem["status"] as? String ?? "Unknown")
-                InfoRow(title: "Brand", value: firstItem["brand"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_status_label", defaultValue: "Status", comment: "FAA registration status label"), value: firstItem["status"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_brand_label", defaultValue: "Brand", comment: "FAA registration brand label"), value: firstItem["brand"] as? String ?? "Unknown")
                 InfoRow(title: "Model", value: firstItem["model"] as? String ?? "Unknown")
-                InfoRow(title: "Manufacturer Code", value: firstItem["manufacturerCode"] as? String ?? "Unknown")
-                InfoRow(title: "Product Type", value: firstItem["productType"] as? String ?? "Unknown")
-                InfoRow(title: "Operation Rules", value: firstItem["operationRules"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_manufacturer_code_label", defaultValue: "Manufacturer Code", comment: "FAA registration manufacturer code label"), value: firstItem["manufacturerCode"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_product_type_label", defaultValue: "Product Type", comment: "FAA registration product type label"), value: firstItem["productType"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_operation_rules_label", defaultValue: "Operation Rules", comment: "FAA registration operation rules label"), value: firstItem["operationRules"] as? String ?? "Unknown")
             } else if let data = faaData["data"] as? [String: Any],
                       let items = data["items"] as? [[String: Any]],
                       let firstItem = items.first {
-                InfoRow(title: "Make", value: firstItem["makeName"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_make_label", defaultValue: "Make", comment: "FAA registration make label"), value: firstItem["makeName"] as? String ?? "Unknown")
                 InfoRow(title: "Model", value: firstItem["modelName"] as? String ?? "Unknown")
-                InfoRow(title: "Series", value: firstItem["series"] as? String ?? "Unknown")
-                InfoRow(title: "Remote ID", value: firstItem["trackingNumber"] as? String ?? "Unknown")
-                InfoRow(title: "Compliance", value: firstItem["complianceCategories"] as? String ?? "Unknown")
-                InfoRow(title: "Updated", value: firstItem["updatedAt"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_series_label", defaultValue: "Series", comment: "FAA registration series label"), value: firstItem["series"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_remote_id_label", defaultValue: "Remote ID", comment: "FAA registration remote ID label"), value: firstItem["trackingNumber"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_compliance_label", defaultValue: "Compliance", comment: "FAA registration compliance label"), value: firstItem["complianceCategories"] as? String ?? "Unknown")
+                InfoRow(title: String(localized: "faa_updated_label", defaultValue: "Updated", comment: "FAA registration updated date label"), value: firstItem["updatedAt"] as? String ?? "Unknown")
             } else {
                 VStack {
-                    Text("No registration data found")
+                    Text(String(localized: "faa_no_data_message", defaultValue: "No registration data found", comment: "Message when no FAA registration data is found"))
                         .font(.appCaption)
                         .foregroundColor(.secondary)
                         .padding(.bottom, 5)
 
-                    Text("Response Structure:")
+                    Text(String(localized: "faa_response_structure_label", defaultValue: "Response Structure:", comment: "Label for FAA response structure debug info"))
                         .font(.appCaption)
                         .foregroundColor(.secondary)
                     Text(debugDescription(for: faaData))
