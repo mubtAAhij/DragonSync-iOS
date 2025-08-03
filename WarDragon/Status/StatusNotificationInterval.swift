@@ -22,7 +22,7 @@ enum StatusNotificationInterval: String, CaseIterable, Codable {
     var displayName: String {
         switch self {
         case .never:
-            return "Never"
+            return String(localized: "notification_interval_never", comment: "Never send notifications option")
         case .always:
             return "Always"
         case .thresholdOnly:
