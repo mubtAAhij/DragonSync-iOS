@@ -16,22 +16,22 @@ struct WebhookSettingsView: View {
     var body: some View {
 
         Form {
-            Section(header: Text("Webhook System")) {
-                Toggle("Enable Webhooks", isOn: .init(
+            Section(header: Text("String(localized: "webhook_system", comment: "Section header for webhook system settings")")) {
+                Toggle("String(localized: "enable_webhooks", comment: "Toggle label to enable/disable webhooks")", isOn: .init(
                     get: { settings.webhooksEnabled },
                     set: { settings.updateWebhookSettings(enabled: $0) }
                 ))
                 
                 if settings.webhooksEnabled {
-                    Text("Send notifications to external services when events occur")
+                    Text("String(localized: "webhook_description", comment: "Description of webhook functionality")")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
             if settings.webhooksEnabled {
-                Section(header: Text("Event Types")) {
-                    Text("Select which events will trigger webhooks")
+                Section(header: Text("String(localized: "event_types", comment: "Section header for event type settings")")) {
+                    Text("String(localized: "select_events_description", comment: "Description for event selection section")")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -41,9 +41,9 @@ struct WebhookSettingsView: View {
                             .foregroundColor(.gray)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Disable All Status Notifications")
+                            Text("String(localized: "disable_all_status_notifications", comment: "Toggle label to disable all status notifications")")
                                 .font(.headline)
-                            Text("Turn off all CPU, memory, temperature, and system alerts")
+                            Text("String(localized: "disable_all_status_description", comment: "Description for disabling all status notifications")")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -74,27 +74,27 @@ struct WebhookSettingsView: View {
                     }
                     
                     // Individual event toggles
-                    eventToggleRow(for: .droneDetected, title: "Drone Detection", description: "New drone detected", icon: "airplane.circle.fill", color: .blue)
+                    eventToggleRow(for: .droneDetected, title: "String(localized: "drone_detection", comment: "Label for drone detection event type")", description: "String(localized: "new_drone_detected", comment: "Description for drone detection events")", icon: "airplane.circle.fill", color: .blue)
                     // TODO merge FPV branch and SDR scripts..
 //                    eventToggleRow(for: .fpvSignal, title: "FPV Signal", description: "FPV video signal detected", icon: "tv.fill", color: .purple)
 //                    
-                    eventToggleRow(for: .proximityWarning, title: "Proximity Warning", description: "Drone approaching threshold", icon: "exclamationmark.triangle.fill", color: .orange)
+                    eventToggleRow(for: .proximityWarning, title: "String(localized: "proximity_warning", comment: "Label for proximity warning event type")", description: "String(localized: "drone_approaching_threshold", comment: "Description for proximity warning events")", icon: "exclamationmark.triangle.fill", color: .orange)
                     
-                    eventToggleRow(for: .systemAlert, title: "System Alert", description: "General system warnings", icon: "exclamationmark.circle.fill", color: .red)
+                    eventToggleRow(for: .systemAlert, title: "String(localized: "system_alert", comment: "Label for system alert event type")", description: "String(localized: "general_system_warnings", comment: "Description for system alert events")", icon: "exclamationmark.circle.fill", color: .red)
                     
-                    eventToggleRow(for: .temperatureAlert, title: "Temperature Alert", description: "High temperature warnings", icon: "thermometer.high", color: .red)
+                    eventToggleRow(for: .temperatureAlert, title: "String(localized: "temperature_alert", comment: "Label for temperature alert event type")", description: "String(localized: "high_temperature_warnings", comment: "Description for temperature alert events")", icon: "thermometer.high", color: .red)
                     
-                    eventToggleRow(for: .memoryAlert, title: "Memory Alert", description: "High memory usage warnings", icon: "memorychip.fill", color: .yellow)
+                    eventToggleRow(for: .memoryAlert, title: "String(localized: "memory_alert", comment: "Label for memory alert event type")", description: "String(localized: "high_memory_usage_warnings", comment: "Description for memory alert events")", icon: "memorychip.fill", color: .yellow)
                     
-                    eventToggleRow(for: .cpuAlert, title: "CPU Alert", description: "High CPU usage warnings", icon: "cpu.fill", color: .red)
+                    eventToggleRow(for: .cpuAlert, title: "String(localized: "cpu_alert", comment: "Label for CPU alert event type")", description: "String(localized: "high_cpu_usage_warnings", comment: "Description for CPU alert events")", icon: "cpu.fill", color: .red)
                 }
                 
-                Section(header: Text("Webhook Services")) {
+                Section(header: Text("String(localized: "webhook_services", comment: "Section header for webhook services")")) {
                     if webhookManager.configurations.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("No webhook services configured")
+                            Text("String(localized: "no_webhook_services_configured", comment: "Message when no webhook services are configured")")
                                 .foregroundColor(.secondary)
-                            Text("Add Discord, Matrix, IFTTT, or custom webhook endpoints")
+                            Text("String(localized: "add_webhook_services_description", comment: "Description of available webhook service types")")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -107,15 +107,15 @@ struct WebhookSettingsView: View {
                         .onDelete(perform: deleteWebhooks)
                     }
                     
-                    Button("Add Webhook Service") {
+                    Button("String(localized: "add_webhook_service", comment: "Button text to add a new webhook service")") {
                         showingAddWebhook = true
                     }
                     .foregroundColor(.blue)
                 }
                 
-                Section(header: Text("Recent Deliveries")) {
+                Section(header: Text("String(localized: "recent_deliveries", comment: "Section header for recent webhook deliveries")")) {
                     if webhookManager.recentDeliveries.isEmpty {
-                        Text("No recent webhook deliveries")
+                        Text("String(localized: "no_recent_webhook_deliveries", comment: "Message when there are no recent webhook deliveries")")
                             .foregroundColor(.secondary)
                             .italic()
                     } else {
@@ -126,7 +126,7 @@ struct WebhookSettingsView: View {
                 }
             }
         }
-        .navigationTitle("Webhooks")
+        .navigationTitle("String(localized: "webhooks", comment: "Navigation title for webhooks settings")")
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showingAddWebhook) {
             WebhookConfigurationView(config: nil) { config in
@@ -191,7 +191,7 @@ struct WebhookRowView: View {
                         .font(.headline)
                     Spacer()
                     if !config.isEnabled {
-                        Text("Disabled")
+                        Text("String(localized: "disabled", comment: "Status label for disabled webhook")")
                             .font(.caption)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
@@ -204,7 +204,7 @@ struct WebhookRowView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                Text("\(config.enabledEvents.count) events enabled")
+                Text("String(localized: "events_enabled_count", comment: "Label showing number of enabled events").replacingOccurrences(of: "%d", with: "\(config.enabledEvents.count)")")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -259,12 +259,12 @@ struct WebhookDeliveryRowView: View {
                 Text(delivery.timestamp, style: .time)
                     .font(.caption)
                 if let code = delivery.responseCode {
-                    Text("HTTP \(code)")
+                    Text("String(localized: "http_status_code", comment: "HTTP status code label").replacingOccurrences(of: "%d", with: "\(code)")")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 if delivery.retryAttempt > 0 {
-                    Text("Retry \(delivery.retryAttempt)")
+                    Text("String(localized: "retry_attempt", comment: "Retry attempt label").replacingOccurrences(of: "%d", with: "\(delivery.retryAttempt)")")
                         .font(.caption)
                         .foregroundColor(.orange)
                 }
