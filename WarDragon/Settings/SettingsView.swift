@@ -15,7 +15,7 @@ struct SettingsView: View {
     
     var body: some View {
         Form {
-            Section("Connection") {
+            Section(String(localized: "connection_section", comment: "Connection settings section title")) {
                 HStack {
                     Image(systemName: connectionStatusSymbol)
                         .foregroundStyle(connectionStatusColor)
@@ -24,7 +24,7 @@ struct SettingsView: View {
                         .foregroundStyle(connectionStatusColor)
                 }
                 
-                Picker("Mode", selection: .init(
+                Picker(String(localized: "connection_mode", comment: "Connection mode picker label"), selection: .init(
                     get: { settings.connectionMode },
                     set: { settings.updateConnection(mode: $0) }
                 )) {
@@ -40,7 +40,7 @@ struct SettingsView: View {
                 
                 if settings.connectionMode == .zmq {
                     HStack {
-                        TextField("ZMQ Host", text: .init(
+                        TextField(String(localized: "zmq_host", comment: "ZMQ host input field label"), text: .init(
                             get: { settings.zmqHost },
                             set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: true) }
                         ))
@@ -64,7 +64,7 @@ struct SettingsView: View {
                     }
                 } else {
                     HStack {
-                        TextField("Multicast Host", text: .init(
+                        TextField(String(localized: "multicast_host", comment: "Multicast host input field label"), text: .init(
                             get: { settings.multicastHost },
                             set: { settings.updateConnection(mode: settings.connectionMode, host: $0, isZmqHost: false) }
                         ))
@@ -100,31 +100,31 @@ struct SettingsView: View {
                         }
                     }
                 )) {
-                    Text(settings.isListening && cotHandler.isListeningCot ? "Active" : "Inactive")
+                    Text(settings.isListening && cotHandler.isListeningCot ? String(localized: "connection_active", comment: "Active connection status") : String(localized: "connection_inactive", comment: "Inactive connection status"))
                 }
                 .disabled(!settings.isHostConfigurationValid())
             }
             
-            Section("Preferences") {
-                Toggle("Auto Spoof Detection", isOn: .init(
+            Section(String(localized: "preferences_section", comment: "Preferences settings section title")) {
+                Toggle(String(localized: "auto_spoof_detection", comment: "Auto spoof detection toggle label"), isOn: .init(
                     get: { settings.spoofDetectionEnabled },
                     set: { settings.spoofDetectionEnabled = $0 }
                 ))
                 
-                Toggle("Keep Screen On", isOn: .init(
+                Toggle(String(localized: "keep_screen_on", comment: "Keep screen on toggle label"), isOn: .init(
                     get: { settings.keepScreenOn },
                     set: { settings.updatePreferences(notifications: settings.notificationsEnabled, screenOn: $0) }
                 ))
                 
-                Toggle("Enable Background Detection", isOn: .init(
+                Toggle(String(localized: "enable_background_detection", comment: "Enable background detection toggle label"), isOn: .init(
                     get: { settings.enableBackgroundDetection },
                     set: { settings.enableBackgroundDetection = $0 }
                 ))
                 .disabled(settings.isListening) // Can't change while listening is active
             }
             
-            Section("Notifications") {
-                Toggle("Enable Push Notifications", isOn: .init(
+            Section(String(localized: "notifications_section", comment: "Notifications settings section title")) {
+                Toggle(String(localized: "enable_push_notifications", comment: "Enable push notifications toggle label"), isOn: .init(
                     get: { settings.notificationsEnabled },
                     set: { settings.updatePreferences(notifications: $0, screenOn: settings.keepScreenOn) }
                 ))
@@ -135,8 +135,8 @@ struct SettingsView: View {
                             Image(systemName: "bell.circle.fill")
                                 .foregroundColor(.orange)
                             VStack(alignment: .leading) {
-                                Text("Notification Settings")
-                                Text("Configure frequency and types")
+                                Text(String(localized: "notification_settings", comment: "Notification settings navigation link"))
+                                Text(String(localized: "configure_frequency_types", comment: "Notification settings description"))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -147,14 +147,14 @@ struct SettingsView: View {
                         }
                     }
                 } else {
-                    Text("Enable to receive alerts on this device when drones are detected")
+                    Text(String(localized: "notification_enable_description", comment: "Description for enabling notifications"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
-            Section("Webhooks & External Services") {
-                Toggle("Enable Webhooks", isOn: .init(
+            Section(String(localized: "webhooks_external_services", comment: "Webhooks and external services section title")) {
+                Toggle(String(localized: "enable_webhooks", comment: "Enable webhooks toggle label"), isOn: .init(
                     get: { settings.webhooksEnabled },
                     set: { settings.updateWebhookSettings(enabled: $0) }
                 ))
@@ -165,8 +165,8 @@ struct SettingsView: View {
                             Image(systemName: "link.circle.fill")
                                 .foregroundColor(.blue)
                             VStack(alignment: .leading) {
-                                Text("Webhook Services")
-                                Text("\(WebhookManager.shared.configurations.count) services configured")
+                                Text(String(localized: "webhook_services", comment: "Webhook services navigation link"))
+                                Text(String(localized: "services_configured", comment: "Number of webhook services configured").replacingOccurrences(of: "{count}", with: "\(WebhookManager.shared.configurations.count)"))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -177,19 +177,19 @@ struct SettingsView: View {
                         }
                     }
                 } else {
-                    Text("Send notifications to Discord, Matrix, IFTTT, and other external services")
+                    Text(String(localized: "webhook_services_description", comment: "Description for webhook services"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
-            Section("Performance") {
+            Section(String(localized: "performance_section", comment: "Performance settings section title")) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("Message Processing Interval")
+                        Text(String(localized: "message_processing_interval", comment: "Message processing interval setting label"))
                         Spacer()
                         Stepper(value: $settings.messageProcessingInterval, in: 300...5000, step: 50) {
-                            Text("\(settings.messageProcessingInterval) ms")
+                            Text(String(localized: "milliseconds_value", comment: "Milliseconds value display").replacingOccurrences(of: "{value}", with: "\(settings.messageProcessingInterval)"))
                                 .font(.appCaption)
                                 .bold()
                                 .foregroundColor(.primary)
@@ -199,16 +199,16 @@ struct SettingsView: View {
                 }
             }
             
-            Section("Warning Thresholds") {
+            Section(String(localized: "warning_thresholds_section", comment: "Warning thresholds section title")) {
                 VStack(alignment: .leading) {
-                    Toggle("System Warnings", isOn: $settings.systemWarningsEnabled)
+                    Toggle(String(localized: "system_warnings", comment: "System warnings toggle label"), isOn: $settings.systemWarningsEnabled)
                         .padding(.bottom)
                     
                     if settings.systemWarningsEnabled {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 30) {
                                 TacDial(
-                                    title: "CPU USAGE",
+                                    title: String(localized: "cpu_usage", comment: "CPU usage threshold dial title"),
                                     value: $settings.cpuWarningThreshold,
                                     range: 50...90,
                                     step: 5,
@@ -217,7 +217,7 @@ struct SettingsView: View {
                                 )
                                 
                                 TacDial(
-                                    title: "SYSTEM TEMP",
+                                    title: String(localized: "system_temp", comment: "System temperature threshold dial title"),
                                     value: $settings.tempWarningThreshold,
                                     range: 40...85,
                                     step: 5,
@@ -226,7 +226,7 @@ struct SettingsView: View {
                                 )
                                 
                                 TacDial(
-                                    title: "MEMORY",
+                                    title: String(localized: "memory", comment: "Memory threshold dial title"),
                                     value: .init(
                                         get: { settings.memoryWarningThreshold * 100 },
                                         set: { settings.memoryWarningThreshold = $0 / 100 }
@@ -238,7 +238,7 @@ struct SettingsView: View {
                                 )
                                 
                                 TacDial(
-                                    title: "PLUTO TEMP",
+                                    title: String(localized: "pluto_temp", comment: "Pluto temperature threshold dial title"),
                                     value: $settings.plutoTempThreshold,
                                     range: 40...100,
                                     step: 5,
@@ -247,7 +247,7 @@ struct SettingsView: View {
                                 )
                                 
                                 TacDial(
-                                    title: "ZYNQ TEMP",
+                                    title: String(localized: "zynq_temp", comment: "Zynq temperature threshold dial title"),
                                     value: $settings.zynqTempThreshold,
                                     range: 40...100,
                                     step: 5,
@@ -261,13 +261,13 @@ struct SettingsView: View {
                 }
                 
                 VStack(alignment: .leading) {
-                    Toggle("Proximity Warnings", isOn: $settings.enableProximityWarnings)
+                    Toggle(String(localized: "proximity_warnings", comment: "Proximity warnings toggle label"), isOn: $settings.enableProximityWarnings)
                         .padding(.vertical)
                     
                     if settings.enableProximityWarnings {
                         HStack {
                             TacDial(
-                                title: "RSSI THRESHOLD",
+                                title: String(localized: "rssi_threshold", comment: "RSSI threshold dial title"),
                                 value: .init(
                                     get: { Double(settings.proximityThreshold) },
                                     set: { settings.proximityThreshold = Int($0) }
@@ -283,11 +283,11 @@ struct SettingsView: View {
                 }
             }
             
-            Section("Ports") {
+            Section(String(localized: "ports_section", comment: "Ports settings section title")) {
                 switch settings.connectionMode {
                 case .multicast:
                     HStack {
-                        Text("Multicast")
+                        Text(String(localized: "multicast", comment: "Network connection mode option"))
                         Spacer()
                         Text(verbatim: String(settings.multicastPort))
                             .foregroundStyle(.secondary)
@@ -296,14 +296,14 @@ struct SettingsView: View {
                     
                 case .zmq:
                     HStack {
-                        Text("ZMQ Telemetry")
+                        Text(String(localized: "zmq_telemetry", comment: "ZeroMQ telemetry connection option"))
                         Spacer()
                         Text(verbatim: String(settings.zmqTelemetryPort))
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
                     HStack {
-                        Text("ZMQ Status")
+                        Text(String(localized: "zmq_status", comment: "ZeroMQ status connection option"))
                         Spacer()
                         Text(verbatim: String(settings.zmqStatusPort))
                             .foregroundStyle(.secondary)
@@ -312,9 +312,9 @@ struct SettingsView: View {
                 }
             }
             
-            Section("About") {
+            Section(String(localized: "about", comment: "About section header")) {
                 HStack {
-                    Text("Version")
+                    Text(String(localized: "version", comment: "App version label"))
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
                         .foregroundStyle(.secondary)
@@ -322,14 +322,14 @@ struct SettingsView: View {
                 
                 Link(destination: URL(string: "https://github.com/Root-Down-Digital/DragonSync-iOS")!) {
                     HStack {
-                        Text("Source Code")
+                        Text(String(localized: "source_code", comment: "Source code link label"))
                         Spacer()
                         Image(systemName: "arrow.up.right.circle")
                     }
                 }
             }
         }
-        .navigationTitle("Settings")
+        .navigationTitle(String(localized: "settings", comment: "Settings navigation title"))
         .font(.appHeadline)
     }
     
@@ -357,12 +357,12 @@ struct SettingsView: View {
     private var connectionStatusText: String {
         if settings.isListening {
             if cotHandler.isListeningCot {
-                return "Connected"
+                return String(localized: "connected", comment: "Connection status - connected")
             } else {
-                return "Listening..."
+                return String(localized: "listening", comment: "Connection status - listening for data")
             }
         } else {
-            return "Disconnected"
+            return String(localized: "disconnected", comment: "Connection status - disconnected")
         }
     }
 }
