@@ -113,7 +113,7 @@ class FAAService: ObservableObject {
                 ]
                 
                 guard let url = components.url else {
-                    throw NSError(domain: "FAAService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+                    throw NSError(domain: "FAAService", code: -1, userInfo: [NSLocalizedDescriptionKey: String(localized: "invalid_url", comment: "Error message when URL is malformed")])
                 }
                 
                 print("FAA Request URL: \(url.absoluteString)")
@@ -139,7 +139,7 @@ class FAAService: ObservableObject {
                         } else {
                             throw NSError(domain: "FAAService",
                                           code: 502,
-                                          userInfo: [NSLocalizedDescriptionKey: "The FAA service is temporarily unavailable (502 Proxy Error). Please try again later."])
+                                          userInfo: [NSLocalizedDescriptionKey: String(localized: "faa_service_unavailable", comment: "Error message when FAA service returns 502 error")])
                         }
                     case 200:
                         // Success
@@ -154,7 +154,7 @@ class FAAService: ObservableObject {
                         // Other HTTP errors
                         throw NSError(domain: "FAAService",
                                       code: httpResponse.statusCode,
-                                      userInfo: [NSLocalizedDescriptionKey: "FAA HTTP error: \(httpResponse.statusCode)"])
+                                      userInfo: [NSLocalizedDescriptionKey: String(localized: "faa_http_error", comment: "Error message for FAA HTTP errors with status code")])
                     }
                 }
                 
