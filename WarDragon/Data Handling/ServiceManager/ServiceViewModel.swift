@@ -123,7 +123,7 @@ class ServiceViewModel: ObservableObject {
                     let serviceStatus = ServiceControl.ServiceStatus(
                         isActive: active,
                         isEnabled: enabled,
-                        statusText: active ? "Running" : "Stopped",
+                        statusText: active ? String(localized: "service_status_running", comment: "Service running status") : String(localized: "service_status_stopped", comment: "Service stopped status"),
                         rawStatus: status["raw_status"] as? String,
                         healthStatus: determineHealthStatus(
                             active: active,
