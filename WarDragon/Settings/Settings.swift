@@ -9,8 +9,8 @@ import Foundation
 import SwiftUI
 
 enum ConnectionMode: String, Codable, CaseIterable {
-    case multicast = "Multicast"
-    case zmq = "Direct ZMQ"
+    case multicast = String(localized: "multicast", comment: "Multicast connection mode")
+    case zmq = String(localized: "direct_zmq", comment: "Direct ZMQ connection mode")
     //    case both = "Both"
     
     var icon: String {
