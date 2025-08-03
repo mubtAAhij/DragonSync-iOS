@@ -254,11 +254,11 @@ struct MessageRow: View {
             
             Menu {
                 Button(action: { showingInfoEditor = true }) {
-                    Label("Edit Info", systemImage: "pencil")
+                    Label(String(localized: "edit_info", comment: "Menu option to edit drone information"), systemImage: "pencil")
                 }
                 
                 Button(action: { activeSheet = .liveMap }) {
-                    Label("Live Map", systemImage: "map")
+                    Label(String(localized: "live_map", comment: "Menu option to view live map"), systemImage: "map")
                 }
                 
                 Divider()
@@ -266,13 +266,13 @@ struct MessageRow: View {
                 Button(action: {
                     removeDroneFromTracking()
                 }) {
-                    Label("Stop Tracking", systemImage: "eye.slash")
+                    Label(String(localized: "stop_tracking", comment: "Menu option to stop tracking a drone"), systemImage: "eye.slash")
                 }
                 
                 Button(role: .destructive, action: {
                     showingDeleteConfirmation = true
                 }) {
-                    Label("Delete", systemImage: "trash")
+                    Label(String(localized: "delete", comment: "Menu option to delete an item"), systemImage: "trash")
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
@@ -371,17 +371,17 @@ struct MessageRow: View {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.yellow)
-                Text("MAC randomizing")
+                Text(String(localized: "mac_randomizing", comment: "Status indicator for MAC address randomization"))
                     .font(.appCaption)
                     .foregroundColor(.secondary)
-                Text("(\(macCount > 10 ? "10+" : String(macCount)) MACs)")
+                Text("(\(macCount > 10 ? String(localized: "ten_plus", comment: "Text showing 10 or more items") : String(macCount)) MACs)")
                     .font(.appCaption)
                     .foregroundColor(.secondary)
                 
                 if cotViewModel.macProcessing[message.uid] == true {
                     Image(systemName: "shield.lefthalf.filled")
                         .foregroundColor(.yellow)
-                        .help("Random MAC addresses detected")
+                        .help(String(localized: "random_mac_addresses_detected", comment: "Alert message about MAC randomization detection"))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -437,7 +437,7 @@ struct MessageRow: View {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.yellow)
-                    Text("Possible Spoofed Signal")
+                    Text(String(localized: "possible_spoofed_signal", comment: "Warning message about potentially fake signal"))
                         .foregroundColor(.primary)
                     Spacer()
                     Text(String(format: "Confidence: %.0f%%", details.confidence * 100))
@@ -485,13 +485,13 @@ struct MessageRow: View {
                 Button(action: {
                     removeDroneFromTracking()
                 }) {
-                    Label("Stop Tracking", systemImage: "eye.slash")
+                    Label(String(localized: "stop_tracking", comment: "Button to stop tracking a drone"), systemImage: "eye.slash")
                 }
                 
                 Button(role: .destructive, action: {
                     showingDeleteConfirmation = true
                 }) {
-                    Label("Delete from History", systemImage: "trash")
+                    Label(String(localized: "delete_from_history", comment: "Button to delete item from history"), systemImage: "trash")
                 }
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -500,13 +500,13 @@ struct MessageRow: View {
                     deleteDroneFromStorage()
 //                    showingDeleteConfirmation = true
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(String(localized: "delete", comment: "Delete confirmation button"), systemImage: "trash")
                 }
                 
                 Button {
                     removeDroneFromTracking()
                 } label: {
-                    Label("Stop", systemImage: "eye.slash")
+                    Label(String(localized: "stop", comment: "Stop action button"), systemImage: "eye.slash")
                 }
                 .tint(.orange)
             }
@@ -515,11 +515,11 @@ struct MessageRow: View {
             case .liveMap:
                 NavigationView {
                     LiveMapView(cotViewModel: cotViewModel, initialMessage: message)
-                        .navigationTitle("Live Drone Map")
+                        .navigationTitle(String(localized: "live_drone_map", comment: "Title for live drone map view"))
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarTrailing) {
-                                Button("Done") {
+                                Button(String(localized: "done", comment: "Done button")) {
                                     activeSheet = nil
                                 }
                             }
@@ -534,7 +534,7 @@ struct MessageRow: View {
                     )
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
+                            Button(String(localized: "done", comment: "Done button")) {
                                 activeSheet = nil
                             }
                         }
@@ -545,11 +545,11 @@ struct MessageRow: View {
         .sheet(isPresented: $showingInfoEditor) {
             NavigationView {
                 DroneInfoEditor(droneId: message.uid)
-                    .navigationTitle("Edit Drone Info")
+                    .navigationTitle(String(localized: "edit_drone_info", comment: "Title for editing drone information"))
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
+                            Button(String(localized: "done", comment: "Done button")) {
                                 showingInfoEditor = false
                             }
                         }
