@@ -61,16 +61,16 @@ struct StoredEncountersView: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search by ID or CAA Registration")
-            .navigationTitle("Encounter History")
+            .searchable(text: $searchText, prompt: String(localized: "search_by_id_or_caa_registration", comment: "Search placeholder text"))
+            .navigationTitle(String(localized: "encounter_history", comment: "Navigation title for encounter history"))
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Picker("Sort By", selection: $sortOrder) {
-                            Text("Last Seen").tag(SortOrder.lastSeen)
-                            Text("First Seen").tag(SortOrder.firstSeen)
-                            Text("Max Altitude").tag(SortOrder.maxAltitude)
-                            Text("Max Speed").tag(SortOrder.maxSpeed)
+                        Picker(String(localized: "sort_by", comment: "Sort picker label"), selection: $sortOrder) {
+                            Text(String(localized: "last_seen", comment: "Last seen sort option")).tag(SortOrder.lastSeen)
+                            Text(String(localized: "first_seen", comment: "First seen sort option")).tag(SortOrder.firstSeen)
+                            Text(String(localized: "max_altitude", comment: "Max altitude sort option")).tag(SortOrder.maxAltitude)
+                            Text(String(localized: "max_speed", comment: "Max speed sort option")).tag(SortOrder.maxSpeed)
                         }
                         Button {
                             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -79,23 +79,23 @@ struct StoredEncountersView: View {
                                 storage.shareCSV(from: rootVC)
                             }
                         } label: {
-                            Label("Export CSV", systemImage: "square.and.arrow.up")
+                            Label(String(localized: "export_csv", comment: "Export CSV menu option"), systemImage: "square.and.arrow.up")
                         }
                         Button(role: .destructive) {
                             showingDeleteConfirmation = true
                         } label: {
-                            Label("Delete All", systemImage: "trash")
+                            Label(String(localized: "delete_all", comment: "Delete all menu option"), systemImage: "trash")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
                 }
             }
-            .alert("Delete All Encounters", isPresented: $showingDeleteConfirmation) {
-                Button("Delete", role: .destructive) {
+            .alert(String(localized: "delete_all_encounters", comment: "Delete all encounters alert title"), isPresented: $showingDeleteConfirmation) {
+                Button(String(localized: "delete", comment: "Delete button text"), role: .destructive) {
                     storage.deleteAllEncounters()
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(String(localized: "cancel", comment: "Cancel button text"), role: .cancel) {}
             }
         }
     }
@@ -121,7 +121,7 @@ struct StoredEncountersView: View {
                     }
                     
                     if let caaReg = encounter.metadata["caaRegistration"] {
-                        Text("CAA: \(caaReg)")
+                        Text(String(localized: "caa_label", comment: "CAA registration label").replacingOccurrences(of: "%@", with: caaReg))
                             .font(.appCaption)
                             .foregroundStyle(.secondary)
                     }
@@ -133,12 +133,12 @@ struct StoredEncountersView: View {
                 }
                 
                 if let mac = encounter.metadata["mac"] {
-                    Text("MAC: \(mac)")
+                    Text(String(localized: "mac_label", comment: "MAC address label").replacingOccurrences(of: "%@", with: mac))
                         .font(.appCaption)
                 }
                 
                 HStack {
-                    Label("\(encounter.flightPath.count) points", systemImage: "map")
+                    Label(String(localized: "flight_points_count", comment: "Flight points count label").replacingOccurrences(of: "%d", with: "\(encounter.flightPath.count)"), systemImage: "map")
                     Label(String(format: "%.0fm", encounter.maxAltitude), systemImage: "arrow.up")
                     Label(String(format: "%.0fm/s", encounter.maxSpeed), systemImage: "speedometer")
                     if encounter.averageRSSI != 0 {
@@ -149,7 +149,7 @@ struct StoredEncountersView: View {
                 .font(.appCaption)
                 .foregroundStyle(.secondary)
                 
-                Text("Duration: \(formatDuration(encounter.totalFlightTime))")
+                Text(String(localized: "duration_label", comment: "Duration label").replacingOccurrences(of: "%@", with: formatDuration(encounter.totalFlightTime)))
                     .font(.appCaption)
                     .foregroundStyle(.secondary)
             }
@@ -208,7 +208,7 @@ struct StoredEncountersView: View {
                                         .font(.system(.title2, design: .monospaced))
                                         .foregroundColor(.primary)
                                 } else {
-                                    Text("Unnamed Drone")
+                                    Text(String(localized: "unnamed_drone", comment: "Default drone name when no custom name is set"))
                                         .font(.system(.title2, design: .monospaced))
                                         .foregroundColor(.secondary)
                                 }
@@ -256,18 +256,18 @@ struct StoredEncountersView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Encounter Details")
+            .navigationTitle(String(localized: "encounter_details", comment: "Encounter details navigation title"))
             .onAppear {
                 setupInitialMapPosition()
             }
             .sheet(isPresented: $showingInfoEditor) {
                 NavigationView {
                     DroneInfoEditor(droneId: encounter.id)
-                        .navigationTitle("Edit Drone Info")
+                        .navigationTitle(String(localized: "edit_drone_info", comment: "Edit drone info navigation title"))
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarTrailing) {
-                                Button("Done") {
+                                Button(String(localized: "done", comment: "Done button text")) {
                                     showingInfoEditor = false
                                 }
                             }
@@ -278,34 +278,34 @@ struct StoredEncountersView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Picker("Map Style", selection: $selectedMapType) {
-                            Text("Standard").tag(MapStyle.standard)
-                            Text("Satellite").tag(MapStyle.satellite)
-                            Text("Hybrid").tag(MapStyle.hybrid)
+                        Picker(String(localized: "map_style", comment: "Map style picker label"), selection: $selectedMapType) {
+                            Text(String(localized: "standard", comment: "Standard map style option")).tag(MapStyle.standard)
+                            Text(String(localized: "satellite", comment: "Satellite map style option")).tag(MapStyle.satellite)
+                            Text(String(localized: "hybrid", comment: "Hybrid map style option")).tag(MapStyle.hybrid)
                         }
                         Button {
                             exportKML()
                         } label: {
-                            Label("Export KML", systemImage: "square.and.arrow.up")
+                            Label(String(localized: "export_kml", comment: "Export KML menu option"), systemImage: "square.and.arrow.up")
                         }
                         Button(role: .destructive) {
                             showingDeleteConfirmation = true
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(String(localized: "delete", comment: "Delete button text"), systemImage: "trash")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
                 }
             }
-            .alert("Delete Encounter", isPresented: $showingDeleteConfirmation) {
-                Button("Delete", role: .destructive) {
+            .alert(String(localized: "delete_encounter", comment: "Delete encounter alert title"), isPresented: $showingDeleteConfirmation) {
+                Button(String(localized: "delete", comment: "Delete button text"), role: .destructive) {
                     storage.deleteEncounter(id: encounter.id)
                     dismiss() // Add this to return to list after deletion
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(String(localized: "cancel", comment: "Cancel button text"), role: .cancel) {}
             } message: {
-                Text("Are you sure you want to delete this encounter? This action cannot be undone.")
+                Text(String(localized: "delete_encounter_confirmation_message", comment: "Delete encounter confirmation message"))
             }
         }
         
@@ -321,7 +321,7 @@ struct StoredEncountersView: View {
                     
                     // Start point (only for normal points)
                     if let start = normalPoints.first {
-                        Annotation("Start", coordinate: start.coordinate) {
+                        Annotation(String(localized: "start", comment: "Start label"), coordinate: start.coordinate) {
                             Image(systemName: "airplane.departure")
                                 .foregroundStyle(.green)
                                 .background(Circle().fill(.white))
@@ -330,7 +330,7 @@ struct StoredEncountersView: View {
                     
                     // End point (only for normal points)
                     if let end = normalPoints.last, normalPoints.count > 1 {
-                        Annotation("End", coordinate: end.coordinate) {
+                        Annotation(String(localized: "end", comment: "End label"), coordinate: end.coordinate) {
                             Image(systemName: "airplane.arrival")
                                 .foregroundStyle(.red)
                                 .background(Circle().fill(.white))
@@ -348,11 +348,11 @@ struct StoredEncountersView: View {
                                 .foregroundStyle(.yellow.opacity(0.1))
                                 .stroke(.yellow, lineWidth: 2)
                             
-                            Annotation("RSSI: \(Int(rssi)) dBm", coordinate: point.coordinate) {
+                            Annotation(String(localized: "rssi_label", comment: "RSSI signal strength label").replacingOccurrences(of: "%d", with: "\(Int(rssi))"), coordinate: point.coordinate) {
                                 VStack {
-                                    Text("Encrypted Drone")
+                                    Text(String(localized: "encrypted_drone", comment: "Encrypted drone label"))
                                         .font(.caption)
-                                    Text("\(Int(radius))m radius")
+                                    Text(String(localized: "radius_label", comment: "Radius measurement label").replacingOccurrences(of: "%d", with: "\(Int(radius))"))
                                         .font(.caption)
                                         .foregroundColor(.primary)
                                 }
@@ -385,7 +385,7 @@ struct StoredEncountersView: View {
                    let pilotLon = Double(pilotLonStr),
                    pilotLat != 0 || pilotLon != 0 {
                     let pilotCoordinate = CLLocationCoordinate2D(latitude: pilotLat, longitude: pilotLon)
-                    Annotation("Pilot", coordinate: pilotCoordinate) {
+                    Annotation(String(localized: "pilot", comment: "Pilot label"), coordinate: pilotCoordinate) {
                         Image(systemName: "person.fill")
                             .foregroundStyle(.orange)
                             .background(Circle().fill(.white))
@@ -487,25 +487,25 @@ struct StoredEncountersView: View {
         
         private var encounterStats: some View {
             VStack(alignment: .leading, spacing: 8) {
-                Text("ENCOUNTER STATS")
+                Text(String(localized: "encounter_stats", comment: "Encounter stats section header"))
                     .font(.appHeadline)
                     .frame(maxWidth: .infinity, alignment: .center)
                 
                 StatsGrid {
-                    StatItem(title: "Duration", value: formatDuration(encounter.totalFlightTime))
-                    StatItem(title: "Max Alt", value: String(format: "%.1fm", encounter.maxAltitude))
-                    StatItem(title: "Max Speed", value: String(format: "%.1fm/s", encounter.maxSpeed))
-                    StatItem(title: "Avg RSSI", value: String(format: "%.1fdBm", encounter.averageRSSI))
-                    StatItem(title: "Points", value: "\(encounter.flightPath.count)")
-                    StatItem(title: "Signatures", value: "\(encounter.signatures.count)")
+                    StatItem(title: String(localized: "duration", comment: "Duration stat label"), value: formatDuration(encounter.totalFlightTime))
+                    StatItem(title: String(localized: "max_alt", comment: "Maximum altitude stat label"), value: String(format: "%.1fm", encounter.maxAltitude))
+                    StatItem(title: String(localized: "max_speed_stat", comment: "Maximum speed stat label"), value: String(format: "%.1fm/s", encounter.maxSpeed))
+                    StatItem(title: String(localized: "avg_rssi", comment: "Average RSSI stat label"), value: String(format: "%.1fdBm", encounter.averageRSSI))
+                    StatItem(title: String(localized: "points", comment: "Points stat label"), value: "\(encounter.flightPath.count)")
+                    StatItem(title: String(localized: "signatures", comment: "Signatures stat label"), value: "\(encounter.signatures.count)")
                 }
-                Text("ENCOUNTER TIMELINE")
+                Text(String(localized: "encounter_timeline", comment: "Encounter timeline section header"))
                     .font(.appHeadline)
                     .frame(maxWidth: .infinity, alignment: .center)
                 
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("First Detected")
+                        Text(String(localized: "first_detected", comment: "First detected timeline label"))
                             .font(.appCaption)
                             .foregroundStyle(.secondary)
                         Text(formatDateTime(encounter.firstSeen))
@@ -515,7 +515,7 @@ struct StoredEncountersView: View {
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: 4) {
-                        Text("Last Contact")
+                        Text(String(localized: "last_contact", comment: "Label showing when the drone was last detected"))
                             .font(.appCaption)
                             .foregroundStyle(.secondary)
                         Text(formatDateTime(encounter.lastSeen))
@@ -551,7 +551,7 @@ struct StoredEncountersView: View {
         }
 
         private var macSectionTitle: some View {
-            Text("MAC RANDOMIZATION")
+            Text(String(localized: "mac_randomization", comment: "Section header for MAC address randomization information"))
                 .font(.appHeadline)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
@@ -567,10 +567,10 @@ struct StoredEncountersView: View {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.yellow)
-                Text("Device using MAC randomization")
+                Text(String(localized: "device_using_mac_randomization", comment: "Description text indicating device uses MAC randomization"))
                     .font(.appSubheadline)
                 Spacer()
-                Text("\(encounter.macHistory.count) addresses")
+                Text(String(localized: "mac_addresses_count", comment: "Label showing number of MAC addresses detected").replacingOccurrences(of: "{count}", with: "\(encounter.macHistory.count)"))
                     .font(.appCaption)
                     .foregroundColor(.secondary)
             }
@@ -608,15 +608,15 @@ struct StoredEncountersView: View {
         
         private var flightDataSection: some View {
             VStack(alignment: .leading, spacing: 8) {
-                Text("FLIGHT DATA")
+                Text(String(localized: "flight_data", comment: "Section header for flight data information"))
                     .font(.appHeadline)
                     .frame(maxWidth: .infinity, alignment: .center)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 20) {
                         Spacer()
-                        FlightDataChart(title: "Altitude", data: encounter.flightPath.map { $0.altitude }.filter { $0 != 0 })
-                        FlightDataChart(title: "Speed", data: encounter.signatures.map { $0.speed }.filter { $0 != 0 })
+                        FlightDataChart(title: String(localized: "altitude", comment: "Label for altitude measurement"), data: encounter.flightPath.map { $0.altitude }.filter { $0 != 0 })
+                        FlightDataChart(title: String(localized: "speed", comment: "Label for speed measurement"), data: encounter.signatures.map { $0.speed }.filter { $0 != 0 })
                         FlightDataChart(title: "RSSI", data: encounter.signatures.map { $0.rssi }.filter { $0 != 0 })
                         Spacer()
                     }
@@ -693,7 +693,7 @@ struct StoredEncountersView: View {
                        .stroke(.blue, lineWidth: 2)
                    }
                } else {
-                   Text("Insufficient data")
+                   Text(String(localized: "insufficient_data", comment: "Message shown when there is not enough data to display"))
                        .font(.appCaption)
                        .foregroundColor(.secondary)
                }
