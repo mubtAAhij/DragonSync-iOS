@@ -216,7 +216,7 @@ struct MessageRow: View {
                 }
                 
                 if let caaReg = message.caaRegistration, !caaReg.isEmpty {
-                    Text("CAA ID: \(caaReg)")
+                    Text(String(localized: "caa_id_label", comment: "Label showing CAA registration ID").replacingOccurrences(of: "{id}", with: caaReg))
                         .font(.appSubheadline)
                         .foregroundColor(.secondary)
                 }
@@ -254,11 +254,11 @@ struct MessageRow: View {
             
             Menu {
                 Button(action: { showingInfoEditor = true }) {
-                    Label("Edit Info", systemImage: "pencil")
+                    Label(String(localized: "edit_info", comment: "Menu option to edit drone information"), systemImage: "pencil")
                 }
                 
                 Button(action: { activeSheet = .liveMap }) {
-                    Label("Live Map", systemImage: "map")
+                    Label(String(localized: "live_map", comment: "Menu option to show live map"), systemImage: "map")
                 }
                 
                 Divider()
@@ -266,13 +266,13 @@ struct MessageRow: View {
                 Button(action: {
                     removeDroneFromTracking()
                 }) {
-                    Label("Stop Tracking", systemImage: "eye.slash")
+                    Label(String(localized: "stop_tracking", comment: "Menu option to stop tracking a drone"), systemImage: "eye.slash")
                 }
                 
                 Button(role: .destructive, action: {
                     showingDeleteConfirmation = true
                 }) {
-                    Label("Delete", systemImage: "trash")
+                    Label(String(localized: "delete", comment: "Menu option to delete a drone"), systemImage: "trash")
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
@@ -284,7 +284,7 @@ struct MessageRow: View {
     
     @ViewBuilder
     private func typeInfoView() -> some View {
-        Text("Type: \(message.type)")
+        Text(String(localized: "type_label", comment: "Label showing drone type").replacingOccurrences(of: "{type}", with: message.type))
             .font(.appSubheadline)
     }
     
@@ -302,7 +302,7 @@ struct MessageRow: View {
         } else if let rssi = getRSSI() {
             // Fallback for messages without signal sources
             HStack(spacing: 8) {
-                Label("\(Int(rssi))dBm", systemImage: "antenna.radiowaves.left.and.right")
+                Label(String(localized: "rssi_value", comment: "RSSI signal strength value in dBm").replacingOccurrences(of: "{value}", with: "\(Int(rssi))"), systemImage: "antenna.radiowaves.left.and.right")
                     .font(.appCaption)
                     .fontWeight(.bold)
                     .foregroundColor(rssiColor(rssi))
@@ -346,7 +346,7 @@ struct MessageRow: View {
                         .foregroundColor(.secondary)
                 }
                 HStack {
-                    Text("\(source.rssi) dBm")
+                    Text(String(localized: "signal_strength_dbm", comment: "Signal strength measurement in dBm").replacingOccurrences(of: "{value}", with: "\(source.rssi)"))
                         .font(.appCaption)
                         .fontWeight(.bold)
                         .foregroundColor(rssiColor(Double(source.rssi)))
@@ -371,17 +371,17 @@ struct MessageRow: View {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.yellow)
-                Text("MAC randomizing")
+                Text(String(localized: "mac_randomizing", comment: "Status text indicating MAC address randomization is active"))
                     .font(.appCaption)
                     .foregroundColor(.secondary)
-                Text("(\(macCount > 10 ? "10+" : String(macCount)) MACs)")
+                Text(String(localized: "mac_count_label", comment: "Label showing number of MAC addresses").replacingOccurrences(of: "{count}", with: macCount > 10 ? String(localized: "ten_plus", comment: "Indicates more than 10 items") : String(macCount)))
                     .font(.appCaption)
                     .foregroundColor(.secondary)
                 
                 if cotViewModel.macProcessing[message.uid] == true {
                     Image(systemName: "shield.lefthalf.filled")
                         .foregroundColor(.yellow)
-                        .help("Random MAC addresses detected")
+                        .help(String(localized: "random_mac_detected", comment: "Alert message indicating random MAC addresses were detected"))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -405,25 +405,25 @@ struct MessageRow: View {
     private func detailsView() -> some View {
         Group {
             if message.lat != "0.0" {
-                Text("Position: \(message.lat), \(message.lon)")
+                Text(String(localized: "position_coordinates", comment: "Label showing GPS coordinates").replacingOccurrences(of: "{lat}", with: "\(message.lat)").replacingOccurrences(of: "{lon}", with: "\(message.lon)"))
             }
             if message.alt != "0.0" {
-                Text("Altitude: \(message.alt)m")
+                Text(String(localized: "altitude_meters", comment: "Label showing altitude in meters").replacingOccurrences(of: "{value}", with: "\(message.alt)"))
             }
             if message.speed != "0.0" {
-                Text("Speed: \(message.speed)m/s")
+                Text(String(localized: "speed_meters_per_second", comment: "Label showing speed in meters per second").replacingOccurrences(of: "{value}", with: "\(message.speed)"))
             }
             if message.pilotLat != "0.0" {
-                Text("Pilot Location: \(message.pilotLat), \(message.pilotLon)")
+                Text(String(localized: "pilot_location", comment: "Label showing pilot GPS coordinates").replacingOccurrences(of: "{lat}", with: "\(message.pilotLat)").replacingOccurrences(of: "{lon}", with: "\(message.pilotLon)"))
             }
             if let operatorId = message.operator_id {
-                Text("Operator ID: \(operatorId)")
+                Text(String(localized: "operator_id", comment: "Label showing operator identification").replacingOccurrences(of: "{id}", with: operatorId))
             }
             if let manufacturer = message.manufacturer, manufacturer != "Unknown" {
-                Text("Manufacturer: \(manufacturer)")
+                Text(String(localized: "manufacturer", comment: "Label showing drone manufacturer").replacingOccurrences(of: "{name}", with: manufacturer))
             }
             if let mac = message.mac, !mac.isEmpty {
-                Text("MAC: \(mac)")
+                Text(String(localized: "mac_address", comment: "Label showing MAC address").replacingOccurrences(of: "{address}", with: mac))
             }
         }
         .font(.appCaption)
@@ -437,10 +437,10 @@ struct MessageRow: View {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.yellow)
-                    Text("Possible Spoofed Signal")
+                    Text(String(localized: "possible_spoofed_signal", comment: "Warning message indicating potential signal spoofing"))
                         .foregroundColor(.primary)
                     Spacer()
-                    Text(String(format: "Confidence: %.0f%%", details.confidence * 100))
+                    Text(String(format: String(localized: "confidence_percentage", comment: "Label showing confidence level as percentage"), details.confidence * 100))
                         .foregroundColor(.primary)
                 }
                 
@@ -485,13 +485,13 @@ struct MessageRow: View {
                 Button(action: {
                     removeDroneFromTracking()
                 }) {
-                    Label("Stop Tracking", systemImage: "eye.slash")
+                    Label(String(localized: "stop_tracking", comment: "Menu option to stop tracking a drone"), systemImage: "eye.slash")
                 }
                 
                 Button(role: .destructive, action: {
                     showingDeleteConfirmation = true
                 }) {
-                    Label("Delete from History", systemImage: "trash")
+                    Label(String(localized: "delete_from_history", comment: "Menu option to delete drone from history"), systemImage: "trash")
                 }
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -500,13 +500,13 @@ struct MessageRow: View {
                     deleteDroneFromStorage()
 //                    showingDeleteConfirmation = true
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(String(localized: "delete", comment: "Menu option to delete a drone"), systemImage: "trash")
                 }
                 
                 Button {
                     removeDroneFromTracking()
                 } label: {
-                    Label("Stop", systemImage: "eye.slash")
+                    Label(String(localized: "stop", comment: "Button to stop an action"), systemImage: "eye.slash")
                 }
                 .tint(.orange)
             }
@@ -515,11 +515,11 @@ struct MessageRow: View {
             case .liveMap:
                 NavigationView {
                     LiveMapView(cotViewModel: cotViewModel, initialMessage: message)
-                        .navigationTitle("Live Drone Map")
+                        .navigationTitle(String(localized: "live_drone_map", comment: "Title for live drone map view"))
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarTrailing) {
-                                Button("Done") {
+                                Button(String(localized: "done", comment: "Button to complete an action")) {
                                     activeSheet = nil
                                 }
                             }
@@ -534,7 +534,7 @@ struct MessageRow: View {
                     )
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
+                            Button(String(localized: "done", comment: "Button to complete an action")) {
                                 activeSheet = nil
                             }
                         }
@@ -545,11 +545,11 @@ struct MessageRow: View {
         .sheet(isPresented: $showingInfoEditor) {
             NavigationView {
                 DroneInfoEditor(droneId: message.uid)
-                    .navigationTitle("Edit Drone Info")
+                    .navigationTitle(String(localized: "edit_drone_info", comment: "Title for editing drone information"))
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
+                            Button(String(localized: "done", comment: "Button to complete an action")) {
                                 showingInfoEditor = false
                             }
                         }
