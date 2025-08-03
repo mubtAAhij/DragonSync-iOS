@@ -31,9 +31,9 @@ struct SpectrumView: View {
                 
                 if let latest = viewModel.spectrumData.last {
                     VStack(alignment: .leading) {
-                        Text("Center: \(formatFrequency(Double(latest.fc)))")
-                        Text("Sample Rate: \(formatFrequency(Double(latest.sampleRate)))")
-                        Text("FFT Size: \(latest.data.count)")
+                        Text(String(localized: "center_frequency", comment: "Label showing center frequency") + ": \(formatFrequency(Double(latest.fc)))")
+                        Text(String(localized: "sample_rate", comment: "Label showing sample rate") + ": \(formatFrequency(Double(latest.sampleRate)))")
+                        Text(String(localized: "fft_size", comment: "Label showing FFT size") + ": \(latest.data.count)")
                     }
                     .font(.system(.caption, design: .monospaced))
                 }
@@ -73,21 +73,21 @@ struct SpectrumView: View {
                             .strokeBorder(Color.green.opacity(0.3), lineWidth: 1)
                     )
             } else {
-                Text("No spectrum data")
+                Text(String(localized: "no_spectrum_data", comment: "Message when no spectrum data is available"))
                     .foregroundColor(.secondary)
                     .frame(maxHeight: .infinity)
             }
         }
         .padding()
-        .navigationTitle("Spectrum")
+        .navigationTitle(String(localized: "spectrum", comment: "Navigation title for spectrum view"))
         .sheet(isPresented: $showSettings) {
             NavigationView {
                 Form {
-                    Section("UDP Connection") {
+                    Section(String(localized: "udp_connection", comment: "Section header for UDP connection settings")) {
                         HStack {
-                            Text("Port")
+                            Text(String(localized: "port", comment: "Label for port setting"))
                             Spacer()
-                            TextField("Port", text: $spectrumPort)
+                            TextField(String(localized: "port", comment: "Placeholder for port input field"), text: $spectrumPort)
                                 .keyboardType(.numberPad)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 100)
@@ -110,11 +110,11 @@ struct SpectrumView: View {
                         }
                     }
                 }
-                .navigationTitle("Spectrum Settings")
+                .navigationTitle(String(localized: "spectrum_settings", comment: "Navigation title for spectrum settings"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
+                        Button(String(localized: "done", comment: "Button to close settings")) {
                             showSettings = false
                         }
                     }
