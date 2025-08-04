@@ -688,7 +688,7 @@ class ZMQHandler: ObservableObject {
                     }
                 }
             }
-            completion(false, "Failed to send command")
+            completion(false, String(localized: "failed_to_send_command", comment: "Error message when command sending fails"))
         } catch {
             completion(false, error.localizedDescription)
         }
@@ -708,7 +708,7 @@ class ZMQHandler: ObservableObject {
                 completion(.success(logs))
             } else {
                 completion(.failure(NSError(domain: "", code: -1,
-                                            userInfo: [NSLocalizedDescriptionKey: "Failed to get logs"])))
+                                            userInfo: [NSLocalizedDescriptionKey: String(localized: "failed_to_get_logs", comment: "Error message when log retrieval fails")])))
             }
         }
     }
