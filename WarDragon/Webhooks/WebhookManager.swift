@@ -46,15 +46,15 @@ enum WebhookEvent: String, CaseIterable, Codable {
     
     var displayName: String {
         switch self {
-        case .droneDetected: return "Drone Detected"
-        case .fpvSignal: return "FPV Signal"
-        case .systemAlert: return "System Alert"
-        case .proximityWarning: return "Proximity Warning"
-        case .temperatureAlert: return "Temperature Alert"
-        case .memoryAlert: return "Memory Alert"
-        case .cpuAlert: return "CPU Alert"
-        case .connectionLost: return "Connection Lost"
-        case .connectionRestored: return "Connection Restored"
+        case .droneDetected: return String(localized: "drone_detected_display_name", comment: "Display name for drone detection events")
+        case .fpvSignal: return String(localized: "fpv_signal_display_name", comment: "Display name for FPV signal events")
+        case .systemAlert: return String(localized: "system_alert_display_name", comment: "Display name for system alert events")
+        case .proximityWarning: return String(localized: "proximity_warning_display_name", comment: "Display name for proximity warning events")
+        case .temperatureAlert: return String(localized: "temperature_alert_display_name", comment: "Display name for temperature alert events")
+        case .memoryAlert: return String(localized: "memory_alert_display_name", comment: "Display name for memory alert events")
+        case .cpuAlert: return String(localized: "cpu_alert_display_name", comment: "Display name for CPU alert events")
+        case .connectionLost: return String(localized: "connection_lost_display_name", comment: "Display name for connection lost events")
+        case .connectionRestored: return String(localized: "connection_restored_display_name", comment: "Display name for connection restored events")
         }
     }
 }

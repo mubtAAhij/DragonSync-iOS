@@ -24,18 +24,18 @@ struct DroneInfoEditor: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            TextField("Drone Name", text: $customName)
+            TextField(String(localized: "drone_name_placeholder", comment: "Placeholder text for drone name input field"), text: $customName)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .font(.appDefault)
                 .padding(.bottom, 8)
             
-            Text("Trust Status")
+            Text(String(localized: "trust_status_label", comment: "Label for trust status selection"))
                 .font(.appSubheadline)
                 .padding(.bottom, 4)
             
             HStack(spacing: 16) {
                 TrustButton(
-                    title: "Trusted",
+                    title: String(localized: "trust_status_trusted", comment: "Trust status option for trusted drone"),
                     icon: "checkmark.shield.fill",
                     color: .green,
                     isSelected: trustStatus == .trusted,
@@ -51,7 +51,7 @@ struct DroneInfoEditor: View {
                 )
                 
                 TrustButton(
-                    title: "Untrusted",
+                    title: String(localized: "trust_status_untrusted", comment: "Trust status option for untrusted drone"),
                     icon: "xmark.shield.fill",
                     color: .red,
                     isSelected: trustStatus == .untrusted,
@@ -61,7 +61,7 @@ struct DroneInfoEditor: View {
             .padding(.bottom, 16)
             
             Button(action: saveChanges) {
-                Text("Save")
+                Text(String(localized: "save_button", comment: "Save button text"))
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.blue)
