@@ -74,7 +74,7 @@ class FAAService: ObservableObject {
     func queryFAAData(mac: String, remoteId: String) async -> [String: Any]? {
         guard !remoteId.isEmpty else {
             DispatchQueue.main.async {
-                self.error = "Remote ID is empty"
+                self.error = String(localized: "remote_id_empty_error", comment: "Error message when remote ID is empty")
             }
             return nil
         }
@@ -113,7 +113,7 @@ class FAAService: ObservableObject {
                 ]
                 
                 guard let url = components.url else {
-                    throw NSError(domain: "FAAService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+                    throw NSError(domain: "FAAService", code: -1, userInfo: [NSLocalizedDescriptionKey: String(localized: "invalid_url_error", comment: "Error message when URL is malformed")])
                 }
                 
                 print("FAA Request URL: \(url.absoluteString)")
@@ -139,7 +139,7 @@ class FAAService: ObservableObject {
                         } else {
                             throw NSError(domain: "FAAService",
                                           code: 502,
-                                          userInfo: [NSLocalizedDescriptionKey: "The FAA service is temporarily unavailable (502 Proxy Error). Please try again later."])
+                                          userInfo: [NSLocalizedDescriptionKey: String(localized: "faa_service_unavailable_error", comment: "Error message when FAA service returns 502 error")])
                         }
                     case 200:
                         // Success
@@ -154,7 +154,7 @@ class FAAService: ObservableObject {
                         // Other HTTP errors
                         throw NSError(domain: "FAAService",
                                       code: httpResponse.statusCode,
-                                      userInfo: [NSLocalizedDescriptionKey: "FAA HTTP error: \(httpResponse.statusCode)"])
+                                      userInfo: [NSLocalizedDescriptionKey: String(localized: "faa_http_error", comment: "FAA HTTP error with status code").replacingOccurrences(of: "{statusCode}", with: "\(httpResponse.statusCode)")])
                     }
                 }
                 
