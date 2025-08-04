@@ -50,7 +50,7 @@ struct SystemStatusCard: View {
             HStack {
                 Image(systemName: "cpu")
                     .foregroundColor(statusViewModel.statusColor)
-                Text("SYSTEM STATUS")
+                Text(String(localized: "system_status_header", comment: "System status card header"))
                     .font(.appHeadline)
                 Spacer()
                 
@@ -76,7 +76,7 @@ struct SystemStatusCard: View {
                 CircularGauge(
                     value: statusViewModel.statusMessages.last?.systemStats.cpuUsage ?? 0,
                     maxValue: 100,
-                    title: "CPU",
+                    title: String(localized: "cpu_gauge_label", comment: "CPU gauge label"),
                     unit: "%",
                     color: cpuColor
                 )
@@ -84,7 +84,7 @@ struct SystemStatusCard: View {
                 CircularGauge(
                     value: memoryUsagePercent,
                     maxValue: 100,
-                    title: "MEM",
+                    title: String(localized: "memory_gauge_label", comment: "Memory gauge label"),
                     unit: "%",
                     color: memoryColor
                 )
@@ -92,7 +92,7 @@ struct SystemStatusCard: View {
                 CircularGauge(
                     value: statusViewModel.statusMessages.last?.systemStats.temperature ?? 0,
                     maxValue: 85,
-                    title: "TEMP",
+                    title: String(localized: "temperature_gauge_label", comment: "Temperature gauge label"),
                     unit: "°C",
                     color: temperatureColor
                 )
@@ -154,7 +154,7 @@ struct DronesOverviewCard: View {
             HStack {
                 Image(systemName: "airplane")
                     .foregroundColor(.blue)
-                Text("ACTIVE DRONES")
+                Text(String(localized: "active_drones_header", comment: "Active drones card header"))
                     .font(.appHeadline)
                 Spacer()
                 Text("\(activeDroneCount)")
@@ -164,21 +164,21 @@ struct DronesOverviewCard: View {
             
             HStack {
                 StatBox(
-                    title: "TRACKED",
+                    title: String(localized: "tracked_drones_label", comment: "Tracked drones stat label"),
                     value: "\(activeDroneCount)",
                     icon: "antenna.radiowaves.left.and.right",
                     color: .blue
                 )
                 
                 StatBox(
-                    title: "SPOOFED",
+                    title: String(localized: "spoofed_drones_label", comment: "Spoofed drones stat label"),
                     value: "\(spoofedCount)",
                     icon: "exclamationmark.triangle",
                     color: .yellow
                 )
                 
                 StatBox(
-                    title: "NEARBY",
+                    title: String(localized: "nearby_drones_label", comment: "Nearby drones stat label"),
                     value: "\(nearbyCount)",
                     icon: "location.fill",
                     color: .green
@@ -191,7 +191,7 @@ struct DronesOverviewCard: View {
                 
                 if randomizingCount > 0 {
                     StatBox(
-                        title: "RANDOMIZING",
+                        title: String(localized: "randomizing_drones_label", comment: "Randomizing drones stat label"),
                         value: "\(randomizingCount)",
                         icon: "shuffle",
                         color: .yellow
@@ -268,7 +268,7 @@ struct SDRStatusCard: View {
             HStack {
                 Image(systemName: "thermometer")
                     .foregroundColor(.purple)
-                Text("SDR STATUS")
+                Text(String(localized: "sdr_status_header", comment: "SDR status card header"))
                     .font(.appHeadline)
                 Spacer()
                 Circle()
@@ -280,7 +280,7 @@ struct SDRStatusCard: View {
                 HStack(spacing: 20) {
                     // Pluto Temperature
                     VStack(alignment: .leading) {
-                        Text("PLUTO")
+                        Text(String(localized: "pluto_label", comment: "Pluto SDR temperature label"))
                             .font(.appCaption)
                             .foregroundColor(.secondary)
                         Text("\(Int(antStats.plutoTemp))°C")
@@ -290,7 +290,7 @@ struct SDRStatusCard: View {
                     
                     // Zynq Temperature
                     VStack(alignment: .leading) {
-                        Text("ZYNQ")
+                        Text(String(localized: "zynq_label", comment: "Zynq SDR temperature label"))
                             .font(.appCaption)
                             .foregroundColor(.secondary)
                         Text("\(Int(antStats.zynqTemp))°C")
@@ -300,17 +300,17 @@ struct SDRStatusCard: View {
                     
                     // SDR Connection Status
                     VStack(alignment: .leading) {
-                        Text("STATUS")
+                        Text(String(localized: "status_label", comment: "General status label"))
                             .font(.appCaption)
                             .foregroundColor(.secondary)
-                        Text(antStats.plutoTemp != 0.0 || antStats.zynqTemp != 0.0 ? "ACTIVE" : "INACTIVE")
+                        Text(antStats.plutoTemp != 0.0 || antStats.zynqTemp != 0.0 ? String(localized: "active_status", comment: "Active status indicator") : String(localized: "inactive_status", comment: "Inactive status indicator"))
                            .font(.system(.caption, design: .monospaced))
                            .foregroundColor(antStats.plutoTemp != 0.0 || antStats.zynqTemp != 0.0 ? .green : .red)
                     }
                 }
                 .padding(.vertical, 4)
             } else {
-                Text("No SDR Data")
+                Text(String(localized: "no_sdr_data", comment: "Message when no SDR data is available"))
                     .font(.appCaption)
                     .foregroundColor(.secondary)
             }
@@ -353,7 +353,7 @@ struct WarningsCard: View {
             HStack {
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundColor(.red)
-                Text("WARNINGS")
+                Text(String(localized: "warnings_header", comment: "Warnings card header"))
                     .font(.appHeadline)
                 Spacer()
                 Text("\(activeWarnings.count)")
@@ -362,7 +362,7 @@ struct WarningsCard: View {
             }
             
             if activeWarnings.isEmpty {
-                Text("No active warnings")
+                Text(String(localized: "no_active_warnings", comment: "Message when no warnings are active"))
                     .font(.appCaption)
                     .foregroundColor(.secondary)
             } else {
@@ -447,8 +447,8 @@ struct WarningsCard: View {
             if !nearbyDrones.isEmpty {
                 warnings.append(SystemWarning(
                     id: "proximity",
-                    title: "Nearby Drones",
-                    detail: "\(nearbyDrones.count) detected",
+                    title: String(localized: "nearby_drones", comment: "Label for nearby drones section"),
+                    detail: String(localized: "drones_detected_count", comment: "Count of detected drones").replacingOccurrences(of: "{count}", with: "\(nearbyDrones.count)"),
                     severity: .medium
                 ))
             }
@@ -459,8 +459,8 @@ struct WarningsCard: View {
         if !spoofedDrones.isEmpty {
             warnings.append(SystemWarning(
                 id: "spoof",
-                title: "Possible Spoofed Signals",
-                detail: "\(spoofedDrones.count) drones",
+                title: String(localized: "possible_spoofed_signals", comment: "Label for possible spoofed signals section"),
+                detail: String(localized: "spoofed_drones_count", comment: "Count of spoofed drones").replacingOccurrences(of: "{count}", with: "\(spoofedDrones.count)"),
                 severity: .high
             ))
         }
